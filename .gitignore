@@ -1,0 +1,4 @@
+barchart_unusual_activity_*
+.idea
+.option_venv
+geckodriver.log
