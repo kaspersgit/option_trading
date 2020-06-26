@@ -25,7 +25,7 @@ from email.mime.multipart import MIMEMultipart
 recipients = ['kasperde@hotmail.com']
 emaillist = [elem.strip().split(',') for elem in recipients]
 msg = MIMEMultipart()
-msg['Subject'] = "Scientias summaries"
+msg['Subject'] = "Unusual option activity"
 msg['From'] = 'k.sends.python@gmail.com'
 
 html = """\
