@@ -3,10 +3,10 @@
 # and https://www.marketbeat.com/market-data/unusual-call-options-volume/
 # and https://marketchameleon.com/Reports/UnusualOptionVolumeReport
 #### Using Selenium
-import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 import pandas as pd
+import numpy as np
 from datetime import datetime
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -28,16 +28,18 @@ def get_loaded_page(url, wait = 5):
 
 # To get the volume
 def get_column_values(columname,soup):
-    volume = list()
+    values = list()
     if columname == 'baseSymbol':
         for td in soup.select('td.baseSymbol.text-left'):
-            volume.append(td.get_text(strip=True))
+            values.append(td.get_text(strip=True))
     input_tag = soup.find_all("td", {"class": columname})
     for i in range(len(input_tag)):
         span_tag = input_tag[i].find("span",{'data-ng-bind':'cell'})
         if not span_tag == None:
-            volume.append(span_tag.text)
-    return(volume)
+            values.append(span_tag.text)
+    if 'values' in globals():
+        print("{} column, {} values extracted".format(columname,len(values)))
+    return(values)
 
 def get_column_classes(soup, part = 'thead'):
     # Getting all column titles
@@ -62,7 +64,6 @@ def get_column_classes(soup, part = 'thead'):
         if (not classname == None) & (
                 element not in ['text-left', 'hide', 'barchart-sort-desc', 'barchart-sort-asc', 'bc-glyph-sort-desc',
                                 'bc-glyph-sort-asc', 'quick-links', 'hide-for-print']):
-            print(element)
             classnames.append(element)
 
     return(classnames, columntitles)
@@ -98,7 +99,7 @@ print("{} page(s) found".format(nr_pages))
 df_total = pd.DataFrame()
 
 for p in range(1, nr_pages+1):
-    print(p)
+    print('Working on page {}'.format(p))
     if p > 1:
         page = get_loaded_page(url+str(p))
         html = page.page_source 
