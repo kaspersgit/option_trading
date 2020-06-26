@@ -15,7 +15,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 
 def get_loaded_page(url, wait = 5):
-    browser = webdriver.Firefox(executable_path='C:/Users/kaspe/Downloads/geckodriver-v0.26.0-win64/geckodriver.exe')
+    browser = webdriver.Chrome()
     browser.get(url)
     delay = wait # seconds
     try:
@@ -101,7 +101,8 @@ for p in range(1, nr_pages+1):
     print(p)
     if p > 1:
         page = get_loaded_page(url+str(p))
-        html = page.page_source
+        html = page.page_source 
+        page.close()
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
     df = pd.DataFrame()
