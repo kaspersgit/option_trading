@@ -1,5 +1,6 @@
 # Load packages
 import pandas as pd
+from datetime import datetime
 
 # Helper functions
 def cherry_pick(df, OutOfMoney = 1.1, maxDTE = 10, minVolOIrate = 5, type = 'calls'):
@@ -8,8 +9,10 @@ def cherry_pick(df, OutOfMoney = 1.1, maxDTE = 10, minVolOIrate = 5, type = 'cal
     selected_df = df[calls]
     return(selected_df)
 
+# variables
+today = datetime.today().strftime('%Y-%m-%d')
 # import data
-df = pd.read_csv('barchart_unusual_activity_2020-06-24.csv')
+df = pd.read_csv('barchart_unusual_activity_'+today+'.csv')
 
 # apply filters
 cherry_df = cherry_pick(df, OutOfMoney = 1.1, maxDTE = 14, minVolOIrate = 3)
