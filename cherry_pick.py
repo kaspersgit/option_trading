@@ -30,7 +30,7 @@ msg['From'] = 'k.sends.python@gmail.com'
 
 html = """\
 <html>
-  <head></head>
+  <head>Some of the most promising soon expiring call options</head>
   <body>
     {0}
   </body>
