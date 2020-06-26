@@ -21,10 +21,12 @@ def get_loaded_page(url, wait = 5):
     try:
         element_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'th.baseSymbol.text-left'))
         WebDriverWait(browser, delay).until(element_present)
-        print("Page is ready!")
+        html = browser.page_source
+        browser.close()
+        print("HTML is served")
     except TimeoutException:
         print("Loading took too much time!")
-    return(browser)
+    return(html)
 
 # To get the volume
 def get_column_values(columname,soup):
@@ -56,7 +58,7 @@ def get_column_classes(soup, part = 'thead'):
         if len(title) > 0:
             string_text = title[0].get_text(strip=True)
             columntitles.append(string_text)
-
+    print('Abundance of classes found, {} in total'.format(len(classes)))
     # try to get the class names (class of the column it seems)
     classnames = []
     for element in classes:
@@ -65,26 +67,17 @@ def get_column_classes(soup, part = 'thead'):
                 element not in ['text-left', 'hide', 'barchart-sort-desc', 'barchart-sort-asc', 'bc-glyph-sort-desc',
                                 'bc-glyph-sort-asc', 'quick-links', 'hide-for-print']):
             classnames.append(element)
-
+    print('Classes cleaned, {} columnclasses left'.format(len(classnames)))
     return(classnames, columntitles)
 
-"""
-absolete
-# try to get the class names (class of the column it seems)
-classnames = []
-for element in classes:
-    classname = columns[0].find_all('th',{'class':element})
-    if (not classname == None) & (element not in ['text-left','hide','barchart-sort-desc','barchart-sort-asc','bc-glyph-sort-desc','bc-glyph-sort-asc','quick-links','hide-for-print']):
-        print(element)
-        classnames.append(element)
-"""
-
+### Let the scraping start
+# Set some variables
 today = datetime.today().strftime("%Y-%m-%d")
 url = 'https://www.barchart.com/options/unusual-activity/stocks?page='
-page = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
-html = page.page_source
+html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
 soup = BeautifulSoup(html, 'html.parser')
 
+# Get the number of pages to loop through
 nr_pages = soup.select('div.bc-table-pagination')
 if nr_pages:
     pages = nr_pages[0].get_text(strip=False)
@@ -95,15 +88,14 @@ else:
     nr_pages = 1
 print("{} page(s) found".format(nr_pages))
 
+# Scrape the table from every page and put together
 # create empty dataframe to save all data for today in
 df_total = pd.DataFrame()
 
 for p in range(1, nr_pages+1):
     print('Working on page {}'.format(p))
     if p > 1:
-        page = get_loaded_page(url+str(p))
-        html = page.page_source 
-        page.close()
+        html = get_loaded_page(url+str(p))
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
     df = pd.DataFrame()
@@ -118,8 +110,8 @@ for p in range(1, nr_pages+1):
     df_total = pd.concat([df_total, df])
 
 # Cleaning and adding columns
-df_total['current_date'] = today
-df_total['current_date'] = pd.to_datetime(df_total['current_date'])
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+df_total['exportedAt'] = now
 df_total['expirationDate'] = pd.to_datetime(df_total['expirationDate'])
 df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").astype(float)
 df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").astype(float)
@@ -127,8 +119,3 @@ df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
 df_total.to_csv('barchart_unusual_activity_'+today+'.csv')
-
-
-
-
-
