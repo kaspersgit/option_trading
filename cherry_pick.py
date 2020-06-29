@@ -7,6 +7,7 @@ def cherry_pick(df, OutOfMoney = 1.1, maxDTE = 10, minVolOIrate = 5, type = 'cal
     calls = (df['symbolType'] == 'Call') & (OutOfMoney * df['baseLastPrice'] < df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
     putts = ( OutOfMoney * df['baseLastPrice'] > df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
     selected_df = df[calls]
+    selected_df.reset_index(drop=True, inplace=True)
     return(selected_df)
 
 # variables

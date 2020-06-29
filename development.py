@@ -116,9 +116,10 @@ for p in range(1, nr_pages+1):
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df_total['exportedAt'] = now
 df_total['expirationDate'] = pd.to_datetime(df_total['expirationDate'])
+df_total['tradeTime'] = pd.to_datetime(df_total['tradeTime'])
 df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").astype(float)
 df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
-df_total.to_csv('barchart_unusual_activity_'+today+'.csv')
+df_total.to_csv('barchart_unusual_activity_'+today+'.csv', index=False)

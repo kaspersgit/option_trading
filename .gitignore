@@ -1,4 +1,5 @@
 barchart_unusual_activity_*
 .idea
+.vscode
 .option_venv
 geckodriver.log
