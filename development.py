@@ -13,6 +13,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+from pyvirtualdisplay import Display
+display = Display(visible=0, size=(800,600))
+display.start()
 
 def get_loaded_page(url, wait = 5):
     browser = webdriver.Chrome()
