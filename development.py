@@ -17,7 +17,7 @@ from pyvirtualdisplay import Display
 display = Display(visible=0, size=(800,600))
 display.start()
 
-def get_loaded_page(url, wait = 5):
+def get_loaded_page(url, wait = 10):
     browser = webdriver.Chrome()
     browser.get(url)
     delay = wait # seconds
@@ -75,7 +75,9 @@ def get_column_classes(soup, part = 'thead'):
 
 ### Let the scraping start
 # Set some variables
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 today = datetime.today().strftime("%Y-%m-%d")
+print('Script started at {}'.format(now))
 url = 'https://www.barchart.com/options/unusual-activity/stocks?page='
 html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
 soup = BeautifulSoup(html, 'html.parser')
@@ -123,3 +125,5 @@ df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
 df_total.to_csv('barchart_unusual_activity_'+today+'.csv', index=False)
+
+print('Script finished at {}'.format(now))
