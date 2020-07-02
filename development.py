@@ -25,10 +25,10 @@ def get_loaded_page(url, wait = 10):
         element_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'th.baseSymbol.text-left'))
         WebDriverWait(browser, delay).until(element_present)
         html = browser.page_source
-        browser.close()
         print("HTML is served")
     except TimeoutException:
         print("Loading took too much time!")
+    browser.close()
     return(html)
 
 # To get the volume
