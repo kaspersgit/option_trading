@@ -5,7 +5,7 @@ from datetime import datetime
 # %%
 def cherry_pick(df, OutOfMoney = 1.1, minDTE =3, maxDTE = 10, minVolOIrate = 5, type = 'calls'):
     calls = (df['symbolType'] == 'Call') & (OutOfMoney * df['baseLastPrice'] < df['strikePrice']) & (df['daysToExpiration'] <= maxDTE) & (df['daysToExpiration'] >= minDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
-    putts = ( OutOfMoney * df['baseLastPrice'] > df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
+    puts = ( OutOfMoney * df['baseLastPrice'] > df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
     selected_df = df[calls]
     selected_df.reset_index(drop=True, inplace=True)
     return(selected_df)
@@ -32,10 +32,9 @@ data.loc['2017-01-03']['SPY']['Close']
 expiration_dates = df['expirationDate'].unique()
 start_date = df['current_date'][0]
 
-for d in expiration_dates:
-    tickers_list = df[df['expirationDate']==d]['baseSymbol'].unique()
-    data = yf.download(tickers_list, start=start_date, end=d,
-                    group_by="ticker")
+for end in expiration_dates:
+    tickers_list = df[df['expirationDate']==end]['baseSymbol'].unique()
+    data = yf.download(tickers_list, start=start_date, end=end)
     data.loc['2017-01-03']['SPY']['Close']
 
 
