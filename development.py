@@ -124,6 +124,6 @@ df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").astype(fl
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
-df_total.to_csv('barchart_unusual_activity_'+today+'.csv', index=False)
+df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_'+today+'.csv', index=False)
 
 print('Script finished at {}'.format(now))
