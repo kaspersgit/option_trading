@@ -42,8 +42,7 @@ def get_column_values(columname,soup):
         span_tag = input_tag[i].find("span",{'data-ng-bind':'cell'})
         if not span_tag == None:
             values.append(span_tag.text)
-    if 'values' in globals():
-        print("{} column, {} values extracted".format(columname,len(values)))
+    print("{} column, {} values extracted".format(columname,len(values)))
     return(values)
 
 def get_column_classes(soup, part = 'thead'):
@@ -61,7 +60,7 @@ def get_column_classes(soup, part = 'thead'):
         if len(title) > 0:
             string_text = title[0].get_text(strip=True)
             columntitles.append(string_text)
-    print('Abundance of classes found, {} in total'.format(len(classes)))
+    #print('Abundance of classes found, {} in total'.format(len(classes)))
     # try to get the class names (class of the column it seems)
     classnames = []
     for element in classes:
@@ -70,7 +69,7 @@ def get_column_classes(soup, part = 'thead'):
                 element not in ['text-left', 'hide', 'barchart-sort-desc', 'barchart-sort-asc', 'bc-glyph-sort-desc',
                                 'bc-glyph-sort-asc', 'quick-links', 'hide-for-print']):
             classnames.append(element)
-    print('Classes cleaned, {} columnclasses left'.format(len(classnames)))
+    #print('Classes cleaned, {} columnclasses left'.format(len(classnames)))
     return(classnames, columntitles)
 
 ### Let the scraping start
@@ -98,7 +97,7 @@ print("{} page(s) found".format(nr_pages))
 df_total = pd.DataFrame()
 
 for p in range(1, nr_pages+1):
-    print('Working on page {}'.format(p))
+    print('Working on page {} of {}'.format(p,nr_pages))
     if p > 1:
         try:
             html = get_loaded_page(url+str(p))

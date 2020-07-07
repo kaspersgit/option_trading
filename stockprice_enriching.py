@@ -21,6 +21,8 @@ def get_mature_df(df, symbolType=['Call']):
 #%%
 # Load and clean data
 df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-26.csv')
+df2 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
+df = df.merge(df2)
 cols = ['volume','openInterest']
 df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
 df[cols] = df[cols].apply(lambda x: x.astype('int'))
@@ -110,16 +112,21 @@ df_enr['revenue'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr['nextBDopen']
 df_enr['profit'] = df_enr['revenue'] - df_enr['nextBDopen']
 #%%
 # Select only mature cases (and exclude options with less then 5 days to expiration)
-df_mature = get_mature_df(df_enr)
-df_mature.describe()
-#%%
+df_mature_call = get_mature_df(df_enr)
+df_mature_call.describe()
 
-# %%
+#%%
+# Predicting
 # All included regression 
-X = df_mature_call[['baseLastPrice', 'strikePrice', 'daysToExpiration',
+df_mature_call_copy = df_mature_call.copy()
+used_cols = ['baseLastPrice', 'strikePrice', 'daysToExpiration',
        'midpoint', 'lastPrice',
-       'volumeOpenInterestRatio' ]]
-Y = df_mature_call['high_plus10p']
+       'volumeOpenInterestRatio' ]
+train_set = df_mature_call_copy.sample(frac=0.75, random_state=0)
+test_set = df_mature_call_copy.drop(train_set.index)
+
+X = train_set[used_cols]
+Y = train_set['high_plus10p']
 X = sm.add_constant(X)
 
 
@@ -128,6 +135,9 @@ mod = sm.Logit(Y, X)
 
 res = mod.fit(maxiter=100)
 print(res.summary())
-# %%
+
+pred = res.predict(test_set[used_cols])
+test_set['prediction'] = pred
+#%%
 ### check single stock
 yf.ticker('')
