@@ -103,12 +103,16 @@ df_enr['high_plus10p'] = np.where(df_enr['low_min10p'] == 1,0,df_enr['high_plus1
 cherry_df = cherry_pick(df_enr, OutOfMoney = 1.1, minDTE = 5, maxDTE = 10, minVolOIrate = 1.9)
 cherry_df.describe()
 
+#%%%
+# Get profit 
+df_enr['revenue'] = np.where(df_enr['high_plus10p'] == 1, 1.1*df_enr['nextBDopen'], df_enr['lastClose'])
+df_enr['revenue'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr['nextBDopen'], df_enr['revenue'])
+df_enr['profit'] = df_enr['revenue'] - df_enr['nextBDopen']
 #%%
 # Select only mature cases (and exclude options with less then 5 days to expiration)
 df_mature = get_mature_df(df_enr)
 df_mature.describe()
 #%%
-# Get profit 
 
 # %%
 # All included regression 

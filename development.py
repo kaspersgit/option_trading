@@ -22,12 +22,12 @@ def get_loaded_page(url, wait = 10):
     browser.get(url)
     delay = wait # seconds
     try:
-        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'th.baseSymbol.text-left'))
+        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, 'th span'))
         WebDriverWait(browser, delay).until(element_present)
         html = browser.page_source
-        print("HTML is served")
     except TimeoutException:
         print("Loading took too much time!")
+        raise Exception
     browser.close()
     return(html)
 
@@ -100,7 +100,10 @@ df_total = pd.DataFrame()
 for p in range(1, nr_pages+1):
     print('Working on page {}'.format(p))
     if p > 1:
-        html = get_loaded_page(url+str(p))
+        try:
+            html = get_loaded_page(url+str(p))
+        except Exception:
+            continue
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
     df = pd.DataFrame()
