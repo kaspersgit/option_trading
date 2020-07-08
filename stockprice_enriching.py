@@ -18,83 +18,89 @@ def get_mature_df(df, symbolType=['Call']):
     df_select = df_select[df_select['daysToExpiration'] > 4]
     df_select = df_select[df_select['symbolType'].isin(symbolType)]
     return(df_select)
+
+def add_stock_price(df):
+    ## Adding actual stockprices
+    # create empty list
+    final_df = []
+    # Loop through all different scraping date
+    start_dates = df['exportedAt'].unique()
+    for start_date in start_dates:
+        data_df = df[df['exportedAt']==start_date]
+        # Get the different dates
+        start_date = pd.to_datetime(start_date)
+        start_date_p1 = (start_date + pd.DateOffset(1)).strftime('%Y-%m-%d')
+        nextBD = (1 * pd.offsets.BDay() + start_date).strftime('%Y-%m-%d')
+        start_date = start_date.strftime('%Y-%m-%d')
+        print('Working with data scraped on {}'.format(start_date))
+
+        # Get all different expiration dates
+        expiration_dates = data_df['expirationDate'].unique()
+
+        for end in expiration_dates:
+            if end <= start_date_p1:
+                continue
+            print('Working with enddate {}'.format(end))
+            tickers_list = data_df[data_df['expirationDate']==end]['baseSymbol'].unique()
+            tickers = ','.join(tickers_list)
+            data = yf.download(tickers, start=start_date, end=end)
+            
+            # next business day opening
+            openbd = data.loc[nextBD]['Open']
+
+            # Get max high and min low
+            highs = data.loc[start_date_p1::]['High'].max()
+            lows = data.loc[start_date_p1::]['Low'].min()
+            last_close = data['Close'].tail(1).mean()
+        
+            if len(tickers_list)==1:
+                highs = pd.DataFrame({'baseSymbol': [tickers], 'maxPrice': [highs]})
+                lows = pd.DataFrame({'baseSymbol': [tickers], 'minPrice': [lows]})
+                openbd = pd.DataFrame({'baseSymbol': [tickers], 'nextBDopen': [openbd]})
+                last_close = pd.DataFrame({'baseSymbol': [tickers], 'lastClose': [last_close]})
+            else:
+                highs = highs.reset_index()
+                highs.columns=['baseSymbol','maxPrice']
+                lows = lows.reset_index()
+                lows.columns=['baseSymbol','minPrice']
+                openbd = openbd.reset_index()
+                openbd.columns=['baseSymbol','nextBDopen']
+                last_close = last_close.reset_index()
+                last_close.columns=['baseSymbol','lastClose']
+
+            #temp_df = pd.merge(temp_df, highs, how='left', on='baseSymbol')
+            temp_df = pd.merge(highs, lows, how='left', on=['baseSymbol'])
+            temp_df = pd.merge(temp_df, openbd, how='left', on=['baseSymbol'])
+            temp_df = pd.merge(temp_df, last_close, how='left', on=['baseSymbol'])
+            temp_df['expirationDate'] = end
+            temp_df['exportedAt'] = start_date
+            if len(final_df) == 0:
+                final_df = temp_df
+            else:
+                final_df = final_df.append(temp_df)
+    final_df.reset_index(drop=True, inplace=True)
+    return(final_df)
 #%%
 # Load and clean data
-df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-26.csv')
-df2 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
-df = df.merge(df2)
+df20200624 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-24.csv')
+df20200625 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-25.csv')
+df20200626 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-26.csv')
+df20200629 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
+df = pd.concat([df20200624, df20200625,df20200626,df20200629],ignore_index=True)
 cols = ['volume','openInterest']
 df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
 df[cols] = df[cols].apply(lambda x: x.astype('int'))
-#%%
-i = 1
-ticker = cherry_df['baseSymbol'][i]
-start_date = cherry_df['current_date'][i]
-end_date = cherry_df['expirationDate'][i]
-stock = yf.Ticker(ticker)
-stock_to_ed = stock.history(start=start_date, end=end_date)
-
-# %%
-tickers_list = ["SPY","AAPL"]
-tickers = ','.join(tickers_list)
-data = yf.download(tickers, start="2017-01-01", end="2017-04-30",
-                   group_by="ticker")
-data.loc['2017-01-03']['SPY']['Close']
 
 #%%
-expiration_dates = df['expirationDate'].unique()
+# Adding some additional columns
+df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
+#%%
+# Adding the stockprices
+final_df = add_stock_price(df)
 
-
-start_date = df['current_date'][0]
-start_date = pd.to_datetime(start_date)
-start_date_p1 = (start_date + pd.DateOffset(1)).strftime('%Y-%m-%d')
-nextBD = (1 * pd.offsets.BDay() + start_date).strftime('%Y-%m-%d')
-
-final_df = []
-for end in expiration_dates:
-    if end <= start_date_p1:
-        continue
-    print('Working with enddate {}'.format(end))
-    tickers_list = df[df['expirationDate']==end]['baseSymbol'].unique()
-    tickers = ','.join(tickers_list)
-    data = yf.download(tickers, start=start_date, end=end)
-    
-    # next business day opening
-    openbd = data.loc[nextBD]['Open']
-
-    # Get max high and min low
-    highs = data.loc[start_date_p1::]['High'].max()
-    lows = data.loc[start_date_p1::]['Low'].min()
-    last_close = data['Close'].tail(1).mean()
-  
-    if len(tickers_list)==1:
-        highs = pd.DataFrame({'baseSymbol': [tickers], 'maxPrice': [highs]})
-        lows = pd.DataFrame({'baseSymbol': [tickers], 'minPrice': [lows]})
-        openbd = pd.DataFrame({'baseSymbol': [tickers], 'nextBDopen': [openbd]})
-        last_close = pd.DataFrame({'baseSymbol': [tickers], 'lastClose': [last_close]})
-    else:
-        highs = highs.reset_index()
-        highs.columns=['baseSymbol','maxPrice']
-        lows = lows.reset_index()
-        lows.columns=['baseSymbol','minPrice']
-        openbd = openbd.reset_index()
-        openbd.columns=['baseSymbol','nextBDopen']
-        last_close = last_close.reset_index()
-        last_close.columns=['baseSymbol','lastClose']
-
-    #temp_df = pd.merge(temp_df, highs, how='left', on='baseSymbol')
-    temp_df = pd.merge(highs, lows, how='left', on=['baseSymbol'])
-    temp_df = pd.merge(temp_df, openbd, how='left', on=['baseSymbol'])
-    temp_df = pd.merge(temp_df, last_close, how='left', on=['baseSymbol'])
-    temp_df['expirationDate'] = end
-    if len(final_df) == 0:
-        final_df = temp_df
-    else:
-        final_df = final_df.append(temp_df)
-final_df.reset_index(drop=True, inplace=True)
 # %%
 # Merge into big df
-df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate'])
+df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate','exportedAt'])
 # Add if stock reached 110% or 90% of start price
 df_enr['high_plus10p'] = np.where(df_enr['nextBDopen'] * 1.1 <= df_enr['maxPrice'],1,0)
 df_enr['low_min10p'] = np.where(df_enr['nextBDopen'] * 0.9 >= df_enr['minPrice'],1,0)
@@ -120,10 +126,9 @@ df_mature_call.describe()
 # All included regression 
 df_mature_call_copy = df_mature_call.copy()
 used_cols = ['baseLastPrice', 'strikePrice', 'daysToExpiration',
-       'midpoint', 'lastPrice',
-       'volumeOpenInterestRatio' ]
+       'midpoint', 'lastPrice', 'volumeOpenInterestRatio']
 train_set = df_mature_call_copy.sample(frac=0.75, random_state=0)
-test_set = df_mature_call_copy.drop(train_set.index)
+test_set = df_mature_call_copy.drop(train_set.index).reset_index(drop=True)
 
 X = train_set[used_cols]
 Y = train_set['high_plus10p']
@@ -136,8 +141,22 @@ mod = sm.Logit(Y, X)
 res = mod.fit(maxiter=100)
 print(res.summary())
 
-pred = res.predict(test_set[used_cols])
+# sometimes seem to need to add the constant
+pred = res.predict(sm.add_constant(test_set[used_cols]))
 test_set['prediction'] = pred
 #%%
-### check single stock
-yf.ticker('')
+threshold = 0.6
+test_set[test_set['prediction']>threshold].mean()
+
+# %%
+test_set[test_set['prediction']>threshold].describe()
+
+# %%
+data = yf.download('CLDR', start='2020-06-24', end='2020-07-10')
+data
+# %%
+# IF happy save model=
+res.save('/Users/kasper.de-harder/gits/option_trading/modelLogit')
+
+
+# %%

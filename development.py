@@ -17,7 +17,7 @@ from pyvirtualdisplay import Display
 display = Display(visible=0, size=(800,600))
 display.start()
 
-def get_loaded_page(url, wait = 10):
+def get_loaded_page(url, wait = 20):
     browser = webdriver.Chrome()
     browser.get(url)
     delay = wait # seconds
@@ -42,7 +42,7 @@ def get_column_values(columname,soup):
         span_tag = input_tag[i].find("span",{'data-ng-bind':'cell'})
         if not span_tag == None:
             values.append(span_tag.text)
-    print("{} column, {} values extracted".format(columname,len(values)))
+    #print("{} column, {} values extracted".format(columname,len(values)))
     return(values)
 
 def get_column_classes(soup, part = 'thead'):
@@ -78,7 +78,11 @@ now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 today = datetime.today().strftime("%Y-%m-%d")
 print('Script started at {}'.format(now))
 url = 'https://www.barchart.com/options/unusual-activity/stocks?page='
-html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
+try:
+    html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
+except Exception:
+    print('Failed, trying again')
+    html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
 soup = BeautifulSoup(html, 'html.parser')
 
 # Get the number of pages to loop through
@@ -113,7 +117,7 @@ for p in range(1, nr_pages+1):
         if any(class_ in 'Symbol' for class_ in class_list):
             class_list.remove('Symbol')
         df[class_] = class_list
-
+    print('Exctracted (max) {} values for {} different columns'.format(len(df),len(classnames)))
     df_total = pd.concat([df_total, df])
 
 # Cleaning and adding columns
@@ -123,6 +127,8 @@ df_total['expirationDate'] = pd.to_datetime(df_total['expirationDate'])
 df_total['tradeTime'] = pd.to_datetime(df_total['tradeTime'])
 df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").astype(float)
 df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").astype(float)
+df_total['volume'] = df_total["volume"].str.replace(",", "").astype(float)
+df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
