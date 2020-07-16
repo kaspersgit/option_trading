@@ -94,6 +94,13 @@ df[cols] = df[cols].apply(lambda x: x.astype('int'))
 #%%
 # Adding some additional columns
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
+df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
+df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice'
+        ]].groupby(['exportedAt','baseSymbol','symbolType','expirationDate'
+        ]).agg({'baseSymbol':'count', 'strikePrice':'mean'
+        }).rename(columns={'baseSymbol':'nrOccurences', 'strikePrice':'meanStrikePrice'
+        }).reset_index()
+df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate'])
 #%%
 # Adding the stockprices
 final_df = add_stock_price(df)
@@ -106,6 +113,9 @@ df_enr['high_plus10p'] = np.where(df_enr['nextBDopen'] * 1.1 <= df_enr['maxPrice
 df_enr['low_min10p'] = np.where(df_enr['nextBDopen'] * 0.9 >= df_enr['minPrice'],1,0)
 # Too be safe, if reached both targets, put 110% target to zero
 df_enr['high_plus10p'] = np.where(df_enr['low_min10p'] == 1,0,df_enr['high_plus10p'])
+# Add flag if they reached strikeprice
+df_enr['reachedStrike'] = np.where(df_enr['maxPrice'] >= df_enr['strikePrice'],1,0)
+df_enr['inTheMoney'] = np.where(df_enr['baseLastPrice'] >= df_enr['strikePrice'],1,0)
 
 # %%
 cherry_df = cherry_pick(df_enr, OutOfMoney = 1.1, minDTE = 5, maxDTE = 10, minVolOIrate = 1.9)
@@ -116,22 +126,41 @@ cherry_df.describe()
 df_enr['revenue'] = np.where(df_enr['high_plus10p'] == 1, 1.1*df_enr['nextBDopen'], df_enr['lastClose'])
 df_enr['revenue'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr['nextBDopen'], df_enr['revenue'])
 df_enr['profit'] = df_enr['revenue'] - df_enr['nextBDopen']
+
+df_enr['revenueStrike'] = np.where(df_enr['reachedStrike'] == 1, df_enr['strikePrice'], df_enr['lastClose'])
+df_enr['profitStrike'] = df_enr['revenueStrike'] - df_enr['nextBDopen']
 #%%
 # Select only mature cases (and exclude options with less then 5 days to expiration)
 df_mature_call = get_mature_df(df_enr)
 df_mature_call.describe()
 
+# TODO aggregate options of the same company 
+# now extra weight is on characteristics of e.g. TESLA 
+# as that stock rose and it had a lot of options showing activity
+
 #%%
 # Predicting
 # All included regression 
 df_mature_call_copy = df_mature_call.copy()
-used_cols = ['baseLastPrice', 'strikePrice', 'daysToExpiration',
-       'midpoint', 'lastPrice', 'volumeOpenInterestRatio']
-train_set = df_mature_call_copy.sample(frac=0.75, random_state=0)
-test_set = df_mature_call_copy.drop(train_set.index).reset_index(drop=True)
+df_mature_call_copy=df_mature_call_copy[df_mature_call_copy['inTheMoney']!=1]
+# variable to be predicted
+end_var = 'reachedStrike'
+# input used to predict with
+ex_vars = ['baseLastPrice', 'strikePrice',
+       # 'daysToExpiration', # not significant as we just have 7 and 8 days
+       'midpoint', 
+       'lastPrice', 'volumeOpenInterestRatio',
+       'nrOccurences',
+       'meanStrikePrice',
+       #'inTheMoney',
+       'priceDiffPerc']
 
-X = train_set[used_cols]
-Y = train_set['high_plus10p']
+train_set = df_mature_call_copy.sample(frac=0.85, random_state=1)
+test_set = df_mature_call_copy.drop(train_set.index).reset_index(drop=True)
+#train_set=train_set.drop_duplicates(subset=['baseSymbol','expirationDate'])
+
+X = train_set[ex_vars]
+Y = train_set[end_var]
 X = sm.add_constant(X)
 
 
@@ -142,14 +171,24 @@ res = mod.fit(maxiter=100)
 print(res.summary())
 
 # sometimes seem to need to add the constant
-pred = res.predict(sm.add_constant(test_set[used_cols]))
+pred = res.predict(sm.add_constant(test_set[ex_vars]))
 test_set['prediction'] = pred
+
+from sklearn import metrics
+auc = metrics.roc_auc_score(test_set[end_var], test_set['prediction'])
+print("The Area under the ROC is {}".format(round(auc,3)))
+# Best: 0.766 (high_plus10p all dataponits included)
+# to visualize
+fpr, tpr, thresholds = metrics.roc_curve(test_set[end_var], test_set['prediction'])
+plt.plot(fpr, tpr)
 #%%
-threshold = 0.6
-test_set[test_set['prediction']>threshold].mean()
+threshold = 0.5
+# to filter out already into the money options
+filtered_set = test_set[(test_set['inTheMoney']==0) & (test_set['priceDiffPerc'] > 1.05)]
+filtered_set[filtered_set['prediction']>threshold].mean()
 
 # %%
-test_set[test_set['prediction']>threshold].describe()
+filtered_set[filtered_set['prediction']>threshold].describe()
 
 # %%
 data = yf.download('CLDR', start='2020-06-24', end='2020-07-10')

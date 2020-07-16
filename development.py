@@ -125,10 +125,10 @@ now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df_total['exportedAt'] = now
 df_total['expirationDate'] = pd.to_datetime(df_total['expirationDate'])
 df_total['tradeTime'] = pd.to_datetime(df_total['tradeTime'])
-df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").astype(float)
-df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").astype(float)
-df_total['volume'] = df_total["volume"].str.replace(",", "").astype(float)
-df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").astype(float)
+df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['volume'] = df_total["volume"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
