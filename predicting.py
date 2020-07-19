@@ -3,13 +3,14 @@
 # packages
 import pandas as pd
 from statsmodels.discrete.discrete_model import LogitResults
-
-# Load model
-model = LogitResults.load('/Users/kasper.de-harder/gits/option_trading/modelLogit')
+import os
+from datetime import datetime
 
 # %%
 # Load newest data
-df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-16.csv')
+today = datetime.today().strftime("%Y-%m-%d")
+current_path = os.getcwd()
+df = pd.read_csv(current_path+'/barchart_unusual_activity_'+today+'.csv')
 
 
 # Adding some additional columns
@@ -21,7 +22,18 @@ df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikeP
         }).rename(columns={'baseSymbol':'nrOccurences', 'strikePrice':'meanStrikePrice'
         }).reset_index()
 df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate'])
+
+# cleaning columns
+cols = ['volatility']
+df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
+df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
+df[cols] = df[cols].apply(lambda x: x.astype('float'))
+
 df['const'] = 1.0
+
+#%%
+# Load model and predict
+model = LogitResults.load(current_path + '/modelLogit')
 # Select columns which are model needs as input but leave out the constant
 cols = model.params.index
 
@@ -29,8 +41,50 @@ pred = model.predict(df[cols])
 df['prediction'] = pred
 
 # %%
+# Subsetting the predictions
 threshold = 0.5
-buy_advise = df[(df['prediction'] > threshold) & (df['symbolType']=='Call') & (df['daysToExpiration']<20) & (df['priceDiffPerc'] > 1.05)]
+buy_advise = df[(df['prediction'] > threshold) & 
+    (df['symbolType']=='Call') & 
+    (df['daysToExpiration'] < 20) & 
+    (df['priceDiffPerc'] > 1.05) & 
+    (df['daysToExpiration'] > 3) & 
+    (df['strikePrice'] < 200)]
 buy_advise = buy_advise[['baseSymbol', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
-buy_advise.sort_values('priceDiffPerc')
+buy_advise = buy_advise.sort_values('priceDiffPerc').reset_index(drop=True)
+
 # %%
+# Sending an email with the predictions
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Email configurations and content
+recipients = ['kasperde@hotmail.com']
+emaillist = [elem.strip().split(',') for elem in recipients]
+msg = MIMEMultipart()
+msg['Subject'] = "Stock buy advise"
+msg['From'] = 'k.sends.python@gmail.com'
+
+html = """\
+<html>
+  <head></head>
+  <body>
+    {0}
+  </body>
+</html>
+""".format(buy_advise.to_html())
+
+part1 = MIMEText(html, 'html')
+msg.attach(part1)
+
+# Sending the email
+import smtplib, ssl
+
+port = 465  # For SSL
+password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
+
+# Create a secure SSL context
+context = ssl.create_default_context()
+
+with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
+    server.login(msg['From'], password)
+    server.sendmail(msg['From'], emaillist , msg.as_string())

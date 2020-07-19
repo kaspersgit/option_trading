@@ -91,11 +91,12 @@ df20200626 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_u
 df20200629 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
 df20200708 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-08.csv')
 
-df = pd.concat([df20200624,df20200626,df20200629,df20200708],ignore_index=True)
+df = pd.concat([df20200624,df20200625,df20200629,df20200708],ignore_index=True)
 df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
-cols = ['volume','openInterest']
+cols = ['volume','openInterest','volatility']
 df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.astype('int'))
+df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
+df[cols] = df[cols].apply(lambda x: x.astype('float'))
 
 #%%
 # Adding some additional columns
@@ -160,11 +161,12 @@ ex_vars = [#'baseLastPrice',
        'daysToExpiration', # not significant as we just have 7 and 8 days
        'midpoint', 
        #'lastPrice', 
-       'volumeOpenInterestRatio',
+       #'volumeOpenInterestRatio',
        'nrOccurences',
-       'meanStrikePrice',
+       #'meanStrikePrice',
        #'inTheMoney',
-       'priceDiffPerc']
+       'priceDiffPerc',
+       'volatility']
 
 #train_set = df_mature_call_copy.sample(frac=0.85, random_state=1)
 train_set = df_mature_call_copy[df_mature_call_copy['exportedAt']!='2020-07-08']
