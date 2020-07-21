@@ -14,8 +14,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from pyvirtualdisplay import Display
+import time
+import random
 display = Display(visible=0, size=(800,600))
 display.start()
+
+# To have some human kind of behaviour with visitin the website
+rand_wait=random.uniform(50,200)
+time.sleep(rand_wait)
 
 def get_loaded_page(url, wait = 20):
     browser = webdriver.Chrome()
@@ -28,7 +34,7 @@ def get_loaded_page(url, wait = 20):
     except TimeoutException:
         print("Loading took too much time!")
         raise Exception
-    browser.close()
+    browser.quit()
     return(html)
 
 # To get the volume
@@ -120,6 +126,9 @@ for p in range(1, nr_pages+1):
         df[class_] = class_list
     print('Exctracted {} values for {} different columns'.format(len(df),len(classnames)))
     df_total = pd.concat([df_total, df])
+
+# close headless display
+display.stop()
 
 # Cleaning and adding columns
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
