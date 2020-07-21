@@ -24,10 +24,10 @@ df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikeP
 df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate'])
 
 # cleaning columns
-cols = ['volatility']
-df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-df[cols] = df[cols].apply(lambda x: x.astype('float'))
+#cols = ['volatility']
+#df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
+#df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
+#df[cols] = df[cols].apply(lambda x: x.astype('float'))
 
 df['const'] = 1.0
 
