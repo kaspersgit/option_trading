@@ -106,6 +106,7 @@ for p in range(1, nr_pages+1):
         try:
             html = get_loaded_page(url+str(p))
         except Exception:
+            print('Skipping page')
             continue
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
@@ -117,7 +118,7 @@ for p in range(1, nr_pages+1):
         if any(class_ in 'Symbol' for class_ in class_list):
             class_list.remove('Symbol')
         df[class_] = class_list
-    print('Exctracted (max) {} values for {} different columns'.format(len(df),len(classnames)))
+    print('Exctracted {} values for {} different columns'.format(len(df),len(classnames)))
     df_total = pd.concat([df_total, df])
 
 # Cleaning and adding columns
