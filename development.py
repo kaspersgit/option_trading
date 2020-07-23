@@ -20,7 +20,7 @@ display = Display(visible=0, size=(800,600))
 display.start()
 
 # To have some human kind of behaviour with visitin the website
-rand_wait=random.uniform(50,200)
+rand_wait=random.uniform(0,200)
 time.sleep(rand_wait)
 
 def get_loaded_page(url, wait = 20):

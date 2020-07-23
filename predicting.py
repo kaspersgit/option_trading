@@ -16,12 +16,13 @@ df = pd.read_csv(current_path+'/barchart_unusual_activity_'+today+'.csv')
 # Adding some additional columns
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
-df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice'
-        ]].groupby(['exportedAt','baseSymbol','symbolType','expirationDate'
+df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
+df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice','inTheMoney'
+        ]].groupby(['exportedAt','baseSymbol','symbolType','expirationDate','inTheMoney'
         ]).agg({'baseSymbol':'count', 'strikePrice':'mean'
         }).rename(columns={'baseSymbol':'nrOccurences', 'strikePrice':'meanStrikePrice'
         }).reset_index()
-df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate'])
+df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate','inTheMoney'])
 
 # cleaning columns
 #cols = ['volatility']
@@ -58,7 +59,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Email configurations and content
-recipients = ['kasperde@hotmail.com']
+recipients = ['kasperde@hotmail.com','derekdh@gmail.com']
 emaillist = [elem.strip().split(',') for elem in recipients]
 msg = MIMEMultipart()
 msg['Subject'] = "Stock buy advise"

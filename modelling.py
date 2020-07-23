@@ -87,11 +87,13 @@ def add_stock_price(df):
 # Load and clean data
 df20200624 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-24.csv')
 df20200625 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-25.csv')
-df20200626 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-26.csv')
 df20200629 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
+df20200701 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-01.csv')
+df20200703 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-03.csv')
+df20200706 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-06.csv')
 df20200708 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-08.csv')
 
-df = pd.concat([df20200624,df20200625,df20200629,df20200708],ignore_index=True)
+df = pd.concat([df20200624,df20200625,df20200629,df20200701,df20200703,df20200706,df20200708],ignore_index=True)
 df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
 cols = ['volume','openInterest','volatility']
 df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
@@ -103,13 +105,16 @@ df[cols] = df[cols].apply(lambda x: x.astype('float'))
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
-df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice'
-        ]].groupby(['exportedAt','baseSymbol','symbolType','expirationDate'
+df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice','inTheMoney'
+        ]].groupby(['exportedAt','baseSymbol','symbolType','expirationDate','inTheMoney'
         ]).agg({'baseSymbol':'count', 'strikePrice':'mean'
         }).rename(columns={'baseSymbol':'nrOccurences', 'strikePrice':'meanStrikePrice'
         }).reset_index()
-df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate'])
+df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate','inTheMoney'])
 #%%
+# reducing size of dataset- only select interesting options
+df = get_mature_df(df)
+df = df[df['inTheMoney']==0]
 # Adding the stockprices
 final_df = add_stock_price(df)
 
@@ -156,14 +161,13 @@ df_mature_call_copy=df_mature_call_copy[df_mature_call_copy['inTheMoney']!=1]
 # variable to be predicted
 end_var = 'reachedStrike'
 # input used to predict with
-ex_vars = [#'baseLastPrice', 
+ex_vars = ['baseLastPrice', 
         'priceDiff',
-       'daysToExpiration', # not significant as we just have 7 and 8 days
+       'daysToExpiration', 
        'midpoint', 
-       #'lastPrice', 
        #'volumeOpenInterestRatio',
        'nrOccurences',
-       #'meanStrikePrice',
+       'meanStrikePrice',
        #'inTheMoney',
        'priceDiffPerc',
        'volatility']
