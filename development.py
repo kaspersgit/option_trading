@@ -16,17 +16,23 @@ from selenium.common.exceptions import TimeoutException
 from pyvirtualdisplay import Display
 import time
 import random
-display = Display(visible=0, size=(800,600))
-display.start()
+import platform
 
-# To have some human kind of behaviour with visitin the website
-rand_wait=random.uniform(0,200)
-time.sleep(rand_wait)
+# Only when running in production
+if platform.system() == 'Linux':
+    display = Display(visible=0, size=(800,600))
+    display.start()
+
+    # To have some human kind of behaviour with visitin the website
+    rand_wait=random.uniform(0,200)
+    time.sleep(rand_wait)
 
 def get_loaded_page(url, wait = 20):
     if platform.system() == 'Linux':
         browser = webdriver.Chrome()
     elif platform.system() == 'Windows':
+        browser = webdriver.Firefox(
+            executable_path='C:/Users/kaspe/Downloads/geckodriver-v0.26.0-win64/geckodriver.exe')
         
     browser.get(url)
     delay = wait # seconds
