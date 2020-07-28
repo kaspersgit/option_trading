@@ -1,11 +1,17 @@
-# Predicting which stocks have the best odds of being profitable
 #%%
-# packages
-import pandas as pd
-from statsmodels.discrete.discrete_model import LogitResults
+import pandas as pd 
+from datetime import datetime
 import numpy as np
-from helper_functions import *
-import pickle
+
+def up_for_trade(df):
+    # In the money based on the last base price
+    df=df[df['inTheMoney']!=1]
+    # In the money based on the nextBDopen 
+    df=df[(~df['nextBDopen'].isnull()) & (df['strikePrice']>df['nextBDopen'])]
+    # Stock price lower than 500 $
+    df=df[df['baseLastPrice'] < 500]
+    # Return result
+    return(df)
 
 def enrich_df(df):
     df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
@@ -51,38 +57,6 @@ def enrich_df(df):
     df['meanStrikePutPerc'] = df['meanStrikePut'] / df['baseLastPrice']
     df['midpointPerc'] = df['midpoint'] / df['baseLastPrice']
     df['meanHigherStrike'] = df['higherStrikePriceCum'] / df['nrHigherOptions']
-    df['volOIrate'] = df['openInterestCall'] / df['volumeCall']
     return(df)
-
-
-# %%
-# Load newest data
-df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-22.csv')
-
-# Adding some additional columns
-df = enrich_df(df)
-df['const'] = 1.0
-#%%
-# Load model
-model = LogitResults.load('/Users/kasper.de-harder/gits/option_trading/modelLogit')
-model = pickle.load(open('/Users/kasper.de-harder/gits/option_trading/RandomForest.sav', 'rb'))
-# Select columns which are model needs as input but leave out the constant
-cols = model.params.index
-
-pred = model.predict(df[cols])
-df['prediction'] = pred
-
-# %%
-threshold = 0.7
-buy_advise = df[(df['prediction'] > threshold) & 
-    (df['symbolType']=='Call') & 
-    (df['daysToExpiration'] < 40) & 
-    (df['priceDiffPerc'] > 1.03) & 
-    (df['daysToExpiration'] > 3) & 
-    (df['strikePrice'] < 200)]
-buy_advise = buy_advise[['baseSymbol', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
-buy_advise = buy_advise.sort_values('prediction').reset_index(drop=True)
-# %%
-buy_advise
 
 # %%

@@ -24,7 +24,10 @@ rand_wait=random.uniform(0,200)
 time.sleep(rand_wait)
 
 def get_loaded_page(url, wait = 20):
-    browser = webdriver.Chrome()
+    if platform.system() == 'Linux':
+        browser = webdriver.Chrome()
+    elif platform.system() == 'Windows':
+        
     browser.get(url)
     delay = wait # seconds
     try:
