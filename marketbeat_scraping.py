@@ -41,16 +41,14 @@ def scrapeMarketBeat(url):
     dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
     match = re.search(r'(\d+/\d+/\d+)', dateSentence)
     if platform.python_version() < '3.6':
-        print('reached version lower than 3.6 strip time')
         dataDate = datetime.strptime(match.group(0), "%m/%d/%Y").strftime('%Y-%m-%d')
-        print('succesfully done strip time')
     else:
         dataDate = datetime.strptime(match[g0], "%m/%d/%Y").strftime('%Y-%m-%d')
 
     df['dataDate'] = dataDate
     return (df)
 
-def text2float(textnum):
+def text2float(textnum, numwords={}):
     scales = ["hundred", "thousand", "million", "billion", "trillion"]
 
     number = float(re.findall("([0-9]+[.]?[0-9]+)", textnum)[0])
