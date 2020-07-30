@@ -38,14 +38,14 @@ def scrapeMarketBeat(url):
     df = pd.DataFrame(data=data, columns=colNames)
 
     # Get date of data
-    if platform.python_version() < '3.6':
-        print('reached version lower than 3.6 soup select')
-        dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
-        print('succesfully done soup select')
-    else:
-        dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
+    dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
     match = re.search(r'(\d+/\d+/\d+)', dateSentence)
-    dataDate = datetime.strptime(match[0], "%m/%d/%Y").strftime('%Y-%m-%d')
+    if platform.python_version() < '3.6':
+        print('reached version lower than 3.6 strip time')
+        dataDate = datetime.strptime(match.group(0), "%m/%d/%Y").strftime('%Y-%m-%d')
+        print('succesfully done strip time')
+    else:
+        dataDate = datetime.strptime(match[g0], "%m/%d/%Y").strftime('%Y-%m-%d')
 
     df['dataDate'] = dataDate
     return (df)
