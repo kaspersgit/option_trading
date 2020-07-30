@@ -2,7 +2,7 @@
 ## Checking out https://www.barchart.com/options/unusual-activity/stocks?page=1
 # and https://www.marketbeat.com/market-data/unusual-call-options-volume/
 # and https://marketchameleon.com/Reports/UnusualOptionVolumeReport
-#### Using Selenium
+
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
