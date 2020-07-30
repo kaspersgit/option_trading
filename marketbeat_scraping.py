@@ -36,6 +36,8 @@ def scrapeMarketBeat(url):
                 'indicators']
 
     df = pd.DataFrame(data=data, columns=colNames)
+    # Filter out tickers with None value
+    df = df[~df['ticker'].isnull()]
 
     # Get date of data
     dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
@@ -43,7 +45,7 @@ def scrapeMarketBeat(url):
     if platform.python_version() < '3.6':
         dataDate = datetime.strptime(match.group(0), "%m/%d/%Y").strftime('%Y-%m-%d')
     else:
-        dataDate = datetime.strptime(match[g0], "%m/%d/%Y").strftime('%Y-%m-%d')
+        dataDate = datetime.strptime(match[0], "%m/%d/%Y").strftime('%Y-%m-%d')
 
     df['dataDate'] = dataDate
     return (df)
@@ -51,7 +53,8 @@ def scrapeMarketBeat(url):
 def text2float(textnum, numwords={}):
     scales = ["hundred", "thousand", "million", "billion", "trillion"]
 
-    number = float(re.findall("([0-9]+[.]?[0-9]+)", textnum)[0])
+    #number = float(re.findall("([0-9]+[.]?[0-9]+)", textnum)[0])
+    number = float(textnum.split()[0])
     for idx, word in enumerate(scales):
         numwords[word] = (10 ** (idx * 3 or 2), 0)
 
