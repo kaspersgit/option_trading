@@ -39,7 +39,9 @@ def scrapeMarketBeat(url):
 
     # Get date of data
     if platform.python_version() < '3.6':
-        dateSentence = soup.select('#cphPageTitle_pnlTwo').group(0).text.strip()
+        print('reached version lower than 3.6 soup select')
+        dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
+        print('succesfully done soup select')
     else:
         dateSentence = soup.select('#cphPageTitle_pnlTwo')[0].text.strip()
     match = re.search(r'(\d+/\d+/\d+)', dateSentence)
