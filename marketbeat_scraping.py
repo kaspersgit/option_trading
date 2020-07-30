@@ -86,7 +86,7 @@ df['avgStockVolume'] = df['avgStockVolume'].str.replace(",", "").str.replace('*'
 df['avgStockVolume'] = df['avgStockVolume'].apply(text2float)
 
 # Saving file as CSV
-df.to_csv('/home/pi/Documents/python_scripts/option_trading/marketbeat_call_activity_' + dataDate + '.csv',
+df.to_csv('/home/pi/Documents/python_scripts/option_trading/marketbeat_call_activity_' + df['dataDate'][0] + '.csv',
                 index=False)
 
 print('Script finished at {}'.format(now))
