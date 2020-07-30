@@ -148,7 +148,7 @@ df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").str.r
 df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['volume'] = df_total["volume"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['volatility'] = df_total["volatility"].str.replace("%", "").str.replace('*', '').astype(float)
+df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
