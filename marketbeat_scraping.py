@@ -90,4 +90,5 @@ dataDate = df['dataDate'][0].strftime('%Y-%m-%d')
 df.to_csv('/home/pi/Documents/python_scripts/option_trading/marketbeat_call_activity_' + dataDate + '.csv',
                 index=False)
 
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))

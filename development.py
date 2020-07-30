@@ -154,4 +154,5 @@ df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 # Saving file as CSV
 df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_'+today+'.csv', index=False)
 
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))
