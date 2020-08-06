@@ -7,6 +7,9 @@ import os
 from datetime import datetime, timedelta
 import numpy as np
 
+# suppress copy warning
+pd.options.mode.chained_assignment = None  # default='warn'
+
 # load in functions 
 def level_enriching(df):
     df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
@@ -40,7 +43,7 @@ def level_enriching(df):
             base_colname = s + itm_str
             temp_df = df_symbol[(df_symbol['symbolType'] == s) & (df_symbol['inTheMoney'] == i)]
 
-            temp_df.loc[:,'volumeOIratio'] = temp_df['sumVolume'] / temp_df['sumOpenInterest']
+            temp_df['volumeOIratio'] = temp_df['sumVolume'] / temp_df['sumOpenInterest']
             temp_df = temp_df.drop(['inTheMoney'], axis=1)
             temp_df.rename(columns={'nrOccurences':'nr' + base_colname, 'meanStrikePrice':'meanStrike' + base_colname
                 , 'sumVolume':'volume' + base_colname, 'sumOpenInterest':'openInterest' + base_colname
