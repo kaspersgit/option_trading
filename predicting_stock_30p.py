@@ -40,7 +40,7 @@ def level_enriching(df):
             base_colname = s + itm_str
             temp_df = df_symbol[(df_symbol['symbolType'] == s) & (df_symbol['inTheMoney'] == i)]
 
-            temp_df['volumeOIratio'] = temp_df['sumVolume'] / temp_df['sumOpenInterest']
+            temp_df.loc[:,'volumeOIratio'] = temp_df['sumVolume'] / temp_df['sumOpenInterest']
             temp_df = temp_df.drop(['inTheMoney'], axis=1)
             temp_df.rename(columns={'nrOccurences':'nr' + base_colname, 'meanStrikePrice':'meanStrike' + base_colname
                 , 'sumVolume':'volume' + base_colname, 'sumOpenInterest':'openInterest' + base_colname
@@ -67,6 +67,7 @@ df_stock = level_enriching(df)
 # due to scraping taking time baseLastPrice changes a bit for the same stock
 # causing multiple rows for the same stock
 df_stock = df_stock.drop_duplicates(subset=['baseSymbol'], keep='last')
+df_stock['predDate'] = today
 df_stock['const'] = 1.0
 
 #%%
