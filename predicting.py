@@ -5,6 +5,7 @@ import pandas as pd
 from statsmodels.discrete.discrete_model import LogitResults
 import os
 from datetime import datetime
+import numpy as np
 
 # %%
 # Load newest data
