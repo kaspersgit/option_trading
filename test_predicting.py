@@ -57,15 +57,18 @@ def enrich_df(df):
 
 # %%
 # Load newest data
-df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-22.csv')
+df = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-28.csv')
 
 # Adding some additional columns
 df = enrich_df(df)
+# In case we are predicting the stocks and not options 
+df = df.sort_values(['strikePrice','expirationDate'])
+df = df.drop_duplicates(subset=['baseSymbol','symbolType','exportedAt'])
 df['const'] = 1.0
 #%%
 # Load model
-model = LogitResults.load('/Users/kasper.de-harder/gits/option_trading/modelLogit')
-model = pickle.load(open('/Users/kasper.de-harder/gits/option_trading/RandomForest.sav', 'rb'))
+model = LogitResults.load('/Users/kasper.de-harder/gits/option_trading/modelLogitStock')
+#model = pickle.load(open('/Users/kasper.de-harder/gits/option_trading/RandomForest.sav', 'rb'))
 # Select columns which are model needs as input but leave out the constant
 cols = model.params.index
 
@@ -73,7 +76,7 @@ pred = model.predict(df[cols])
 df['prediction'] = pred
 
 # %%
-threshold = 0.7
+threshold = 0.2
 buy_advise = df[(df['prediction'] > threshold) & 
     (df['symbolType']=='Call') & 
     (df['daysToExpiration'] < 40) & 

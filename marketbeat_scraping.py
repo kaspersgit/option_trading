@@ -51,19 +51,23 @@ def scrapeMarketBeat(url):
     return (df)
 
 def text2float(textnum, numwords={}):
-    scales = ["hundred", "thousand", "million", "billion", "trillion"]
+    if textnum == 'N/A':
+        number = 100
+    else:
+        scales = ["hundred", "thousand", "million", "billion", "trillion"]
 
-    #number = float(re.findall("([0-9]+[.]?[0-9]+)", textnum)[0])
-    number = float(textnum.split()[0])
-    for idx, word in enumerate(scales):
-        numwords[word] = (10 ** (idx * 3 or 2), 0)
+        #number = float(re.findall("([0-9]+[.]?[0-9]+)", textnum)[0])
+        number = float(textnum.split()[0])
+        for idx, word in enumerate(scales):
+            numwords[word] = (10 ** (idx * 3 or 2), 0)
 
-    for word in textnum.split():
-        if word in scales:
-            scale, increment = numwords[word]
-            number = number * scale + increment
+        for word in textnum.split():
+            if word in scales:
+                scale, increment = numwords[word]
+                number = number * scale + increment
     return(number)
 
+#%%
 ### Let the scraping start
 # Set some variables
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -90,4 +94,5 @@ dataDate = df['dataDate'][0].strftime('%Y-%m-%d')
 df.to_csv('/home/pi/Documents/python_scripts/option_trading/marketbeat_call_activity_' + dataDate + '.csv',
                 index=False)
 
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))
