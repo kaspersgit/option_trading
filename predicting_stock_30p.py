@@ -9,12 +9,12 @@ import numpy as np
 
 # load in functions 
 def level_enriching(df):
-    df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
-    df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
-    df['inTheMoney'] = np.where((df['symbolType']=='Call') & (df['baseLastPrice'] >= df['strikePrice']),1,0)
-    df['inTheMoney'] = np.where((df['symbolType']=='Putt') & (df['baseLastPrice'] <= df['strikePrice']),1,df['inTheMoney'])
-    df['nrOptions'] = 1
-    df['strikePriceCum'] = df['strikePrice']
+    df.loc[:,'priceDiff'] = df['strikePrice'] - df['baseLastPrice']
+    df.loc[:,'priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
+    df.loc[:,'inTheMoney'] = np.where((df['symbolType']=='Call') & (df['baseLastPrice'] >= df['strikePrice']),1,0)
+    df.loc[:,'inTheMoney'] = np.where((df['symbolType']=='Putt') & (df['baseLastPrice'] <= df['strikePrice']),1,df['inTheMoney'])
+    df.loc[:,'nrOptions'] = 1
+    df.loc[:,'strikePriceCum'] = df['strikePrice']
 
     df.sort_values(['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice'
         ], inplace=True)
@@ -89,8 +89,8 @@ daysAhead = 14
 
 buy_advise = df_stock[(df_stock['prediction'] > threshold) & 
     (df_stock['baseLastPrice'] < maxBasePrice)]
-buy_advise['expectedPrice'] = expectedIncrease * buy_advise['baseLastPrice']
-buy_advise['expectedDate'] = (pd.to_datetime(buy_advise['exportedAt']) + timedelta(days=daysAhead)).dt.strftime('%Y-%m-%d')
+buy_advise.loc[:,'expectedPrice'] = expectedIncrease * buy_advise['baseLastPrice']
+buy_advise.loc[:,'expectedDate'] = (pd.to_datetime(buy_advise['exportedAt']) + timedelta(days=daysAhead)).dt.strftime('%Y-%m-%d')
 buy_advise = buy_advise[['baseSymbol', 'baseLastPrice', 'expectedDate','expectedPrice', 'prediction','modelVersion']]
 buy_advise = buy_advise.sort_values('prediction').reset_index(drop=True)
 
