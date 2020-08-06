@@ -1,7 +1,7 @@
 #%%
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import statsmodels.api as sm
 from sklearn.ensemble import RandomForestClassifier
@@ -14,11 +14,10 @@ def cherry_pick(df, OutOfMoney = 1.1, minDTE =3, maxDTE = 10, minVolOIrate = 5, 
     selected_df.reset_index(drop=True, inplace=True)
     return(selected_df)
 
-def get_mature_df(df, symbolType=['Call']):
+def get_mature_df(df):
     # Select only mature cases (and exclude options with less then 5 days to expiration)
     df_select = df[pd.to_datetime(df['expirationDate']) < datetime.today()]
     df_select = df_select[df_select['daysToExpiration'] > 4]
-    df_select = df_select[df_select['symbolType'].isin(symbolType)]
     return(df_select)
 
 def add_stock_price(df):
@@ -112,7 +111,7 @@ def RandomForest(test_set, train_set, ex_vars, target):
     Y = train_set[target]
 
     # Fit and summarize OLS model
-    clf = RandomForestClassifier(max_depth=2, random_state=0)
+    clf = RandomForestClassifier(max_depth=3, random_state=0)
     clf.fit(X,Y)
 
     # sometimes seem to need to add the constant
@@ -124,10 +123,6 @@ def RandomForest(test_set, train_set, ex_vars, target):
 
 
 def up_for_trade(df):
-    # In the money based on the last base price
-    df=df[df['inTheMoney']!=1]
-    # In the money based on the 1.025 * baseLastPrice 
-    df=df[(~df['nextBDopen'].isnull()) & (df['strikePrice']> 1.025*df['baseLastPrice'])]
     # Stock price lower than 500 $
     df=df[df['baseLastPrice'] < 200]
     # Return result
@@ -178,6 +173,54 @@ def enrich_df(df):
     df['midpointPerc'] = df['midpoint'] / df['baseLastPrice']
     df['meanHigherStrike'] = df['higherStrikePriceCum'] / df['nrHigherOptions']
     return(df)
+
+def level_enriching(df):
+    df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
+    df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
+    df['inTheMoney'] = np.where((df['symbolType']=='Call') & (df['baseLastPrice'] >= df['strikePrice']),1,0)
+    df['inTheMoney'] = np.where((df['symbolType']=='Putt') & (df['baseLastPrice'] <= df['strikePrice']),1,df['inTheMoney'])
+    df['nrOptions'] = 1
+    df['strikePriceCum'] = df['strikePrice']
+
+    df.sort_values(['exportedAt','baseSymbol','symbolType','expirationDate','strikePrice'
+        ], inplace=True)
+
+    df_stock = df[['exportedAt','baseSymbol','baseLastPrice']].drop_duplicates()
+
+    df_symbol = df[['exportedAt','baseSymbol','symbolType','daysToExpiration','strikePrice','inTheMoney','volume','openInterest','volatility','lastPrice'
+            ]].groupby(['exportedAt','baseSymbol','symbolType','inTheMoney'
+            ]).agg({'baseSymbol':'count', 'strikePrice':'mean', 'volume':'sum', 'openInterest':'sum', 'daysToExpiration':'mean', 'lastPrice':'mean', 'volatility':'mean'
+            }).rename(columns={'baseSymbol':'nrOptions', 'strikePrice':'meanStrikePrice', 'volume':'sumVolume','openInterest':'sumOpenInterest','daysToExpiration':'meanDaysToExpiration','lastPrice':'meanLastPrice', 'volatility':'meanVolatility'
+            }).reset_index()
+    
+    itm = df['inTheMoney'].unique()
+    symbol = df['symbolType'].unique()
+
+    for s in symbol:
+        for i in itm:
+            if i == 1:
+                itm_str = 'Itm'
+            elif i == 0:
+                itm_str = 'Otm'
+            
+            base_colname = s + itm_str
+            temp_df = df_symbol[(df_symbol['symbolType'] == s) & (df_symbol['inTheMoney'] == i)]
+
+            temp_df['volumeOIratio'] = temp_df['sumVolume'] / temp_df['sumOpenInterest']
+            temp_df = temp_df.drop(['inTheMoney'], axis=1)
+            temp_df.rename(columns={'nrOccurences':'nr' + base_colname, 'meanStrikePrice':'meanStrike' + base_colname
+                , 'sumVolume':'volume' + base_colname, 'sumOpenInterest':'openInterest' + base_colname
+                , 'meanDaysToExpiration':'daysToExpiration' + base_colname, 'volumeOIratio':'volumeOIratio' + base_colname
+                , 'meanLastPrice':'lastprice' + base_colname, 'meanVolatility':'volatility' + base_colname
+                , 'nrOptions':'count' + base_colname}, inplace=True)
+            temp_df.drop(columns=['symbolType'], inplace=True)
+
+            df_stock = pd.merge(df_stock, temp_df, how='left', on=['exportedAt','baseSymbol'])
+
+    # set nr of occurences to 0 when NaN
+    #df[['nrCalls','nrPuts','volumeCall','volumePut']] = df[['nrCalls','nrPuts','volumeCall','volumePut']].fillna(0)
+    return(df_stock)
+
 #%%
 # Load and clean data
 # import market beat
@@ -228,18 +271,32 @@ df[cols] = df[cols].apply(lambda x: x.astype('float'))
 
 #%%
 # Adding some additional columns
-df = enrich_df(df)
+df = level_enriching(df)
 #%%
 # reducing size of dataset- only select interesting options
+# make fake expiration date to let function work
+virt_daysToExpiration = 14
+df['expirationDate'] = (pd.to_datetime(df['exportedAt']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
+df['daysToExpiration'] = virt_daysToExpiration
+
+
 df = get_mature_df(df)
-df = df[df['inTheMoney']==0]
+#df = df[df['inTheMoney']==0]
 # Adding the stockprices
 final_df = add_stock_price(df)
 
 # %%
 # Merge into big df
 df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate','exportedAt'])
+
+mb_df = mb_df.drop(['exportedAt'], axis=1)
 df_enr = pd.merge(df_enr, mb_df, how='left', left_on=['baseSymbol','exportedAt'], right_on=['ticker','dataDate'])
+
+# Add variables from marketbeat
+df_enr['marketBeatPresent'] = np.where(df_enr['callOptionVolume'].isnull(),0,1)
+df_enr['callIncrease1000p'] = np.where(df_enr['increaseRelative2Avg'] > 1000,1,0)
+df_enr['upcomingEarnings'] = np.where(df_enr['indicators'].str.contains('Upcoming Earnings'),1,0)
+
 
 # Add target variables
 # What price we think we can buy it for?
@@ -248,19 +305,16 @@ df_enr = pd.merge(df_enr, mb_df, how='left', left_on=['baseSymbol','exportedAt']
 buyPrice = 'baseLastPrice' 
 # Add flag if stock raised 50%
 df_enr['high_plus50p'] = np.where(df_enr[buyPrice] * 1.5 <= df_enr['maxPrice'],1,0)
+df_enr['high_plus30p'] = np.where(df_enr[buyPrice] * 1.3 <= df_enr['maxPrice'],1,0)
 # Add if stock reached 110% or 90% of start price
 df_enr['high_plus10p'] = np.where(df_enr[buyPrice] * 1.1 <= df_enr['maxPrice'],1,0)
 df_enr['low_min10p'] = np.where(df_enr[buyPrice] * 0.9 >= df_enr['minPrice'],1,0)
 # Too be safe, if reached both targets, put 110% target to zero
 df_enr['high_plus10p'] = np.where(df_enr['low_min10p'] == 1,0,df_enr['high_plus10p'])
 # Add flag if they reached strikeprice
-df_enr['reachedStrike'] = np.where(df_enr['maxPrice'] >= df_enr['strikePrice'],1,0)
+#df_enr['reachedStrike'] = np.where(df_enr['maxPrice'] >= df_enr['strikePrice'],1,0)
 # Add flag if reached 110% of strikeprice
-df_enr['reachedStrike110p'] = np.where(df_enr['maxPrice'] >= 1.1*df_enr['strikePrice'],1,0)
-
-# %%
-cherry_df = cherry_pick(df_enr, OutOfMoney = 1.1, minDTE = 5, maxDTE = 10, minVolOIrate = 1.9)
-cherry_df.describe()
+#df_enr['reachedStrike110p'] = np.where(df_enr['maxPrice'] >= 1.1*df_enr['strikePrice'],1,0)
 
 #%%%
 # Get profit 
@@ -269,17 +323,22 @@ df_enr['revenue'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df
 df_enr['profit'] = df_enr['revenue'] - df_enr[buyPrice]
 df_enr['profitPerc'] = df_enr['profit']/df_enr[buyPrice]
 
+# for high of 30 percent 
+df_enr['revenue30p'] = np.where(df_enr['high_plus30p'] == 1, 1.3*df_enr[buyPrice], df_enr['lastClose'])
+#f_enr['revenue30p'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenue30p'])
+df_enr['profit30p'] = df_enr['revenue30p'] - df_enr[buyPrice]
+df_enr['profitPerc30p'] = df_enr['profit30p']/df_enr[buyPrice]
 
-df_enr['revenueStrike'] = np.where(df_enr['reachedStrike'] == 1, df_enr['strikePrice'], df_enr['lastClose'])
-df_enr['revenueStrike'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenueStrike'])
-df_enr['profitStrike'] = df_enr['revenueStrike'] - df_enr[buyPrice]
-df_enr['profitStrikePerc'] = df_enr['profitStrike']/df_enr[buyPrice]
-df_enr['revenueStrike110p'] = np.where(df_enr['reachedStrike110p'] == 1, 1.1 * df_enr['strikePrice'], df_enr['lastClose'])
-df_enr['revenueStrike110p'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenueStrike110p'])
-df_enr['profitStrike110p'] = df_enr['revenueStrike110p'] - df_enr[buyPrice]
-df_enr['profitStrikePerc110p'] = df_enr['profitStrike110p']/df_enr[buyPrice]
+# for high of 50 percent 
+df_enr['revenue50p'] = np.where(df_enr['high_plus50p'] == 1, 1.5*df_enr[buyPrice], df_enr['lastClose'])
+df_enr['revenue50p'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenue50p'])
+df_enr['profit50p'] = df_enr['revenue50p'] - df_enr[buyPrice]
+df_enr['profitPerc50p'] = df_enr['profit50p']/df_enr[buyPrice]
+
+# weighted profit
 df_enr['units'] = 1000/df_enr[buyPrice]
-df_enr['weightedProfitStrike110p'] = df_enr['units'] * df_enr['profitStrike110p']
+df_enr['weightedProfit50p'] = df_enr['units'] * df_enr['profit50p']
+
 #%%
 # Select only mature cases (and exclude options with less then 5 days to expiration)
 df_mature_call = get_mature_df(df_enr)
@@ -293,34 +352,20 @@ df_mature_call.describe()
 # Predicting
 # Only include data points in regression we would act on in real life
 df_regr = up_for_trade(df_mature_call)
-
+df_regr = df_regr[df_regr['countCallOtm'].notna()]
 # variable to be predicted
-target = 'reachedStrike'
+target = 'high_plus30p'
 # input used to predict with
-ex_vars = [#'baseLastPrice',
-       #'strikePrice',
-       #'volOIrate',
-        'daysToExpiration',
-        'lastPrice',
-        #'volume',
-        'openInterest',
-       'volumeOpenInterestRatio',
-        'volatility',
-       'priceDiff',
-        'priceDiffPerc',
-        'nrCalls',
-        'meanStrikeCall',
-        'volumeCall',
-        'openInterestCall',
-        'nrPuts',
-        'volumeCumSum', 
-        #'openInterestCumSum',
-       'nrHigherOptions', 
-       'higherStrikePriceCum',
-        'meanStrikeCallPerc',
-        'meanHigherStrike',
-        'midpointPerc',
-       #'nextBDopen'
+ex_vars = ['baseLastPrice', 
+        #'countCallOtm',
+       #'meanStrikeCallOtm',
+       #'daysToExpirationCallOtm',
+       'lastpriceCallOtm',
+       'volatilityCallOtm',
+       #'volumeOIratioCallOtm',
+       #'marketBeatPresent',
+       #'callIncrease1000p',
+       #'upcomingEarnings'
        ]
 
 #train_set = df_regr.sample(frac=0.85, random_state=1)
@@ -333,19 +378,31 @@ logit_preds, logit_model = logitModel(test_set, train_set, ex_vars, target=targe
 
 # mean profitability of cases with prediction > 50%
 # Assuming we would invest a certain amount equally spread among the stocks
-predicted_df = logit_preds #.copy()
-threshold = 0.75
+predicted_df = logit_preds.copy()
+threshold = 0.5
 filtered_df = predicted_df[(predicted_df['prediction']>threshold) 
-    & (1.05 * predicted_df[buyPrice] < predicted_df['strikePrice'])
-    ][['baseSymbol','exportedAt','expirationDate','strikePrice',buyPrice,'profitStrike','profitStrike110p','lastClose','prediction']]
+    ][['baseSymbol','exportedAt','expirationDate',buyPrice,target,'profit50p','profit30p','profit','lastClose','marketBeatPresent','prediction']]
 filtered_df['units'] = 10000/filtered_df[buyPrice]
 if target == 'reachedStrik110p':
     profitVar = 'profitStrike110p'
 elif target == 'reachedStrike':
     profitVar = 'profitStrike'
+elif target == 'high_plus50p':
+    profitVar = 'profit50p'
+elif target == 'high_plus30p':
+    profitVar = 'profit30p'
+elif target == 'high_plus10p':
+    profitVar = 'profit'
 filtered_df['weightedProfit'] = filtered_df[profitVar] * filtered_df['units']
 filtered_mean = filtered_df.mean()
-print('Profit margin: {} \nActing on {} call options'.format(round(filtered_mean['weightedProfit'] / 10000,4),len(filtered_df)))
+print('Profit margin: {} \nActing on {} stocks'.format(round(filtered_mean['weightedProfit'] / 10000,4),len(filtered_df)))
+
+# confusion matrix 
+from sklearn.metrics import confusion_matrix
+cm1 = confusion_matrix(predicted_df[target],np.where(predicted_df['prediction']>threshold,1,0))
+print('Confusion Matrix : \n', cm1)
+sensitivity1 = cm1[1,1]/(cm1[1,1]+cm1[0,1])
+print('Sensitivity : ', sensitivity1 )
 
 # Showing the ROC and AUC
 from sklearn import metrics
@@ -373,17 +430,17 @@ filtered_set[filtered_set['prediction']>threshold].mean()
 filtered_set[filtered_set['prediction']>threshold].describe()
 
 # %%
-data = yf.download('CLDR', start='2020-06-23', end='2020-07-01')
+data = yf.download('LVGO', start='2020-07-09', end='2020-07-23')
 data
 # %%
 # IF happy save models
 # LOGIT
-logit_model.save('/Users/kasper.de-harder/gits/option_trading/modelLogit')
+logit_model.save('/Users/kasper.de-harder/gits/option_trading/modelLogitStock')
 
 #%%
 # RandomForest
 # save the model to disk
-filename = '/Users/kasper.de-harder/gits/option_trading/RandomForest.sav'
+filename = '/Users/kasper.de-harder/gits/option_trading/RandomForestStock.sav'
 pickle.dump(rf_model, open(filename, 'wb'))
 
 # %%
