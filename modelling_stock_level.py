@@ -272,6 +272,7 @@ df[cols] = df[cols].apply(lambda x: x.astype('float'))
 #%%
 # Adding some additional columns
 df = level_enriching(df)
+df = df.drop_duplicates(subset = ['exportedAt','baseSymbol'], keep = 'last')
 #%%
 # reducing size of dataset- only select interesting options
 # make fake expiration date to let function work
@@ -291,6 +292,10 @@ df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate','ex
 
 mb_df = mb_df.drop(['exportedAt'], axis=1)
 df_enr = pd.merge(df_enr, mb_df, how='left', left_on=['baseSymbol','exportedAt'], right_on=['ticker','dataDate'])
+
+# Add relative to base price variables
+df_enr['meanStrikeCallOtmPerc'] = df_enr['meanStrikeCallOtm'] / df_enr['baseLastPrice']
+df_enr['lastpriceCallOtmPerc'] = df_enr['lastpriceCallOtm'] / df_enr['baseLastPrice']
 
 # Add variables from marketbeat
 df_enr['marketBeatPresent'] = np.where(df_enr['callOptionVolume'].isnull(),0,1)
@@ -331,7 +336,7 @@ df_enr['profitPerc30p'] = df_enr['profit30p']/df_enr[buyPrice]
 
 # for high of 50 percent 
 df_enr['revenue50p'] = np.where(df_enr['high_plus50p'] == 1, 1.5*df_enr[buyPrice], df_enr['lastClose'])
-df_enr['revenue50p'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenue50p'])
+#df_enr['revenue50p'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenue50p'])
 df_enr['profit50p'] = df_enr['revenue50p'] - df_enr[buyPrice]
 df_enr['profitPerc50p'] = df_enr['profit50p']/df_enr[buyPrice]
 
@@ -357,11 +362,13 @@ df_regr = df_regr[df_regr['countCallOtm'].notna()]
 target = 'high_plus30p'
 # input used to predict with
 ex_vars = ['baseLastPrice', 
-        #'countCallOtm',
-       #'meanStrikeCallOtm',
-       #'daysToExpirationCallOtm',
+        'countCallOtm',
+       'meanStrikeCallOtm',
+       'daysToExpirationCallOtm',
        'lastpriceCallOtm',
        'volatilityCallOtm',
+       #'meanStrikeCallOtmPerc',
+       #'lastpriceCallOtmPerc',
        #'volumeOIratioCallOtm',
        #'marketBeatPresent',
        #'callIncrease1000p',
@@ -412,22 +419,6 @@ print("The Area under the ROC is {}".format(round(auc,3)))\
 import matplotlib.pyplot as plt
 fpr, tpr, thresholds = metrics.roc_curve(predicted_df[target], predicted_df['prediction'])
 plt.plot(fpr, tpr)
-# %%
-
-# %%
-
-#%%
-threshold = 0.7
-# to filter out already into the money options
-filtered_set = logit_preds[(logit_preds['inTheMoney']==0) 
-    & (logit_preds['priceDiffPerc'] > 1.05) 
-    #& (logit_preds['strikePrice'] > logit_preds[buyPrice])
-    #& (logit_preds['strikePrice'] < 1000)
- ]
-filtered_set[filtered_set['prediction']>threshold].mean()
-
-# %%
-filtered_set[filtered_set['prediction']>threshold].describe()
 
 # %%
 data = yf.download('LVGO', start='2020-07-09', end='2020-07-23')

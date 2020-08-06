@@ -5,6 +5,7 @@ import pandas as pd
 from statsmodels.discrete.discrete_model import LogitResults
 import os
 from datetime import datetime
+import numpy as np
 
 # %%
 # Load newest data
@@ -14,6 +15,7 @@ df = pd.read_csv(current_path+'/barchart_unusual_activity_'+today+'.csv')
 
 
 # Adding some additional columns
+df['predDate'] = today
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
@@ -50,7 +52,7 @@ buy_advise = df[(df['prediction'] > threshold) &
     (df['priceDiffPerc'] > 1.05) & 
     (df['daysToExpiration'] > 3) & 
     (df['strikePrice'] < 200)]
-buy_advise = buy_advise[['baseSymbol', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
+buy_advise = buy_advise[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
 buy_advise = buy_advise.sort_values('priceDiffPerc').reset_index(drop=True)
 
 # %%

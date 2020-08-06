@@ -1,1 +1,8 @@
 scp pi@192.168.1.181:<file_from> <file_to>
+
+
+scp pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_2020-07-16.csv barchart_unusual_activity_2020-07-16.csv
+'/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_2020-07-17.csv'
+
+scp pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_2020-08-06.csv barchart_unusual_activity_2020-08-07.csv
+'/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_2020-07-17.csv'
