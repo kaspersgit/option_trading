@@ -67,8 +67,8 @@ df_stock = level_enriching(df)
 # due to scraping taking time baseLastPrice changes a bit for the same stock
 # causing multiple rows for the same stock
 df_stock = df_stock.drop_duplicates(subset=['baseSymbol'], keep='last')
-df_stock['predDate'] = today
-df_stock['const'] = 1.0
+df_stock.loc[:,'predDate'] = today
+df_stock.loc[:,'const'] = 1.0
 
 #%%
 # Load model and predict
@@ -78,8 +78,8 @@ model_version = 'stockLogit_20200808'
 cols = model.params.index
 
 pred = model.predict(df_stock[cols])
-df_stock['prediction'] = pred
-df_stock['modelVersion'] = model_version
+df_stock.loc[:,'prediction'] = pred
+df_stock.loc[:,'modelVersion'] = model_version
 # %%
 # Subsetting the predictions
 threshold = 0.5
