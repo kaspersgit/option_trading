@@ -46,12 +46,17 @@ df['prediction'] = pred
 # %%
 # Subsetting the predictions
 threshold = 0.5
+maxBasePrice = 200 
+minDaysToExp = 3
+maxDaysToExp = 20
+minStrikeIncrease = 1.05
+
 buy_advise = df[(df['prediction'] > threshold) & 
     (df['symbolType']=='Call') & 
-    (df['daysToExpiration'] < 20) & 
-    (df['priceDiffPerc'] > 1.05) & 
-    (df['daysToExpiration'] > 3) & 
-    (df['strikePrice'] < 200)]
+    (df['daysToExpiration'] < maxDaysToExp) & 
+    (df['priceDiffPerc'] > minStrikeIncrease) & 
+    (df['daysToExpiration'] > minDaysToExp) & 
+    (df['baseLastPrice'] < maxBasePrice)]
 buy_advise = buy_advise[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
 buy_advise = buy_advise.sort_values('priceDiffPerc').reset_index(drop=True)
 
@@ -72,9 +77,18 @@ html = """\
   <head></head>
   <body>
     {0}
+    <hr>
+    <h3> Configurations </h3>
+    <p>
+    Minimal threshold: {1} <br>
+    Maximum stock price: {2} <br>
+    Days to expiration between {3} and {4} <br>
+    Strike price at least {5} higher than stock price <br>
+    </p
   </body>
 </html>
-""".format(buy_advise.to_html())
+""".format(buy_advise.to_html(),threshold,maxBasePrice,
+  minDaysToExp,maxDaysToExp,minStrikeIncrease)
 
 part1 = MIMEText(html, 'html')
 msg.attach(part1)
