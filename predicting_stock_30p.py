@@ -85,7 +85,7 @@ df_stock['prediction'] = pred
 df_stock['modelVersion'] = model_version
 # %%
 # Subsetting the predictions
-threshold = 0.5
+threshold = 0.6
 maxBasePrice = 200 
 expectedIncrease = 1.3
 daysAhead = 14

@@ -7,19 +7,6 @@ import statsmodels.api as sm
 from sklearn.ensemble import RandomForestClassifier
 import pickle
 # %%
-def cherry_pick(df, OutOfMoney = 1.1, minDTE =3, maxDTE = 10, minVolOIrate = 5, type = 'calls'):
-    calls = (df['symbolType'] == 'Call') & (OutOfMoney * df['baseLastPrice'] < df['strikePrice']) & (df['daysToExpiration'] <= maxDTE) & (df['daysToExpiration'] >= minDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
-    puts = ( OutOfMoney * df['baseLastPrice'] > df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
-    selected_df = df[calls]
-    selected_df.reset_index(drop=True, inplace=True)
-    return(selected_df)
-
-def get_mature_df(df):
-    # Select only mature cases (and exclude options with less then 5 days to expiration)
-    df_select = df[pd.to_datetime(df['expirationDate']) < datetime.today()]
-    df_select = df_select[df_select['daysToExpiration'] > 4]
-    return(df_select)
-
 def add_stock_price(df):
     ## Adding actual stockprices
     # create empty list
@@ -237,77 +224,27 @@ mb20200715 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/marketbeat
 mb20200716 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/marketbeat_call_activity_2020-07-16.csv')
 mb20200717 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/marketbeat_call_activity_2020-07-17.csv')
 
-
-# import barchart
-df20200624 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-24.csv')
-df20200625 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-25.csv')
-df20200629 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-06-29.csv')
-df20200701 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-01.csv')
-df20200703 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-03.csv')
-df20200706 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-06.csv')
-df20200707 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-07.csv')
-df20200709 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-09.csv')
-df20200710 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-10.csv')
-df20200714 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-14.csv')
-df20200715 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-15.csv')
-df20200716 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-16.csv')
-df20200717 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-17.csv')
-
-df = pd.concat([df20200624,df20200625,df20200629,df20200701,df20200703,df20200706,df20200707,df20200709,df20200710],ignore_index=True)
-mb_df = pd.concat([mb20200624,mb20200625,mb20200629,mb20200701,mb20200706,mb20200707,mb20200709,mb20200710],ignore_index=True)
-
-cols = ['volume','openInterest']
-df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-df[cols] = df[cols].apply(lambda x: x.astype('float'))
-
-# Newer so above is already applied in scraping script
-df = pd.concat([df,df20200709,df20200710,df20200714,df20200715,df20200716,df20200717],ignore_index=True)
-df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
-cols = ['volatility']
-df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-df[cols] = df[cols].apply(lambda x: x.astype('float'))
-
-#%%
-# Adding some additional columns
-df = level_enriching(df)
-df = df.drop_duplicates(subset = ['exportedAt','baseSymbol'], keep = 'last')
+mb_df = pd.concat([mb20200624,mb20200625,mb20200629,mb20200701,mb20200706,mb20200707
+    ,mb20200709,mb20200710,mb20200714,mb20200715,mb20200716,mb20200717],ignore_index=True)
 #%%
 # reducing size of dataset- only select interesting options
 # make fake expiration date to let function work
 virt_daysToExpiration = 14
-df['expirationDate'] = (pd.to_datetime(df['exportedAt']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
-df['daysToExpiration'] = virt_daysToExpiration
+mb_df['expirationDate'] = (pd.to_datetime(mb_df['dataDate']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
+mb_df['exportedAt'] = mb_df['dataDate']
+mb_df['baseSymbol'] = mb_df['ticker']
+mb_df['daysToExpiration'] = virt_daysToExpiration
 
-
-df = get_mature_df(df)
 #df = df[df['inTheMoney']==0]
 # Adding the stockprices
-final_df = add_stock_price(df)
-
-# %%
-# Merge into big df
-df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate','exportedAt'])
-
-mb_df = mb_df.drop(['exportedAt'], axis=1)
-df_enr = pd.merge(df_enr, mb_df, how='left', left_on=['baseSymbol','exportedAt'], right_on=['ticker','dataDate'])
-
-# Add relative to base price variables
-df_enr['meanStrikeCallOtmPerc'] = df_enr['meanStrikeCallOtm'] / df_enr['baseLastPrice']
-df_enr['lastpriceCallOtmPerc'] = df_enr['lastpriceCallOtm'] / df_enr['baseLastPrice']
-
-# Add variables from marketbeat
-df_enr['marketBeatPresent'] = np.where(df_enr['callOptionVolume'].isnull(),0,1)
-df_enr['callIncrease1000p'] = np.where(df_enr['increaseRelative2Avg'] > 1000,1,0)
-df_enr['upcomingEarnings'] = np.where(df_enr['indicators'].str.contains('Upcoming Earnings'),1,0)
-
-
+final_df = add_stock_price(mb_df)
+df_enr = pd.merge(mb_df,final_df, how='left', on=['baseSymbol','expirationDate','exportedAt'])
+#%%
 # Add target variables
 # What price we think we can buy it for?
 # baseLastPrice ?
 # nextBDopen ?
-buyPrice = 'baseLastPrice' 
+buyPrice = 'nextBDopen' 
 # Add flag if stock raised 50%
 df_enr['high_plus50p'] = np.where(df_enr[buyPrice] * 1.5 <= df_enr['maxPrice'],1,0)
 df_enr['high_plus30p'] = np.where(df_enr[buyPrice] * 1.3 <= df_enr['maxPrice'],1,0)
@@ -322,6 +259,13 @@ df_enr['high_plus10p'] = np.where(df_enr['low_min10p'] == 1,0,df_enr['high_plus1
 #df_enr['reachedStrike110p'] = np.where(df_enr['maxPrice'] >= 1.1*df_enr['strikePrice'],1,0)
 
 #%%%
+# add more columns
+#variables
+df_enr['indicatorPresent'] = np.where(df_enr['indicators'].isnull(),0,1)
+df_enr['upcomingEarning'] = np.where(df_enr['indicators'].str.contains('Upcoming Earnings'),1,0)
+df_enr['earningAnnounced'] = np.where(df_enr['indicators'].str.contains('Earnings Announcement'),1,0)
+df_enr['callStockVolume'] = df_enr['avgStockVolume'] / df_enr['avgOptionVolume']
+
 # Get profit 
 df_enr['revenue'] = np.where(df_enr['high_plus10p'] == 1, 1.1*df_enr[buyPrice], df_enr['lastClose'])
 df_enr['revenue'] = np.where(df_enr['low_min10p'] == 1, 0.9*df_enr[buyPrice], df_enr['revenue'])
@@ -342,37 +286,24 @@ df_enr['profitPerc50p'] = df_enr['profit50p']/df_enr[buyPrice]
 
 # weighted profit
 df_enr['units'] = 1000/df_enr[buyPrice]
+df_enr['weightedProfit30p'] = df_enr['units'] * df_enr['profit30p']
 df_enr['weightedProfit50p'] = df_enr['units'] * df_enr['profit50p']
-
-#%%
-# Select only mature cases (and exclude options with less then 5 days to expiration)
-df_mature_call = get_mature_df(df_enr)
-df_mature_call.describe()
-
-# TODO aggregate options of the same company 
-# now extra weight is on characteristics of e.g. TESLA 
-# as that stock rose and it had a lot of options showing activity
 
 #%%
 # Predicting
 # Only include data points in regression we would act on in real life
-df_regr = up_for_trade(df_mature_call)
-df_regr = df_regr[df_regr['countCallOtm'].notna()]
+df_regr = df_enr
 # variable to be predicted
 target = 'high_plus30p'
 # input used to predict with
-ex_vars = ['baseLastPrice', 
-        'countCallOtm',
-       'meanStrikeCallOtm',
-       'daysToExpirationCallOtm',
-       'lastpriceCallOtm',
-       'volatilityCallOtm',
-       #'meanStrikeCallOtmPerc',
-       #'lastpriceCallOtmPerc',
-       #'volumeOIratioCallOtm',
-       #'marketBeatPresent',
-       #'callIncrease1000p',
-       #'upcomingEarnings'
+ex_vars = ['nextBDopen', 
+        #'callOptionVolume',
+       #'avgOptionVolume',
+       'increaseRelative2Avg',
+       'indicatorPresent',
+       #'upcomingEarning',
+       'earningAnnounced',
+       #'avgStockVolume',
        ]
 
 #train_set = df_regr.sample(frac=0.85, random_state=1)
@@ -386,9 +317,9 @@ logit_preds, logit_model = logitModel(test_set, train_set, ex_vars, target=targe
 # mean profitability of cases with prediction > 50%
 # Assuming we would invest a certain amount equally spread among the stocks
 predicted_df = logit_preds.copy()
-threshold = 0.6
+threshold = 0.15
 filtered_df = predicted_df[(predicted_df['prediction']>threshold) 
-    ][['baseSymbol','exportedAt','expirationDate',buyPrice,target,'profit50p','profit30p','profit','lastClose','marketBeatPresent','prediction']]
+    ][['baseSymbol','exportedAt','expirationDate',buyPrice,target,'profit50p','profit30p','profit','lastClose','prediction']]
 filtered_df['units'] = 10000/filtered_df[buyPrice]
 if target == 'reachedStrik110p':
     profitVar = 'profitStrike110p'
@@ -421,7 +352,7 @@ fpr, tpr, thresholds = metrics.roc_curve(predicted_df[target], predicted_df['pre
 plt.plot(fpr, tpr)
 
 # %%
-data = yf.download('LVGO', start='2020-07-09', end='2020-07-23')
+data = yf.download('QD', start='2020-07-07', end='2020-07-21')
 data
 # %%
 # IF happy save models
