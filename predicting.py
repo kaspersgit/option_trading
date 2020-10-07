@@ -11,7 +11,7 @@ import numpy as np
 # Load newest data
 today = datetime.today().strftime("%Y-%m-%d")
 current_path = os.getcwd()
-df = pd.read_csv(current_path+'/barchart_unusual_activity_'+today+'.csv')
+df = pd.read_csv(current_path+'data/barchart/barchart_unusual_activity_'+today+'.csv')
 
 
 # Adding some additional columns
@@ -46,16 +46,16 @@ df['prediction'] = pred
 # %%
 # Subsetting the predictions
 threshold = 0.5
-maxBasePrice = 200 
+maxBasePrice = 200
 minDaysToExp = 3
 maxDaysToExp = 20
 minStrikeIncrease = 1.05
 
-buy_advise = df[(df['prediction'] > threshold) & 
-    (df['symbolType']=='Call') & 
-    (df['daysToExpiration'] < maxDaysToExp) & 
-    (df['priceDiffPerc'] > minStrikeIncrease) & 
-    (df['daysToExpiration'] > minDaysToExp) & 
+buy_advise = df[(df['prediction'] > threshold) &
+    (df['symbolType']=='Call') &
+    (df['daysToExpiration'] < maxDaysToExp) &
+    (df['priceDiffPerc'] > minStrikeIncrease) &
+    (df['daysToExpiration'] > minDaysToExp) &
     (df['baseLastPrice'] < maxBasePrice)]
 buy_advise = buy_advise[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
 buy_advise = buy_advise.sort_values('priceDiffPerc').reset_index(drop=True)

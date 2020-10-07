@@ -10,7 +10,7 @@ import numpy as np
 # suppress copy warning
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# load in functions 
+# load in functions
 def level_enriching(df):
     df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
     df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
@@ -29,7 +29,7 @@ def level_enriching(df):
             ]).agg({'baseSymbol':'count', 'strikePrice':'mean', 'volume':'sum', 'openInterest':'sum', 'daysToExpiration':'mean', 'lastPrice':'mean', 'volatility':'mean'
             }).rename(columns={'baseSymbol':'nrOptions', 'strikePrice':'meanStrikePrice', 'volume':'sumVolume','openInterest':'sumOpenInterest','daysToExpiration':'meanDaysToExpiration','lastPrice':'meanLastPrice', 'volatility':'meanVolatility'
             }).reset_index()
-    
+
     itm = df['inTheMoney'].unique()
     symbol = df['symbolType'].unique()
 
@@ -39,7 +39,7 @@ def level_enriching(df):
                 itm_str = 'Itm'
             elif i == 0:
                 itm_str = 'Otm'
-            
+
             base_colname = s + itm_str
             temp_df = df_symbol[(df_symbol['symbolType'] == s) & (df_symbol['inTheMoney'] == i)]
 
@@ -62,7 +62,7 @@ def level_enriching(df):
 # Load newest data
 today = datetime.today().strftime("%Y-%m-%d")
 current_path = os.getcwd()
-df = pd.read_csv(current_path+'/barchart_unusual_activity_'+today+'.csv')
+df = pd.read_csv(current_path+'data/barchart/barchart_unusual_activity_'+today+'.csv')
 
 # Add extra columns
 df_stock = level_enriching(df)
@@ -86,11 +86,11 @@ df_stock['modelVersion'] = model_version
 # %%
 # Subsetting the predictions
 threshold = 0.6
-maxBasePrice = 200 
+maxBasePrice = 200
 expectedIncrease = 1.3
 daysAhead = 14
 
-buy_advise = df_stock[(df_stock['prediction'] > threshold) & 
+buy_advise = df_stock[(df_stock['prediction'] > threshold) &
     (df_stock['baseLastPrice'] < maxBasePrice)]
 buy_advise['expectedPrice'] = expectedIncrease * buy_advise['baseLastPrice']
 buy_advise['expectedDate'] = (pd.to_datetime(buy_advise['exportedAt']) + timedelta(days=daysAhead)).dt.strftime('%Y-%m-%d')
