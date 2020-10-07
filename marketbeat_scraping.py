@@ -91,7 +91,7 @@ df['avgStockVolume'] = df['avgStockVolume'].apply(text2float)
 
 dataDate = df['dataDate'][0].strftime('%Y-%m-%d')
 # Saving file as CSV
-df.to_csv('/home/pi/Documents/python_scripts/option_trading/marketbeat_call_activity_' + dataDate + '.csv',
+df.to_csv('/home/pi/Documents/python_scripts/option_trading/data/marketbeat/marketbeat_call_activity_' + dataDate + '.csv',
                 index=False)
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

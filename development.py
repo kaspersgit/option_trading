@@ -33,7 +33,7 @@ def get_loaded_page(url, wait = 20):
     elif platform.system() == 'Windows':
         browser = webdriver.Firefox(
             executable_path='C:/Users/kaspe/Downloads/geckodriver-v0.26.0-win64/geckodriver.exe')
-        
+
     browser.get(url)
     delay = wait # seconds
     try:
@@ -152,7 +152,7 @@ df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 # Saving file as CSV
-df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/barchart_unusual_activity_'+today+'.csv', index=False)
+df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+today+'.csv', index=False)
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))

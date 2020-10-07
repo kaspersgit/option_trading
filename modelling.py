@@ -3,135 +3,13 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime
 import numpy as np
-import statsmodels.api as sm
-from sklearn.ensemble import RandomForestClassifier
 import pickle
+
+from option_trading_nonprod.process.merge_and_clean import *
+from option_trading_nonprod.process.stock_price_enriching import *
+from option_trading_nonprod.models import *
 # %%
-def cherry_pick(df, OutOfMoney = 1.1, minDTE =3, maxDTE = 10, minVolOIrate = 5, type = 'calls'):
-    calls = (df['symbolType'] == 'Call') & (OutOfMoney * df['baseLastPrice'] < df['strikePrice']) & (df['daysToExpiration'] <= maxDTE) & (df['daysToExpiration'] >= minDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
-    puts = ( OutOfMoney * df['baseLastPrice'] > df['strikePrice']) & (df['daysToExpiration'] < maxDTE) & (df['volumeOpenInterestRatio'] > minVolOIrate)
-    selected_df = df[calls]
-    selected_df.reset_index(drop=True, inplace=True)
-    return(selected_df)
 
-def get_mature_df(df, symbolType=['Call']):
-    # Select only mature cases (and exclude options with less then 5 days to expiration)
-    df_select = df[pd.to_datetime(df['expirationDate']) < datetime.today()]
-    df_select = df_select[df_select['daysToExpiration'] > 4]
-    df_select = df_select[df_select['symbolType'].isin(symbolType)]
-    return(df_select)
-
-def add_stock_price(df):
-    ## Adding actual stockprices
-    # create empty list
-    final_df = []
-    # Loop through all different scraping date
-    start_dates = df['exportedAt'].unique()
-    for start_date in start_dates:
-        data_df = df[df['exportedAt']==start_date]
-        # Get the different dates
-        start_date = pd.to_datetime(start_date)
-        start_date_p1 = (start_date + pd.DateOffset(1)).strftime('%Y-%m-%d')
-        nextBD = (1 * pd.offsets.BDay() + start_date).strftime('%Y-%m-%d')
-        start_date = start_date.strftime('%Y-%m-%d')
-        print('Working with data scraped on {}'.format(start_date))
-
-        # Get all different expiration dates
-        expiration_dates = data_df['expirationDate'].unique()
-
-        for end in expiration_dates:
-            if end <= start_date_p1:
-                continue
-            print('Working with enddate {}'.format(end))
-            tickers_list = data_df[data_df['expirationDate']==end]['baseSymbol'].unique()
-            tickers = ','.join(tickers_list)
-            data = yf.download(tickers, start=start_date, end=end)
-            
-            # next business day opening
-            # first check if avaialable 
-            if nextBD not in data.index:
-                continue
-            openbd = data.loc[nextBD]['Open']
-
-            # Get max high and min low
-            highs = data.loc[start_date_p1::]['High'].max()
-            lows = data.loc[start_date_p1::]['Low'].min()
-            last_close = data['Close'].tail(1).mean()
-        
-            if len(tickers_list)==1:
-                highs = pd.DataFrame({'baseSymbol': [tickers], 'maxPrice': [highs]})
-                lows = pd.DataFrame({'baseSymbol': [tickers], 'minPrice': [lows]})
-                openbd = pd.DataFrame({'baseSymbol': [tickers], 'nextBDopen': [openbd]})
-                last_close = pd.DataFrame({'baseSymbol': [tickers], 'lastClose': [last_close]})
-            else:
-                highs = highs.reset_index()
-                highs.columns=['baseSymbol','maxPrice']
-                lows = lows.reset_index()
-                lows.columns=['baseSymbol','minPrice']
-                openbd = openbd.reset_index()
-                openbd.columns=['baseSymbol','nextBDopen']
-                last_close = last_close.reset_index()
-                last_close.columns=['baseSymbol','lastClose']
-
-            #temp_df = pd.merge(temp_df, highs, how='left', on='baseSymbol')
-            temp_df = pd.merge(highs, lows, how='left', on=['baseSymbol'])
-            temp_df = pd.merge(temp_df, openbd, how='left', on=['baseSymbol'])
-            temp_df = pd.merge(temp_df, last_close, how='left', on=['baseSymbol'])
-            temp_df['expirationDate'] = end
-            temp_df['exportedAt'] = start_date
-            if len(final_df) == 0:
-                final_df = temp_df
-            else:
-                final_df = final_df.append(temp_df)
-    final_df.reset_index(drop=True, inplace=True)
-    return(final_df)
-
-# Logistic regressions model
-def logitModel(test_set, train_set, ex_vars, target):
-    X = train_set[ex_vars]
-    Y = train_set[target]
-    X = sm.add_constant(X)
-
-
-    # Fit and summarize OLS model
-    mod = sm.Logit(Y, X)
-
-    res = mod.fit(maxiter=100)
-    print(res.summary())
-
-    # sometimes seem to need to add the constant
-    Xtest = test_set[ex_vars]
-    Xtest = sm.add_constant(Xtest, has_constant='add')
-    pred = res.predict(Xtest)
-    test_set['prediction'] = pred
-    return(test_set, res)
-
-# Logistic regressions model
-def RandomForest(test_set, train_set, ex_vars, target):
-    X = train_set[ex_vars]
-    Y = train_set[target]
-
-    # Fit and summarize OLS model
-    clf = RandomForestClassifier(max_depth=2, random_state=0)
-    clf.fit(X,Y)
-
-    # sometimes seem to need to add the constant
-    Xtest = test_set[ex_vars]
-    pred = clf.predict_proba(Xtest)
-    test_set['prediction'] = pred[:,1]
-    return(test_set, clf)
-
-
-
-def up_for_trade(df):
-    # In the money based on the last base price
-    df=df[df['inTheMoney']!=1]
-    # In the money based on the 1.025 * baseLastPrice 
-    df=df[(~df['nextBDopen'].isnull()) & (df['strikePrice']> 1.025*df['baseLastPrice'])]
-    # Stock price lower than 500 $
-    df=df[df['baseLastPrice'] < 200]
-    # Return result
-    return(df)
 
 def enrich_df(df):
     df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
@@ -178,6 +56,8 @@ def enrich_df(df):
     df['midpointPerc'] = df['midpoint'] / df['baseLastPrice']
     df['meanHigherStrike'] = df['higherStrikePriceCum'] / df['nrHigherOptions']
     return(df)
+# %%
+
 #%%
 # Load and clean data
 # import market beat
@@ -209,22 +89,21 @@ df20200714 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_u
 df20200715 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-15.csv')
 df20200716 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-16.csv')
 df20200717 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-17.csv')
+df20200722 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-22.csv')
+df20200723 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-23.csv')
+df20200728 = pd.read_csv('/Users/kasper.de-harder/gits/option_trading/barchart_unusual_activity_2020-07-28.csv')
 
 df = pd.concat([df20200624,df20200625,df20200629,df20200701,df20200703,df20200706,df20200707],ignore_index=True)
 mb_df = pd.concat([mb20200624,mb20200625,mb20200629,mb20200701,mb20200706,mb20200707],ignore_index=True)
 
 cols = ['volume','openInterest']
-df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-df[cols] = df[cols].apply(lambda x: x.astype('float'))
+df = commas2points2float(df, cols)
 
 # Newer so above is already applied in scraping script
 df = pd.concat([df,df20200709,df20200710,df20200714,df20200715,df20200716,df20200717],ignore_index=True)
 df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
 cols = ['volatility']
-df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-df[cols] = df[cols].apply(lambda x: x.astype('float'))
+df = commas2points2float(df, cols)
 
 #%%
 # Adding some additional columns
@@ -234,12 +113,15 @@ df = enrich_df(df)
 df = get_mature_df(df)
 df = df[df['inTheMoney']==0]
 # Adding the stockprices
-final_df = add_stock_price(df)
+df_price_enr = add_stock_price(df)
+df_pastprice_enr = last_10d_avg(df)
 
 # %%
 # Merge into big df
-df_enr = pd.merge(df,final_df, how='left', on=['baseSymbol','expirationDate','exportedAt'])
-df_enr = pd.merge(df_enr, mb_df, how='left', left_on=['baseSymbol','exportedAt'], right_on=['ticker','dataDate'])
+df_enr = pd.merge(df,df_price_enr, how='left', on=['baseSymbol','expirationDate','exportedAt'])
+df_enr = pd.merge(df_enr, df_pastprice_enr[['baseSymbol','exportedAt','meanLast10D']], how='left', on=['baseSymbol','exportedAt'])
+
+#df_enr = pd.merge(df_enr, df_pastprice_enr, how='left', left_on=['baseSymbol','exportedAt'], right_on=['ticker','dataDate'])
 
 # Add target variables
 # What price we think we can buy it for?
@@ -257,10 +139,6 @@ df_enr['high_plus10p'] = np.where(df_enr['low_min10p'] == 1,0,df_enr['high_plus1
 df_enr['reachedStrike'] = np.where(df_enr['maxPrice'] >= df_enr['strikePrice'],1,0)
 # Add flag if reached 110% of strikeprice
 df_enr['reachedStrike110p'] = np.where(df_enr['maxPrice'] >= 1.1*df_enr['strikePrice'],1,0)
-
-# %%
-cherry_df = cherry_pick(df_enr, OutOfMoney = 1.1, minDTE = 5, maxDTE = 10, minVolOIrate = 1.9)
-cherry_df.describe()
 
 #%%%
 # Get profit 
@@ -293,6 +171,7 @@ df_mature_call.describe()
 # Predicting
 # Only include data points in regression we would act on in real life
 df_regr = up_for_trade(df_mature_call)
+df_regr = df_regr[df_regr['daysToExpiration'] < 16]
 
 # variable to be predicted
 target = 'reachedStrike'
@@ -310,11 +189,11 @@ ex_vars = [#'baseLastPrice',
         'priceDiffPerc',
         'nrCalls',
         'meanStrikeCall',
-        'volumeCall',
+        #'volumeCall',
         'openInterestCall',
         'nrPuts',
         'volumeCumSum', 
-        #'openInterestCumSum',
+        'openInterestCumSum',
        'nrHigherOptions', 
        'higherStrikePriceCum',
         'meanStrikeCallPerc',
@@ -324,7 +203,7 @@ ex_vars = [#'baseLastPrice',
        ]
 
 #train_set = df_regr.sample(frac=0.85, random_state=1)
-train_set = df_regr[df_regr['exportedAt']<'2020-07-10']
+train_set = df_regr[df_regr['exportedAt']<'2020-07-14']
 test_set = df_regr.drop(train_set.index).reset_index(drop=True)
 
 # Training logistic regression
@@ -334,10 +213,10 @@ logit_preds, logit_model = logitModel(test_set, train_set, ex_vars, target=targe
 # mean profitability of cases with prediction > 50%
 # Assuming we would invest a certain amount equally spread among the stocks
 predicted_df = logit_preds #.copy()
-threshold = 0.75
+threshold = 0.5
 filtered_df = predicted_df[(predicted_df['prediction']>threshold) 
     & (1.05 * predicted_df[buyPrice] < predicted_df['strikePrice'])
-    ][['baseSymbol','exportedAt','expirationDate','strikePrice',buyPrice,'profitStrike','profitStrike110p','lastClose','prediction']]
+    ][['baseSymbol','exportedAt','expirationDate','strikePrice',buyPrice,'maxPrice','profitStrike','profitStrike110p','lastClose','prediction']]
 filtered_df['units'] = 10000/filtered_df[buyPrice]
 if target == 'reachedStrik110p':
     profitVar = 'profitStrike110p'
@@ -355,9 +234,6 @@ print("The Area under the ROC is {}".format(round(auc,3)))\
 import matplotlib.pyplot as plt
 fpr, tpr, thresholds = metrics.roc_curve(predicted_df[target], predicted_df['prediction'])
 plt.plot(fpr, tpr)
-# %%
-
-# %%
 
 #%%
 threshold = 0.7
