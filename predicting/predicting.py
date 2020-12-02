@@ -36,7 +36,7 @@ df['const'] = 1.0
 
 #%%
 # Load model and predict
-model = LogitResults.load(current_path + '/modelLogit')
+model = LogitResults.load(current_path + '/predicting/modelLogit')
 # Select columns which are model needs as input but leave out the constant
 cols = model.params.index
 
