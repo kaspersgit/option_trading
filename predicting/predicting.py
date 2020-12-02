@@ -11,7 +11,7 @@ import numpy as np
 # Load newest data
 today = datetime.today().strftime("%Y-%m-%d")
 current_path = os.getcwd()
-df = pd.read_csv(current_path+'data/barchart/barchart_unusual_activity_'+today+'.csv')
+df = pd.read_csv(current_path+'/data/barchart/barchart_unusual_activity_'+today+'.csv')
 
 
 # Adding some additional columns

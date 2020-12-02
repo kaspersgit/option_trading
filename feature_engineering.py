@@ -2,6 +2,7 @@
 
 # import packages
 from datetime import datetime, timedelta
+import pandas as pd
 
 
 # select target variable
