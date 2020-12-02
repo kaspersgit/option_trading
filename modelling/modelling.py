@@ -39,7 +39,7 @@ clf = RandomForestClassifier(max_depth=2, random_state=0)
 clf.fit(X_train,y_train)
 
 # Catboost
-params = {}
+params = {'iterations':300}
 cb_model = fit_cb(X_train, y_train, X_val, y_val, params, save_model = False, cb_path='', name='')
 
 # Choose model
@@ -63,3 +63,7 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
 ######################
 # Test out predictions
+df_test = df_all.loc[pred_df.index,:]
+df_test['prob'] =  pred_df['prob']
+df_test['maxProfit'] = df_test['maxPrice'] - df_test['strikePrice']
+df_test[df_test['prob'] >= 0.5].describe()
