@@ -4,6 +4,8 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
+from option_trading_nonprod.models.tree_based import *
+
 #######################
 # Load and prepare data
 df_all = pd.read_csv('data/barchart_yf_enr_1.csv')
@@ -63,7 +65,9 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
 ######################
 # Test out predictions
+# profitability
 df_test = df_all.loc[pred_df.index,:]
 df_test['prob'] =  pred_df['prob']
-df_test['maxProfit'] = df_test['maxPrice'] - df_test['strikePrice']
-df_test[df_test['prob'] >= 0.5].describe()
+df_test['maxProfit'] = df_test['maxPrice'] - df_test['baseLastPrice']
+df_test['aimedProfit'] = np.where(df_test['maxPrice'] >= df_test['strikePrice'],df_test['strikePrice'], df_test['finalPrice']) - df_test['baseLastPrice']
+df_test[df_test['prob'] >= 0.9].describe()

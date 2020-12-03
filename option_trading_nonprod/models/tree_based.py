@@ -37,7 +37,8 @@ def fit_cb(X_fit, y_fit, X_val, y_val, params, save_model, cb_path, name):
 	model.set_params(**params)
 	model.fit(X_fit, y_fit,
 			  eval_set=[(X_val, y_val)],
-			  verbose=0, early_stopping_rounds=1000)
+			  verbose=0,
+              early_stopping_rounds=1000)
 	model.set_feature_names(X_fit.columns)
 
 	if save_model:
