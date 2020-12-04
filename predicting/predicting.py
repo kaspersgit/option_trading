@@ -26,22 +26,31 @@ df_symbol = df[['exportedAt','baseSymbol','symbolType','expirationDate','strikeP
         }).reset_index()
 df = pd.merge(df,df_symbol, how='left', on=['exportedAt','baseSymbol','symbolType','expirationDate','inTheMoney'])
 
-# cleaning columns
-#cols = ['volatility']
-#df[cols] = df[cols].apply(lambda x: x.str.replace(',',''))
-#df[cols] = df[cols].apply(lambda x: x.str.replace('%',''))
-#df[cols] = df[cols].apply(lambda x: x.astype('float'))
-
 df['const'] = 1.0
 
 #%%
 # Load model and predict
-model = LogitResults.load(current_path + '/predicting/modelLogit')
-# Select columns which are model needs as input but leave out the constant
-cols = model.params.index
+if model_choice == 'LogisticRegression':
+    # Logistic Regression
+    file_path = current_path + '/predicting/modelLogit'
+    model = LogitResults.load(file_path)
+    model_name = file_path.split('/')[-1]
+    # Select columns which are model needs as input but leave out the constant
+    features = model.params.index
+    prob = model.predict(df[features])
+elif model_choice == 'CatBoost':
+    # Load CatBoost model
+    import catboost as cb
+    model = cb.CatBoostClassifier()
+    file_path = current_path + '/trained_models/cb_model_v1.cbm'
+    model.load_model(file_path, format='cbm')
+    model_name = file_path.split('/')[-1]
+    features = model.feature_names_
+    prob = model.predict_proba(df[features])[:,1]
 
-pred = model.predict(df[cols])
-df['prediction'] = pred
+
+df['prediction'] = prob
+df['model'] = model_name
 
 # %%
 # Subsetting the predictions
@@ -57,7 +66,7 @@ buy_advise = df[(df['prediction'] > threshold) &
     (df['priceDiffPerc'] > minStrikeIncrease) &
     (df['daysToExpiration'] > minDaysToExp) &
     (df['baseLastPrice'] < maxBasePrice)]
-buy_advise = buy_advise[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction']]
+buy_advise = buy_advise[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction','model']]
 buy_advise = buy_advise.sort_values('priceDiffPerc').reset_index(drop=True)
 
 # %%

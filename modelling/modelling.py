@@ -1,7 +1,7 @@
 # Load packages
 import pandas as pd
 import numpy as np
-
+import os
 from sklearn.model_selection import train_test_split
 
 from option_trading_nonprod.models.tree_based import *
@@ -42,7 +42,9 @@ clf.fit(X_train,y_train)
 
 # Catboost
 params = {'iterations':300}
-cb_model = fit_cb(X_train, y_train, X_val, y_val, params, save_model = False, cb_path='', name='')
+
+getwd = os.getcwd()
+cb_model = fit_cb(X_train, y_train, X_val, y_val, params, save_model = True, cb_path=getwd+'/trained_models/', name='cb_model_v1')
 
 # Choose model
 model = cb_model
@@ -70,4 +72,24 @@ df_test = df_all.loc[pred_df.index,:]
 df_test['prob'] =  pred_df['prob']
 df_test['maxProfit'] = df_test['maxPrice'] - df_test['baseLastPrice']
 df_test['aimedProfit'] = np.where(df_test['maxPrice'] >= df_test['strikePrice'],df_test['strikePrice'], df_test['finalPrice']) - df_test['baseLastPrice']
-df_test[df_test['prob'] >= 0.9].describe()
+df_test['priceDiffPerc'] = df_test['strikePrice'] / df_test['baseLastPrice']
+# Select based on parameters
+# Subsetting the predictions
+threshold = 0.5
+maxBasePrice = 200
+minDaysToExp = 3
+maxDaysToExp = 20
+minStrikeIncrease = 1.05
+
+df_test = df_test[(df_test['prob'] > threshold) &
+    (df_test['symbolType']=='Call') &
+    (df_test['daysToExpiration'] < maxDaysToExp) &
+    (df_test['priceDiffPerc'] > minStrikeIncrease) &
+    (df_test['daysToExpiration'] > minDaysToExp) &
+    (df_test['baseLastPrice'] < maxBasePrice)]
+
+df_test.describe()
+
+
+######################
+# Tune hyperparameters
