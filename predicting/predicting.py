@@ -13,6 +13,8 @@ today = datetime.today().strftime("%Y-%m-%d")
 current_path = os.getcwd()
 df = pd.read_csv(current_path+'/data/barchart/barchart_unusual_activity_'+today+'.csv')
 
+# Select model
+model_choice = 'LogisticRegression'
 
 # Adding some additional columns
 df['predDate'] = today
@@ -54,7 +56,7 @@ df['model'] = model_name
 
 # %%
 # Subsetting the predictions
-threshold = 0.5
+threshold = 0.6
 maxBasePrice = 200
 minDaysToExp = 3
 maxDaysToExp = 20

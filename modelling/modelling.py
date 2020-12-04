@@ -40,14 +40,26 @@ from sklearn.ensemble import RandomForestClassifier
 clf = RandomForestClassifier(max_depth=2, random_state=0)
 clf.fit(X_train,y_train)
 
-# Catboost
+# AdaBoost classifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.isotonic import IsotonicRegression
+clf = AdaBoostClassifier(n_estimators=1000, learning_rate=0.5, random_state=42)
+clf.fit(X_train,y_train)
+Adaprob = clf.predict_proba(X_val)[:,1]
+iso_reg = IsotonicRegression().fit(Adaprob, y_val)
+
+rawprob = clf.predict_proba(X_test)[:,1]
+prob = iso_reg.predict(rawprob)
+
+# Catboost (not working on raspberry pi (32bit))
 params = {'iterations':300}
 
 getwd = os.getcwd()
 cb_model = fit_cb(X_train, y_train, X_val, y_val, params, save_model = True, cb_path=getwd+'/trained_models/', name='cb_model_v1')
 
+###########
 # Choose model
-model = cb_model
+model = clf
 
 # Make predictions
 prob = model.predict_proba(X_test)[:,1]
@@ -70,9 +82,9 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 # profitability
 df_test = df_all.loc[pred_df.index,:]
 df_test['prob'] =  pred_df['prob']
+df_test['priceDiffPerc'] = df_test['strikePrice'] / df_test['baseLastPrice']
 df_test['maxProfit'] = df_test['maxPrice'] - df_test['baseLastPrice']
 df_test['aimedProfit'] = np.where(df_test['maxPrice'] >= df_test['strikePrice'],df_test['strikePrice'], df_test['finalPrice']) - df_test['baseLastPrice']
-df_test['priceDiffPerc'] = df_test['strikePrice'] / df_test['baseLastPrice']
 # Select based on parameters
 # Subsetting the predictions
 threshold = 0.5
