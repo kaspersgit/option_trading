@@ -6,6 +6,7 @@ from statsmodels.discrete.discrete_model import LogitResults
 import os
 from datetime import datetime
 import numpy as np
+import pickle
 
 # %%
 # Load newest data
@@ -14,7 +15,7 @@ current_path = os.getcwd()
 df = pd.read_csv(current_path+'/data/barchart/barchart_unusual_activity_'+today+'.csv')
 
 # Select model
-model_choice = 'LogisticRegression'
+model_choice = 'AdaBoost'
 
 # Adding some additional columns
 df['predDate'] = today
@@ -44,11 +45,18 @@ elif model_choice == 'CatBoost':
     # Load CatBoost model
     import catboost as cb
     model = cb.CatBoostClassifier()
-    file_path = current_path + '/trained_models/cb_model_v1.cbm'
+    file_path = current_path + '/trained_models/cb_v1.cbm'
     model.load_model(file_path, format='cbm')
     model_name = file_path.split('/')[-1]
     features = model.feature_names_
     prob = model.predict_proba(df[features])[:,1]
+elif model_choice == 'AdaBoost':
+	file_path = current_path + '/trained_models/c_AB_v1.sav'
+	with open(file_path, 'rb') as file:
+		model = pickle.load(file)
+	model_name = file_path.split('/')[-1]
+	features = model.feature_names
+	prob = model.predict_proba(df[features])[:, 1]
 
 
 df['prediction'] = prob

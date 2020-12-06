@@ -1,5 +1,7 @@
 import xgboost as xgb
 import catboost as cb
+from sklearn.ensemble import AdaBoostClassifier
+import pickle
 
 def fit_xgb(X_fit, y_fit, X_val, y_val, params, save_model, xgb_path, name):
 	# Example
@@ -45,6 +47,26 @@ def fit_cb(X_fit, y_fit, X_val, y_val, params, save_model, cb_path, name):
 		# Save Catboost Model
 		save_to = '{}{}.cbm'.format(cb_path, name)
 		model.save_model(save_to)
+		print('Saved model to {}'.format(save_to))
+
+	return model
+
+def fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model, ab_path, name):
+	# Example
+	# params = {'iterations':100,
+	#                               'max_depth':2,
+	#                               'learning_rate':0.1,
+	#                               'colsample_bylevel':0.03,
+	#                               'objective':"Logloss"}
+	model = AdaBoostClassifier()
+	model.set_params(**params)
+	model.fit(X_fit, y_fit)
+	model.feature_names=X_fit.columns
+
+	if save_model:
+		# Save AdaBoost Model
+		save_to = '{}{}.sav'.format(ab_path, name)
+		pickle.dump(model, open(save_to, 'wb'))
 		print('Saved model to {}'.format(save_to))
 
 	return model
