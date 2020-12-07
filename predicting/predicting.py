@@ -57,6 +57,13 @@ elif model_choice == 'AdaBoost':
 	model_name = file_path.split('/')[-1]
 	features = model.feature_names
 	prob = model.predict_proba(df[features])[:, 1]
+elif model_choice == 'GradientBoost':
+	file_path = current_path + '/trained_models/c_GB_v1.sav'
+	with open(file_path, 'rb') as file:
+		model = pickle.load(file)
+	model_name = file_path.split('/')[-1]
+	features = model.feature_names
+	prob = model.predict_proba(df[features])[:, 1]
 
 
 df['prediction'] = prob
