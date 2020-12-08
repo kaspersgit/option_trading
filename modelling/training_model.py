@@ -2,8 +2,10 @@
 import pandas as pd
 import numpy as np
 import os
+os.chdir('/home/pi/Documents/python_scripts/option_trading')
 from sklearn.model_selection import train_test_split
 from option_trading_nonprod.models.tree_based import *
+
 
 #######################
 # Load and prepare data
