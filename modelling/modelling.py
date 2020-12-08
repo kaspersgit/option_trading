@@ -5,6 +5,7 @@ import os
 from sklearn.model_selection import train_test_split
 
 from option_trading_nonprod.models.tree_based import *
+from option_trading_nonprod.validation.calibration import *
 
 #######################
 # Load and prepare data
@@ -41,7 +42,7 @@ clf = RandomForestClassifier(max_depth=2, random_state=0)
 clf.fit(X_train,y_train)
 
 # AdaBoost classifier
-from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
@@ -53,13 +54,17 @@ getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
 AB_model = fit_AdaBoost(X_train.append(X_test), y_train.append(y_test), X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AdaBoost_model_v1')
 
+params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
+GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GBclf_v1')
+
 Adaprob = clf.predict_proba(X_val)[:,1]
+GBprob = GBC_model.predict_proba(X_val)[:,1]
 
 # calibration
 # isotonic regression
 iso_reg = IsotonicRegression().fit(Adaprob, y_val)
 # calibrated classifier
-calClf = CalibratedClassifierCV(AB_model, cv='prefit', method='sigmoid')
+calClf = CalibratedClassifierCV(GBC_model, cv='prefit', method='sigmoid')
 calClf.fit(X_val, y_val)
 calClf.feature_names = X_train.columns
 
@@ -69,6 +74,7 @@ prob_iso_reg = iso_reg.predict(rawprob)
 prob = calClf.predict_proba(X_test)[:,1]
 
 plot_calibration_curve(AdaBoostClassifier(),X_train,y_train,X_test,y_test,'AdaBoost',1)
+plot_calibration_curve(GradientBoostingClassifier(n_estimators=500),X_train,y_train,X_test,y_test,'GradientBoostingClf',1)
 
 # Catboost (not working on raspberry pi (32bit))
 # params = {'iterations':300}
@@ -79,7 +85,7 @@ plot_calibration_curve(AdaBoostClassifier(),X_train,y_train,X_test,y_test,'AdaBo
 
 # Save model(S)
 # Save calibration model
-save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB_v1')
+save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_GB_v1')
 pickle.dump(calClf, open(save_to, 'wb'))
 print('Saved model to {}'.format(save_to))
 
@@ -93,8 +99,10 @@ with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
 with open(getwd+'/trained_models/calibrated_AdaBoost_model_v1.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
+model = GBC_model
+
 # Make predictions
-prob = calib_model.predict_proba(X_test)[:,1]
+prob = model.predict_proba(X_test)[:,1]
 
 
 pred_df = pd.DataFrame({'prob':prob, 'actual':y_test})

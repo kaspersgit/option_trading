@@ -67,5 +67,4 @@ def plot_calibration_curve(est, X_train, y_train, X_test, y_test, name, fig_inde
     ax2.legend(loc="upper center", ncol=2)
 
     plt.tight_layout()
-
-	plt.show()
+    plt.show()
