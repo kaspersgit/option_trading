@@ -60,7 +60,7 @@ GBprob = GBC_model.predict_proba(X_val)[:,1]
 # isotonic regression
 iso_reg = IsotonicRegression().fit(Adaprob, y_val)
 # calibrated classifier
-calClf = CalibratedClassifierCV(GBC_model, cv='prefit', method='sigmoid')
+calClf = CalibratedClassifierCV(AB_model, cv='prefit', method='sigmoid')
 calClf.fit(X_val, y_val)
 calClf.feature_names = X_train.columns
 
@@ -81,7 +81,7 @@ plot_calibration_curve(GradientBoostingClassifier(n_estimators=500),X_train,y_tr
 
 # Save model(S)
 # Save calibration model
-save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_GB_v1')
+save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB_v1')
 pickle.dump(calClf, open(save_to, 'wb'))
 print('Saved model to {}'.format(save_to))
 
