@@ -8,4 +8,4 @@ scp pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/barchart_u
 scp -r pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/data/barchart ~/gits/option_trading/data/barchart
 
 -- To pi
-scp -r  ~/Downloads/xgboost-0.90-cp35-cp35m-win32.whl pi@192.168.1.181:/home/pi/Downloads/xgboost-0.90-cp35-cp35m-win32.whl
+scp -r  ~/gits/option_trading/data/barchart_yf_enr_1.csv pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/data/barchart_yf_enr_1.csv
