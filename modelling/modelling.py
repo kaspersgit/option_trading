@@ -46,10 +46,6 @@ from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-clf = AdaBoostClassifier(n_estimators=1000, learning_rate=0.5, random_state=42)
-clf.feature_names=X_train.columns
-clf.fit(X_train,y_train)
-
 getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
 AB_model = fit_AdaBoost(X_train.append(X_test), y_train.append(y_test), X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AdaBoost_model_v1')
@@ -57,7 +53,7 @@ AB_model = fit_AdaBoost(X_train.append(X_test), y_train.append(y_test), X_val, y
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
 GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GBclf_v1')
 
-Adaprob = clf.predict_proba(X_val)[:,1]
+Adaprob = AB_model.predict_proba(X_val)[:,1]
 GBprob = GBC_model.predict_proba(X_val)[:,1]
 
 # calibration
@@ -99,7 +95,7 @@ with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
 with open(getwd+'/trained_models/calibrated_AdaBoost_model_v1.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
-model = GBC_model
+model = calClf
 
 # Make predictions
 prob = model.predict_proba(X_test)[:,1]
