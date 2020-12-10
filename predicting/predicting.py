@@ -12,7 +12,7 @@ import pickle
 # Load newest data
 today = datetime.today().strftime("%Y-%m-%d")
 current_path = os.getcwd()
-df = pd.read_csv(current_path+'/data/barchart/barchart_unusual_activity_'+today+'.csv')
+df = pd.read_csv(current_path+'Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+today+'.csv')
 
 # Select model
 model_choice = 'AdaBoost'
