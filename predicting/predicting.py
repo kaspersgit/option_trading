@@ -35,30 +35,21 @@ df['const'] = 1.0
 # Load model and predict
 if model_choice == 'LogisticRegression':
     # Logistic Regression
-    file_path = current_path + '/Docuements/python_scripts/option_trading/predicting/modelLogit'
+    file_path = current_path + '/Docuements/python_scripts/option_trading/trained_models/modelLogit'
     model = LogitResults.load(file_path)
     model_name = file_path.split('/')[-1]
     # Select columns which are model needs as input but leave out the constant
     features = model.params.index
     prob = model.predict(df[features])
-elif model_choice == 'CatBoost':
-    # Load CatBoost model
-    import catboost as cb
-    model = cb.CatBoostClassifier()
-    file_path = current_path + '/trained_models/cb_v1.cbm'
-    model.load_model(file_path, format='cbm')
-    model_name = file_path.split('/')[-1]
-    features = model.feature_names_
-    prob = model.predict_proba(df[features])[:,1]
 elif model_choice == 'AdaBoost':
-	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_AB_v1.sav'
+	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_AB32_v1.sav'
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
 	model_name = file_path.split('/')[-1]
 	features = model.feature_names
 	prob = model.predict_proba(df[features])[:, 1]
 elif model_choice == 'GradientBoost':
-	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_GB_v1.sav'
+	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_GB32_v1.sav'
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
 	model_name = file_path.split('/')[-1]

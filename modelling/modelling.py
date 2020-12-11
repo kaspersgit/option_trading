@@ -48,17 +48,15 @@ from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-AB_model = fit_AdaBoost(X_train.append(X_test), y_train.append(y_test), X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AdaBoost_model_v1')
+AB_model = fit_AdaBoost(X_train, y_train, X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AB64_v1')
 
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GBclf_v1')
+GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GBclf64_v1')
 
 Adaprob = AB_model.predict_proba(X_val)[:,1]
 GBprob = GBC_model.predict_proba(X_val)[:,1]
 
 # calibration
-# isotonic regression
-iso_reg = IsotonicRegression().fit(Adaprob, y_val)
 # calibrated classifier
 calClf = CalibratedClassifierCV(AB_model, cv='prefit', method='sigmoid')
 calClf.fit(X_val, y_val)
@@ -81,7 +79,7 @@ plot_calibration_curve(GradientBoostingClassifier(n_estimators=500),X_train,y_tr
 
 # Save model(S)
 # Save calibration model
-save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB_v1')
+save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB64_v1')
 pickle.dump(calClf, open(save_to, 'wb'))
 print('Saved model to {}'.format(save_to))
 
@@ -92,10 +90,10 @@ print('Saved model to {}'.format(save_to))
 getwd = os.getcwd()
 with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
     model = pickle.load(file)
-with open(getwd+'/trained_models/calibrated_AdaBoost_model_v1.sav', 'rb') as file:
+with open(getwd+'/trained_models/c_AB64_v1.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
-model = calClf
+model = calib_model
 
 # Make predictions
 prob = model.predict_proba(X_test)[:,1]
@@ -116,6 +114,9 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
 ######################
 # Test out predictions
+pd.set_option('display.max_rows', 50)
+pd.set_option('display.max_columns', 10)
+pd.set_option('display.width', 1000)
 # profitability
 df_test = df_all.loc[pred_df.index,:]
 df_test['prob'] =  pred_df['prob']
@@ -124,21 +125,29 @@ df_test['maxProfit'] = df_test['maxPrice'] - df_test['baseLastPrice']
 df_test['aimedProfit'] = np.where(df_test['maxPrice'] >= df_test['strikePrice'],df_test['strikePrice'], df_test['finalPrice']) - df_test['baseLastPrice']
 # Select based on parameters
 # Subsetting the predictions
-threshold = 0.7
+threshold = 0.5
 maxBasePrice = 200
 minDaysToExp = 3
 maxDaysToExp = 20
 minStrikeIncrease = 1.05
 
-df_test = df_test[(df_test['prob'] > threshold) &
+df_select = df_test[(df_test['prob'] > threshold) &
     (df_test['symbolType']=='Call') &
     (df_test['daysToExpiration'] < maxDaysToExp) &
     (df_test['priceDiffPerc'] > minStrikeIncrease) &
     (df_test['daysToExpiration'] > minDaysToExp) &
     (df_test['baseLastPrice'] < maxBasePrice)]
 
-df_test.describe()
+df_select.describe()
 
+# Subset based on highest profit (%)
+df_test['profitPerc'] = df_test['aimedProfit'] / df_test['baseLastPrice']
+df_highest = df_test.sort_values('profitPerc', ascending=False).head(400)
+df_highest['profTimesProb'] = df_highest['priceDiffPerc'] * df_highest['prob']
+df_highest[['baseSymbol','baseLastPrice','strikePrice','priceDiffPerc','maxPrice','aimedProfit','profitPerc','prob','profTimesProb','reachedStrikePrice']].head(50)
+
+# calibration plot
+plotCalibrationCurve(df_test['reachedStrikePrice'], df_test['prob'], bins=10)
 
 ######################
 # Tune hyperparameters
