@@ -144,7 +144,7 @@ html = """\
 """.format(high_prob.to_html(),threshold,maxBasePrice,
   minDaysToExp,maxDaysToExp,minStrikeIncrease,
 		   high_prof.to_html(),hprof_threshold, hprof_maxBasePrice,
-  hprof_minDaysToExp,hprof_maxDaysToExp,h_profminStrikeIncrease,
+  hprof_minDaysToExp,hprof_maxDaysToExp,hprof_minStrikeIncrease,
 		   )
 
 part1 = MIMEText(html, 'html')
