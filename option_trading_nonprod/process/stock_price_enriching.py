@@ -136,3 +136,142 @@ def last_10d_avg(df):
             final_df = final_df.append(temp_df)
     final_df.reset_index(drop=True, inplace=True)
     return(final_df)
+
+def getContractPrices(df):
+    """
+    For each unique ticker (column name 'baseSymbol') it will extract the
+    daily stock prices between export date and expiration date. Of this time series
+    the Min price, Max price, first price (on export date) and last price (on expiration date)
+    will be added as columns to the dataframe
+
+    :param df: Must include 'baseSymbol', 'exportedAt', 'expirationDate'
+    :return:
+    """
+    df = limitDaysToExpiration(df)
+    contracts_enr = pd.DataFrame(columns=['baseSymbol','exportedAt','expirationDate','minPrice','maxPrice','finalPrice','firstPrice'])
+    config_df = pd.DataFrame(columns=['baseSymbol','minDate','maxDate'])
+    config_df['baseSymbol'] = df['baseSymbol'].unique()
+    for symbol in config_df['baseSymbol']:
+        temp_df = df[df['baseSymbol']==symbol]
+        minDate = temp_df['exportedAt'].min()
+        maxDate = temp_df['expirationDate'].max()
+        config_df.at[config_df['baseSymbol']==symbol, 'minDate'] = minDate
+        config_df.at[config_df['baseSymbol']==symbol, 'maxDate'] = maxDate
+
+    # Print status
+    print('Unique tickers: {}'.format(config_df['baseSymbol'].nunique()))
+
+    # For each symbol extract the stock price series
+    for index, row in config_df.iterrows():
+        if index % 100 == 0:
+            print('Rows done: {}'.format(index))
+        stock_price = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
+        # Check for empty dataframe
+        if len(stock_price) == 0:
+            continue
+        stock_price = stock_price[row['minDate']::]
+        contracts = df[df['baseSymbol']==row['baseSymbol']][['baseSymbol','exportedAt','expirationDate']]
+        contracts.drop_duplicates(inplace=True)
+        # For every different option contract get the prices
+        for _index, contract_row in contracts.iterrows():
+            # Check if time series is incomplete
+            if stock_price[contract_row['exportedAt']:contract_row['expirationDate']].empty:
+                continue
+            minPrice, maxPrice, finalPrice, firstPrice = getMinMaxLastFirst(stock_price[contract_row['exportedAt']:contract_row['expirationDate']])
+            contracts.at[(contracts['exportedAt']==contract_row['exportedAt']) & (contracts['expirationDate']==contract_row['expirationDate']),'minPrice'] = minPrice
+            contracts.at[(contracts['exportedAt']==contract_row['exportedAt']) & (contracts['expirationDate']==contract_row['expirationDate']),'maxPrice'] = maxPrice
+            contracts.at[(contracts['exportedAt']==contract_row['exportedAt']) & (contracts['expirationDate']==contract_row['expirationDate']),'finalPrice'] = finalPrice
+            contracts.at[(contracts['exportedAt']==contract_row['exportedAt']) & (contracts['expirationDate']==contract_row['expirationDate']),'firstPrice'] = firstPrice
+        # Add contract to master df where stock time series is found
+        contracts = contracts[contracts['maxPrice'].notna()]
+        contracts_enr = contracts_enr.append(contracts, ignore_index=True)
+
+    return contracts_enr
+
+def getMinMaxLastFirst(stock_df):
+    """
+    For the period from scraping the option data until execution date
+     get the minimum, maximum, last and first price of the stock
+
+    :param stock_df: pandas dataframe with only Date as index
+    :return: Lowest, highest, last and first price in period
+    """
+    minPrice = stock_df['Low'].min()
+    maxPrice = stock_df['High'].max()
+    finalPrice = stock_df['Close'].iloc[-1]
+    firstPrice = stock_df['Close'].iloc[0]
+    return(minPrice, maxPrice, finalPrice, firstPrice)
+
+def limitDaysToExpiration(df, min=15, max=25):
+    df = df[(df['daysToExpiration'] > min) & (df['daysToExpiration'] < max)]
+    return(df)
+
+
+def enrich_df(df):
+    """
+    Adding information about the other option data within the same batch
+    together with some ratios
+    :param df: must include ['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'openInterest', 'volume']
+    :return:
+    """
+    df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
+    df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
+    df['inTheMoney'] = np.where((df['symbolType'] == 'Call') & (df['baseLastPrice'] >= df['strikePrice']), 1, 0)
+    df['inTheMoney'] = np.where((df['symbolType'] == 'Putt') & (df['baseLastPrice'] <= df['strikePrice']), 1,
+                                df['inTheMoney'])
+    df['nrOptions'] = 1
+    df['strikePriceCum'] = df['strikePrice']
+
+    df.sort_values(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice'
+                    ], inplace=True)
+
+    df_symbol = df[['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'inTheMoney', 'volume',
+                    'openInterest'
+                    ]].groupby(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney'
+                                ]).agg(
+        {'baseSymbol': 'count', 'strikePrice': 'mean', 'volume': 'sum', 'openInterest': 'sum'
+         }).rename(columns={'baseSymbol': 'nrOccurences', 'strikePrice': 'meanStrikePrice'
+                            }).reset_index()
+
+    # only give info about calls with higher strike price
+    df_option_inv_cum = df[
+        ['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'strikePriceCum', 'inTheMoney',
+         'volume', 'openInterest', 'nrOptions'
+         ]].groupby(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney', 'strikePrice'
+                     ]).sum().sort_values('strikePrice', ascending=False
+                                          ).groupby(
+        ['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']
+        ).agg({'volume': 'cumsum', 'openInterest': 'cumsum', 'nrOptions': 'cumsum', 'strikePriceCum': 'cumsum'
+               }).rename(
+        columns={'volume': 'volumeCumSum', 'openInterest': 'openInterestCumSum', 'nrOptions': 'nrHigherOptions',
+                 'strikePriceCum': 'higherStrikePriceCum'
+                 }).reset_index()
+
+    df_call = df_symbol[df_symbol['symbolType'] == 'Call']
+    df_call.rename(columns={'nrOccurences': 'nrCalls', 'meanStrikePrice': 'meanStrikeCall', 'volume': 'volumeCall',
+                            'openInterest': 'openInterestCall'}, inplace=True)
+    df_call.drop(columns=['symbolType'], inplace=True)
+    df_put = df_symbol[df_symbol['symbolType'] == 'Put']
+    df_put.rename(columns={'nrOccurences': 'nrPuts', 'meanStrikePrice': 'meanStrikePut', 'volume': 'volumePut',
+                           'openInterest': 'openInterestPut'}, inplace=True)
+    df_put.drop(columns=['symbolType'], inplace=True)
+
+    # Add summarized data from Calls and Puts to df
+    df = pd.merge(df, df_call, how='left', on=['exportedAt', 'baseSymbol', 'expirationDate', 'inTheMoney'])
+    df = pd.merge(df, df_put, how='left', on=['exportedAt', 'baseSymbol', 'expirationDate', 'inTheMoney'])
+    df = pd.merge(df, df_option_inv_cum, how='left',
+                  on=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney', 'strikePrice'])
+
+    df['meanStrikeCallPerc'] = df['meanStrikeCall'] / df['baseLastPrice']
+    df['meanStrikePutPerc'] = df['meanStrikePut'] / df['baseLastPrice']
+    df['midpointPerc'] = df['midpoint'] / df['baseLastPrice']
+    df['meanHigherStrike'] = df['higherStrikePriceCum'] / df['nrHigherOptions']
+
+    # set nr of occurences to 0 when NaN
+    df[['nrCalls', 'nrPuts', 'volumeCall', 'volumePut']].fillna(0, inplace=True)
+    # Set percentages to 0 when NaN
+    df[['meanStrikeCallPerc', 'meanStrikePutPerc', 'midpointPerc']].fillna(0, inplace=True)
+    # Set all other columns to 0 when NaN
+    df[['meanStrikePut', 'openInterestPut', 'meanStrikePutPerc']].fillna(0, inplace=True)
+
+    return (df)

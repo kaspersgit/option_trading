@@ -48,10 +48,10 @@ from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-AB_model = fit_AdaBoost(X_train, y_train, X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AB64_v1')
+AB_model = fit_AdaBoost(X_train, y_train, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='AB64_v2')
 
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GBclf64_v1')
+GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_v2')
 
 Adaprob = AB_model.predict_proba(X_val)[:,1]
 GBprob = GBC_model.predict_proba(X_val)[:,1]
@@ -96,8 +96,7 @@ with open(getwd+'/trained_models/c_AB64_v1.sav', 'rb') as file:
 model = calib_model
 
 # Make predictions
-prob = model.predict_proba(X_test)[:,1]
-
+prob = model.predict_proba(X_test[model.feature_names])[:,1]
 
 pred_df = pd.DataFrame({'prob':prob, 'actual':y_test})
 pred_df['pred'] = np.where(pred_df['prob'] >= 0.5,1,0)
@@ -106,11 +105,18 @@ pred_df['pred'] = np.where(pred_df['prob'] >= 0.5,1,0)
 # Measure performance
 from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
 
+# AUC
 plotCurveAUC(pred_df['prob'],pred_df['actual'],type='roc')
+
+# Confucion matrix
 showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
+
+# Calibration plot
+plotCalibrationCurve(pred_df['actual'], pred_df['prob'], bins=10)
 
 #####################
 # Visualize
+
 
 ######################
 # Test out predictions
@@ -147,7 +153,7 @@ df_highest['profTimesProb'] = df_highest['priceDiffPerc'] * df_highest['prob']
 df_highest[['baseSymbol','baseLastPrice','strikePrice','priceDiffPerc','maxPrice','aimedProfit','profitPerc','prob','profTimesProb','reachedStrikePrice']].head(50)
 
 # calibration plot
-plotCalibrationCurve(df_test['reachedStrikePrice'], df_test['prob'], bins=10)
+plotCalibrationCurve(df_highest['reachedStrikePrice'], df_highest['prob'], bins=10)
 
 ######################
 # Tune hyperparameters
