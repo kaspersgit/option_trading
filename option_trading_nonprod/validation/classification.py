@@ -3,18 +3,18 @@ import numpy as np
 from sklearn import metrics 
 import itertools
 
-def plotCurveAUC(probs, actual, type='roc'):
+def plotCurveAUC(probs, actual, title, type='roc'):
     type = type.lower()
     if type == 'roc':
         xVar, yVar, thresholds = metrics.roc_curve(actual, probs)
-        title = 'ROC curve'
+        title = 'ROC curve - {}'.format(title)
         xlabel = 'False Positive Rate'
         ylabel = 'True Positive Rate (Recall)'
         diagCor1 = [0,1]
         diagCor2 = [0,1]
     elif ('recall' in type and 'precision' in type) or type == 'pr':
         yVar, xVar, thresholds = metrics.precision_recall_curve(actual, probs)
-        title = 'Precision-Recall curve'
+        title = 'Precision-Recall curve - {}'.format(title)
         xlabel = 'True Positive Rate (Recall)'
         ylabel = 'Precision'
         diagCor1 = [1,0]

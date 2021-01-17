@@ -247,11 +247,16 @@ def enrich_df(df):
                  'strikePriceCum': 'higherStrikePriceCum'
                  }).reset_index()
 
-    df_call = df_symbol[df_symbol['symbolType'] == 'Call']
+    # Excluding own option from the higher options
+    df_option_inv_cum['nrHigherOptions'] = df_option_inv_cum['nrHigherOptions'] - 1
+    df_option_inv_cum['higherStrikePriceCum'] = df_option_inv_cum['higherStrikePriceCum'] - df_option_inv_cum['strikePrice']
+
+    df_call = df_symbol[df_symbol['symbolType'] == 'Call'].copy()
     df_call.rename(columns={'nrOccurences': 'nrCalls', 'meanStrikePrice': 'meanStrikeCall', 'volume': 'volumeCall',
                             'openInterest': 'openInterestCall'}, inplace=True)
     df_call.drop(columns=['symbolType'], inplace=True)
-    df_put = df_symbol[df_symbol['symbolType'] == 'Put']
+
+    df_put = df_symbol[df_symbol['symbolType'] == 'Put'].copy()
     df_put.rename(columns={'nrOccurences': 'nrPuts', 'meanStrikePrice': 'meanStrikePut', 'volume': 'volumePut',
                            'openInterest': 'openInterestPut'}, inplace=True)
     df_put.drop(columns=['symbolType'], inplace=True)
@@ -265,13 +270,23 @@ def enrich_df(df):
     df['meanStrikeCallPerc'] = df['meanStrikeCall'] / df['baseLastPrice']
     df['meanStrikePutPerc'] = df['meanStrikePut'] / df['baseLastPrice']
     df['midpointPerc'] = df['midpoint'] / df['baseLastPrice']
-    df['meanHigherStrike'] = df['higherStrikePriceCum'] / df['nrHigherOptions']
+    df['meanHigherStrike'] = np.where((df['higherStrikePriceCum'] > 0) & (df['nrHigherOptions'] > 0), df['higherStrikePriceCum'] / df['nrHigherOptions'], 0)
 
-    # set nr of occurences to 0 when NaN
-    df[['nrCalls', 'nrPuts', 'volumeCall', 'volumePut']].fillna(0, inplace=True)
-    # Set percentages to 0 when NaN
-    df[['meanStrikeCallPerc', 'meanStrikePutPerc', 'midpointPerc']].fillna(0, inplace=True)
-    # Set all other columns to 0 when NaN
-    df[['meanStrikePut', 'openInterestPut', 'meanStrikePutPerc']].fillna(0, inplace=True)
+    # Set to 0 when NaN
+    df.fillna({'nrCalls': 0, 'nrPuts': 0,
+                'volumeCall': 0, 'volumePut': 0,
+                'openInterestCall': 0, 'openInterestPut': 0}, inplace=True)
+    cols = ['meanStrikeCall','meanStrikePut']
+    for col in cols:
+        df[col] = df.apply(
+            lambda row: row['baseLastPrice'] if np.isnan(row[col]) else row[col],
+            axis=1
+        )
+    cols = ['meanStrikeCallPerc','meanStrikePutPerc']
+    for col in cols:
+        df[col] = df.apply(
+            lambda row: 0 if np.isnan(row[col]) else row[col],
+            axis=1
+        )
 
     return (df)

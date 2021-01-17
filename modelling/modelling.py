@@ -6,10 +6,18 @@ from sklearn.model_selection import train_test_split
 
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.validation.calibration import *
+from option_trading_nonprod.process.stock_price_enriching import *
 
 #######################
 # Load and prepare data
 df_all = pd.read_csv('data/barchart_yf_enr_1.csv')
+
+# clean out duplicates to be sure
+df_all = df_all.drop(axis=1, columns='Unnamed: 0')
+df_all = df_all.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
+
+# Add internal (within same batch) information
+df_all = enrich_df(df_all)
 
 # Set target
 df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
@@ -18,10 +26,28 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 # only select Call option out of the money
 df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
+# feature selection
+features = ['reachedStrikePrice',
+            'openInterestCall',
+            'meanStrikeCallPerc',
+            'volatility',
+            'baseLastPrice',
+            'strikePrice',
+            'askPrice',
+            'priceDiffPerc',
+            'openInterest',
+            'volume',
+            'openInterestCumSum',
+            'meanStrikePut',
+            'midpointPerc',
+            'volumeCall']
+
 # TODO include this in preprocesseing
 # clean unwanted columns
-df = df.drop(columns=['Unnamed: 0','baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
+df = df.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
        'finalPrice', 'firstPrice'])
+
+# df = df[features]
 
 ########################
 # Split in train and test
@@ -33,56 +59,36 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 
 #####################
 # Train and predict
-
-# Random Forest
-from sklearn.ensemble import RandomForestClassifier
-
-# Random Forest classifier model
-clf = RandomForestClassifier(max_depth=2, random_state=0)
-clf.fit(X_train,y_train)
-
 # AdaBoost classifier
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.isotonic import IsotonicRegression
-from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+# either DEV(ELOPMENT) or PROD(UCTION)
+# v1x0 trained on data with max expirationDate 2020-10-30
+# v1x1 trained on data with max expirationDate 2020-12-18
+
+train_type = 'DEV'
+version = 'v1x1'
+if train_type == 'DEV':
+    X_fit = X_train
+    y_fit = y_train
+    df_test = df_all.loc[X_test.index,:]
+    df_test.to_csv("validation/test_df.csv")
+elif train_type == 'PROD':
+    X_fit = pd.concat([X_train, X_test])
+    y_fit = pd.concat([y_train, y_test])
 
 getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-AB_model = fit_AdaBoost(X_train, y_train, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='AB64_v2')
+AB_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='AB64_'+version)
+# Calibrate pre trained model
+Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_AB64_'+version)
 
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_v2')
+GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
 
 Adaprob = AB_model.predict_proba(X_val)[:,1]
 GBprob = GBC_model.predict_proba(X_val)[:,1]
 
-# calibration
-# calibrated classifier
-calClf = CalibratedClassifierCV(AB_model, cv='prefit', method='sigmoid')
-calClf.fit(X_val, y_val)
-calClf.feature_names = X_train.columns
-
 # test Dataset
-rawprob = clf.predict_proba(X_test)[:,1]
-prob_iso_reg = iso_reg.predict(rawprob)
-prob = calClf.predict_proba(X_test)[:,1]
-
-plot_calibration_curve(AdaBoostClassifier(),X_train,y_train,X_test,y_test,'AdaBoost',1)
-plot_calibration_curve(GradientBoostingClassifier(n_estimators=500),X_train,y_train,X_test,y_test,'GradientBoostingClf',1)
-
-# Catboost (not working on raspberry pi (32bit))
-# params = {'iterations':300}
-#
-# getwd = os.getcwd()
-# cb_model = fit_cb(X_train, y_train, X_val, y_val, params, save_model = True, cb_path=getwd+'/trained_models/', name='cb_model_v1')
-
-
-# Save model(S)
-# Save calibration model
-save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB64_v1')
-pickle.dump(calClf, open(save_to, 'wb'))
-print('Saved model to {}'.format(save_to))
-
+prob = Cal_AB_model.predict_proba(X_test)[:,1]
 
 ###########
 # Choose model
@@ -90,7 +96,7 @@ print('Saved model to {}'.format(save_to))
 getwd = os.getcwd()
 with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
     model = pickle.load(file)
-with open(getwd+'/trained_models/c_AB64_v1.sav', 'rb') as file:
+with open(getwd+'/trained_models/DEV_c_AB64_v2.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
 model = calib_model
@@ -137,14 +143,17 @@ minDaysToExp = 3
 maxDaysToExp = 20
 minStrikeIncrease = 1.05
 
-df_select = df_test[(df_test['prob'] > threshold) &
+df_select = df_test[
+    (df_test['prob'] > threshold) &
     (df_test['symbolType']=='Call') &
     (df_test['daysToExpiration'] < maxDaysToExp) &
     (df_test['priceDiffPerc'] > minStrikeIncrease) &
     (df_test['daysToExpiration'] > minDaysToExp) &
-    (df_test['baseLastPrice'] < maxBasePrice)]
+    (df_test['baseLastPrice'] < maxBasePrice)
+]
 
 df_select.describe()
+plotCurveAUC(df_select['prob'],df_select['actual'],type='roc')
 
 # Subset based on highest profit (%)
 df_test['profitPerc'] = df_test['aimedProfit'] / df_test['baseLastPrice']

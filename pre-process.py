@@ -26,6 +26,8 @@ df.reset_index(drop=True, inplace=True)
 # Select columns
 df = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate', 'daysToExpiration', 'bidPrice', 'midpoint', 'askPrice', 'lastPrice', 'volume', 'openInterest', 'volumeOpenInterestRatio', 'volatility', 'tradeTime', 'exportedAt']]
 
+# filter on only mature options
+df = df[df['expirationDate'] < today]
 
 # Helper functions
 def colType2Float(series, decimal_sep='.'):

@@ -11,7 +11,7 @@ from sklearn.metrics import (brier_score_loss, precision_score, recall_score,
                              f1_score)
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-def plotCalibrationCurve(actuals, probs, bins=10):
+def plotCalibrationCurve(actuals, probs, title, bins=10):
     """
     Plot the calibration curve for a set of true and predicted values
 
@@ -20,7 +20,11 @@ def plotCalibrationCurve(actuals, probs, bins=10):
     :param bins: how many bins to divide data in for plotting
     :return: calibration plot
     """
-    fig = plt.figure(0, figsize=(10, 10))
+    plt.figure(figsize=(10, 10))
+
+    # below would overwrite the figure in a plot
+    # plt.figure(0, figsize=(10, 10))
+
     ax1 = plt.subplot2grid((3, 1), (0, 0), rowspan=2)
     ax1.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
     fraction_of_positives, mean_predicted_value = \
@@ -31,8 +35,8 @@ def plotCalibrationCurve(actuals, probs, bins=10):
     ax1.set_ylabel("Fraction of positives")
     ax1.set_ylim([-0.05, 1.05])
     ax1.legend(loc="lower right")
-    ax1.set_title('Calibration plots  (reliability curve)')
-    fig.show()
+    ax1.set_title('Calibration plots  (reliability curve) - {}'.format(title))
+    plt.show()
 
 def plot_calibration_curve_mult(est, X_train, y_train, X_test, y_test, name, fig_index):
     """Plot calibration curve for est w/o and with calibration. """

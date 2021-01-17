@@ -1,9 +1,14 @@
 # option_trading
 Option trading based on a strategy
 
-## Installing XGBoost on raspberry pi
-Follow guide on https://github.com/dmlc/xgboost/issues/2012
-EDIT: MakeFile in 'xgboost/rabit/guide/'
+# Main model
+AdaBoost model from sklearn package due to 32bit system on raspberry pi
 
-## Installing LightGBM on raspberry pi
-https://github.com/microsoft/LightGBM/tree/master/python-package#build-32-bit-version-with-32-bit-python
+# upcoming improvements
+pre processing of data should not output duplicates or non mature options
+models should be well documented
+- name
+- date
+- details of data trained on
+- features used
+- performance
