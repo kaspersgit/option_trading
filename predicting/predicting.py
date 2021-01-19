@@ -4,21 +4,39 @@
 import pandas as pd
 from statsmodels.discrete.discrete_model import LogitResults
 import os
+import sys
 from datetime import datetime
 import numpy as np
 import pickle
 
-# %%
-# Load newest data
-today = datetime.today().strftime("%Y-%m-%d")
-current_path = os.getcwd()
-df = pd.read_csv(current_path+'/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+today+'.csv')
+# Get supplied system arguments
+# mode (development or production)
+if len(sys.argv) >= 3:
+	mode = sys.argv[2]
+	if mode.upper().startswith('PROD'):
+		mode = 'PRODUCTION'
+		# Load in todays scraped data
+		day = datetime.today()
+	elif mode.upper().startswith('DEV'):
+		mode = 'DEVELOPMENT'
+		# Load in scraped data of last business day
+		day = datetime.today() - pd.tseries.offsets.BDay(1)
 
-# Select model
-model_choice = 'AdaBoost'
+# model (disregard extension)
+model = sys.argv[1]
+model = model.split('.')[0]
+
+# Set variagbles and load in data
+day = day.strftime("%Y-%m-%d")
+print('Mode: {}'.format(mode))
+print('Model: {}'.format(model))
+print('Using data from {}'.format(day))
+current_path = os.getcwd()
+df = pd.read_csv(current_path+'/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+day+'.csv')
+
 
 # Adding some additional columns
-df['predDate'] = today
+df['predDate'] = day
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
@@ -33,29 +51,21 @@ df['const'] = 1.0
 
 #%%
 # Load model and predict
-if model_choice == 'LogisticRegression':
+if model == 'LogisticRegression':
     # Logistic Regression
-    file_path = current_path + '/Docuements/python_scripts/option_trading/trained_models/modelLogit'
+    file_path = current_path + '/Docuements/python_scripts/option_trading/trained_models/'+model
     model = LogitResults.load(file_path)
     model_name = file_path.split('/')[-1]
     # Select columns which are model needs as input but leave out the constant
     features = model.params.index
     prob = model.predict(df[features])
-elif model_choice == 'AdaBoost':
-	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_AB32_v1.sav'
+elif model != 'Logit':
+	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/'+model+'.sav'
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
 	model_name = file_path.split('/')[-1]
 	features = model.feature_names
 	prob = model.predict_proba(df[features])[:, 1]
-elif model_choice == 'GradientBoost':
-	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/c_GB32_v1.sav'
-	with open(file_path, 'rb') as file:
-		model = pickle.load(file)
-	model_name = file_path.split('/')[-1]
-	features = model.feature_names
-	prob = model.predict_proba(df[features])[:, 1]
-
 
 df['prediction'] = prob
 df['model'] = model_name
