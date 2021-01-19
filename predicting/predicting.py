@@ -32,6 +32,7 @@ print('Mode: {}'.format(mode))
 print('Model: {}'.format(model))
 print('Using data from {}'.format(day))
 # current_path = os.getcwd()
+current_path = '/home/pi'
 df = pd.read_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+day+'.csv')
 
 
@@ -53,7 +54,7 @@ df['const'] = 1.0
 # Load model and predict
 if model == 'LogisticRegression':
     # Logistic Regression
-    file_path = current_path + '/Docuements/python_scripts/option_trading/trained_models/'+model
+    file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/'+model
     model = LogitResults.load(file_path)
     model_name = file_path.split('/')[-1]
     # Select columns which are model needs as input but leave out the constant
