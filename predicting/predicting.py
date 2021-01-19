@@ -20,7 +20,7 @@ if len(sys.argv) >= 3:
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		# Load in scraped data of last business day
-		datetime.today() - pd.tseries.offsets.BDay(1)
+		day = datetime.today() - pd.tseries.offsets.BDay(1)
 
 # model (disregard extension)
 model = sys.argv[1]
