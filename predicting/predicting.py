@@ -17,10 +17,15 @@ if len(sys.argv) >= 3:
 		mode = 'PRODUCTION'
 		# Load in todays scraped data
 		day = datetime.today()
+		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
+			recipients = f.read().splitlines()
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		# Load in scraped data of last business day
 		day = datetime.today() - pd.tseries.offsets.BDay(1)
+		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
+			recipients = f.read().splitlines()
+		recipients = recipients[0]
 
 # model (disregard extension)
 model = sys.argv[1]
@@ -68,6 +73,7 @@ elif model != 'Logit':
 	features = model.feature_names
 	prob = model.predict_proba(df[features])[:, 1]
 
+print('Options contract scored')
 df['prediction'] = prob
 df['model'] = model_name
 
@@ -88,6 +94,7 @@ high_prob = df[(df['prediction'] > threshold) &
 high_prob = high_prob[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction','model']]
 high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 
+print('High probability table size: {}'.format(len(high_prob)))
 
 # Subsetting the predictions for highly profitable stocks
 hprof_threshold = 0.1
@@ -105,14 +112,14 @@ high_prof = df[(df['prediction'] > hprof_threshold) &
 high_prof = high_prof[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction','model']]
 high_prof = high_prof.sort_values('priceDiffPerc').reset_index(drop=True)
 
+print('High profitability table size: {}'.format(len(high_prof)))
+
 # %%
 # Sending an email with the predictions
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Email configurations and content
-with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
-	recipients = f.read().splitlines()
 emaillist = [elem.strip().split(',') for elem in recipients]
 msg = MIMEMultipart()
 msg['Subject'] = "Stock buy advise"
@@ -164,3 +171,5 @@ context = ssl.create_default_context()
 with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.login(msg['From'], password)
     server.sendmail(msg['From'], emaillist , msg.as_string())
+
+print('Email with predictions send')
