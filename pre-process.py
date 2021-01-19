@@ -1,6 +1,7 @@
 # Load in all csv files from source folder
 import os
 import pandas as pd
+from datetime import datetime
 from option_trading_nonprod.process import *
 
 # Temp setting
@@ -27,6 +28,7 @@ df.reset_index(drop=True, inplace=True)
 df = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate', 'daysToExpiration', 'bidPrice', 'midpoint', 'askPrice', 'lastPrice', 'volume', 'openInterest', 'volumeOpenInterestRatio', 'volatility', 'tradeTime', 'exportedAt']]
 
 # filter on only mature options
+today = datetime.today().strftime('%Y-%m-%d')
 df = df[df['expirationDate'] < today]
 
 # Helper functions

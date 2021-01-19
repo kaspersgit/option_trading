@@ -5,6 +5,7 @@ import os
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 from sklearn.model_selection import train_test_split
 from option_trading_nonprod.models.tree_based import *
+from option_trading_nonprod.models.calibrate import *
 
 
 #######################
@@ -35,20 +36,24 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 # AdaBoost classifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
+train_type = 'PROD'
+version = 'v1x2'
+if train_type == 'DEV':
+    X_fit = X_train
+    y_fit = y_train
+    df_test = df_all.loc[X_test.index,:]
+    df_test.to_csv("validation/test_df.csv")
+elif train_type == 'PROD':
+    X_fit = pd.concat([X_train, X_test])
+    y_fit = pd.concat([y_train, y_test])
+
 getwd = os.getcwd()
 params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-AB_model = fit_AdaBoost(X_train.append(X_test), y_train.append(y_test), X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name='AdaBoost_model_v1')
+AB_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name=train_type+'_AB32_'+version)
 
 Adaprob = AB_model.predict_proba(X_val)[:,1]
 
-# calibration
-# calibrated classifier
-calClf = CalibratedClassifierCV(AB_model, cv='prefit', method='sigmoid')
-calClf.fit(X_val, y_val)
-calClf.feature_names = X_train.columns
+# calibrate and save classifier
+Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_AB32_'+version)
 
-# Save model(S)
-# Save calibration model
-save_to = '{}{}.sav'.format(getwd+'/trained_models/', 'c_AB_v1')
-pickle.dump(calClf, open(save_to, 'wb'))
-print('Saved model to {}'.format(save_to))
+

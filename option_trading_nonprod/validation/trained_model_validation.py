@@ -20,10 +20,10 @@ with open(getwd+'/trained_models/DEV_c_AB64_v1x0.sav', 'rb') as file:
     DEV_c_AB64_v1x0 = pickle.load(file)
 with open(getwd+'/trained_models/DEV_c_AB64_v1x1.sav', 'rb') as file:
     DEV_c_AB64_v1x1 = pickle.load(file)
-with open(getwd+'/trained_models/DEV_c_AB64_v3.sav', 'rb') as file:
-    DEV_c_AB64_v3 = pickle.load(file)
+with open(getwd+'/trained_models/DEV_c_AB64_v1x2.sav', 'rb') as file:
+    DEV_c_AB64_v1x2 = pickle.load(file)
 
-model = DEV_c_AB64_v1x0
+model = DEV_c_AB64_v1x2
 
 
 

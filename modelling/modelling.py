@@ -99,7 +99,7 @@ with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
 with open(getwd+'/trained_models/DEV_c_AB64_v2.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
-model = calib_model
+model = Cal_AB_model
 
 # Make predictions
 prob = model.predict_proba(X_test[model.feature_names])[:,1]
@@ -112,7 +112,7 @@ pred_df['pred'] = np.where(pred_df['prob'] >= 0.5,1,0)
 from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
 
 # AUC
-plotCurveAUC(pred_df['prob'],pred_df['actual'],type='roc')
+plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all data', type='roc')
 
 # Confucion matrix
 showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])

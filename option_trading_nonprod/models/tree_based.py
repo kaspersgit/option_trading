@@ -62,6 +62,7 @@ def fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model, ab_path, name):
 	model.set_params(**params)
 	model.fit(X_fit, y_fit)
 	model.feature_names = X_fit.columns
+	model.train_data_shape = X_fit.shape
 
 	if save_model:
 		# Save AdaBoost Model
