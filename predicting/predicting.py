@@ -19,13 +19,14 @@ if len(sys.argv) >= 3:
 		day = datetime.today()
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
 			recipients = f.read().splitlines()
+		emaillist = [elem.strip().split(',') for elem in recipients]
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		# Load in scraped data of last business day
 		day = datetime.today() - pd.tseries.offsets.BDay(1)
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
 			recipients = f.read().splitlines()
-		recipients = recipients[0]
+		emaillist = recipients[0]
 
 # model (disregard extension)
 model = sys.argv[1]
@@ -120,7 +121,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Email configurations and content
-emaillist = [elem.strip().split(',') for elem in recipients]
 msg = MIMEMultipart()
 msg['Subject'] = "Stock buy advise"
 msg['From'] = 'k.sends.python@gmail.com'
