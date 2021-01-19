@@ -31,8 +31,8 @@ day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
 print('Model: {}'.format(model))
 print('Using data from {}'.format(day))
-current_path = os.getcwd()
-df = pd.read_csv(current_path+'/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+day+'.csv')
+# current_path = os.getcwd()
+df = pd.read_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+day+'.csv')
 
 
 # Adding some additional columns
