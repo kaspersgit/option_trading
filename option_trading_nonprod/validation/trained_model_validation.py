@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-
+from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
+from option_trading_nonprod.validation.calibration import *
 
 ##### This script
 # Predict test data
@@ -10,25 +11,26 @@ import numpy as np
 
 ###########
 # Load data and model
+# set configurations
+model_name = 'DEV_c_AB64_v1x2'
+test_set = 'oot'
 
 # Load test data
-pred_df = pd.read_csv("validation/test_df.csv")
+df_test = pd.read_csv("validation/test_df.csv")
+df_oot = pd.read_csv("validation/oot_df.csv")
 
 # Load model
 getwd = os.getcwd()
-with open(getwd+'/trained_models/DEV_c_AB64_v1x0.sav', 'rb') as file:
-    DEV_c_AB64_v1x0 = pickle.load(file)
-with open(getwd+'/trained_models/DEV_c_AB64_v1x1.sav', 'rb') as file:
-    DEV_c_AB64_v1x1 = pickle.load(file)
-with open(getwd+'/trained_models/DEV_c_AB64_v1x2.sav', 'rb') as file:
-    DEV_c_AB64_v1x2 = pickle.load(file)
-
-model = DEV_c_AB64_v1x2
-
-
+with open(getwd+'/trained_models/'+model_name+'.sav', 'rb') as file:
+    model = pickle.load(file)
 
 ############
 # Make predictions
+if test_set == 'oot':
+    pred_df = df_oot
+elif test_set == 'test':
+    pred_df = df_test
+
 prob = model.predict_proba(pred_df[model.feature_names])[:,1]
 pred_df['prob'] = prob
 pred_df['pred'] = np.where(pred_df['prob'] >= 0.5,1,0)
@@ -36,9 +38,6 @@ pred_df.rename(columns={'reachedStrikePrice':'actual'}, inplace=True)
 
 #####################
 # Measure performance
-from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
-from option_trading_nonprod.validation.calibration import *
-
 # AUC
 plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations',type='roc')
 
@@ -48,13 +47,20 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 # Calibration plot
 plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all test observations', bins=10)
 
-# Show perfromance for different segments
+# Threshold against precision/recall
+plotThresholdMetrics(pred_df['prob'],pred_df['actual'])
+
+# Show performance for different segments
 brackets = [{'lower':1.00, 'higher':1.02}
     ,{'lower':1.02, 'higher':1.05}
     ,{'lower':1.05, 'higher':1.1}
     , {'lower':1.1, 'higher':1.2}
     , {'lower':1.2, 'higher':9999}
             ]
+
+# Create column to segment on
+pred_df['priceDiffPerc'] = pred_df['strikePrice'] / pred_df['baseLastPrice']
+
 for bracket in brackets:
     print('Strike price / stock price ratio between {} and {}'.format(bracket['lower'], bracket['higher']))
 

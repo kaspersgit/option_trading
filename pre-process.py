@@ -63,11 +63,17 @@ for col in int_cols:
 # add target label
 # stock price reached strike price at expiration date
 
+# Filter df
+# on only short time to expiration
+df = limitDaysToExpiration(df)
+# Delete duplicates
+df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
+
+
 # Using above functions
 contracts_prices = getContractPrices(df)
 
-# Filter df on only short time to expiration
-df = limitDaysToExpiration(df)
+# Put dfs together
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
 
 # Save enriched df as csv

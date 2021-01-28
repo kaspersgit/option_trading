@@ -37,6 +37,17 @@ def plotCurveAUC(probs, actual, title, type='roc'):
     plt.show()
     return(auc)
 
+def plotThresholdMetrics(pred, actual):
+    precision, recall, th = metrics.precision_recall_curve(actual, pred)
+    plt.plot(th, precision[1:], label="Precision", linewidth=5)
+    plt.plot(th, recall[1:], label="Recall", linewidth=5)
+    plt.title('Precision and recall for different threshold values')
+    plt.xlabel('Threshold')
+    plt.ylabel('Precision/Recall')
+    plt.legend()
+    plt.show()
+
+
 def showConfusionMatrix(pred, actual, normalize=None):
     """
     pred: the predicted classes

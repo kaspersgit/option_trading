@@ -24,35 +24,38 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 
 # filter set on applicable rows
 # only select Call option out of the money
-df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
+df = df_all[(df_all['symbolType'] == 'Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
 # feature selection
-features = ['reachedStrikePrice',
-            'openInterestCall',
-            'meanStrikeCallPerc',
-            'volatility',
-            'baseLastPrice',
-            'strikePrice',
-            'askPrice',
-            'priceDiffPerc',
-            'openInterest',
-            'volume',
-            'openInterestCumSum',
-            'meanStrikePut',
-            'midpointPerc',
-            'volumeCall']
+features = ['baseLastPrice'
+    , 'strikePrice'
+    , 'daysToExpiration'
+    , 'bidPrice'
+    , 'midpoint'
+    , 'askPrice'
+    , 'lastPrice'
+    , 'volume'
+    , 'openInterest'
+    , 'volumeOpenInterestRatio'
+    , 'volatility']
 
-# TODO include this in preprocesseing
-# clean unwanted columns
-df = df.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'])
+
 
 # df = df[features]
 
 ########################
-# Split in train and test
-X = df.drop(columns='reachedStrikePrice')
-y = df['reachedStrikePrice']
+# Split in train, validation, test and out of time
+df_oot = df.sort_values('exportedAt', ascending=True)[-1000::]
+df_rest = df.drop(df_oot.index, axis=0)
+
+# clean unwanted columns for model training
+df_oot = df_oot.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
+       'finalPrice', 'firstPrice'])
+df_rest = df_rest.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
+       'finalPrice', 'firstPrice'])
+
+X = df_rest.drop(columns='reachedStrikePrice')
+y = df_rest['reachedStrikePrice']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=42)
@@ -65,12 +68,13 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 # v1x1 trained on data with max expirationDate 2020-12-18
 
 train_type = 'DEV'
-version = 'v1x1'
+version = 'v1x2'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
     df_test = df_all.loc[X_test.index,:]
     df_test.to_csv("validation/test_df.csv")
+    df_oot.to_csv("validation/oot_df.csv")
 elif train_type == 'PROD':
     X_fit = pd.concat([X_train, X_test])
     y_fit = pd.concat([y_train, y_test])
@@ -81,14 +85,10 @@ AB_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, 
 # Calibrate pre trained model
 Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_AB64_'+version)
 
-params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
+params = {'n_estimators':1000, 'learning_rate': 0.05, 'max_features': 3, 'random_state':42}
 GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
-
-Adaprob = AB_model.predict_proba(X_val)[:,1]
-GBprob = GBC_model.predict_proba(X_val)[:,1]
-
-# test Dataset
-prob = Cal_AB_model.predict_proba(X_test)[:,1]
+# Calibrate pre trained model
+Cal_GB_model = calibrate_model(GBC_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_GB64_'+version)
 
 ###########
 # Choose model
@@ -96,10 +96,10 @@ prob = Cal_AB_model.predict_proba(X_test)[:,1]
 getwd = os.getcwd()
 with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
     model = pickle.load(file)
-with open(getwd+'/trained_models/DEV_c_AB64_v2.sav', 'rb') as file:
+with open(getwd+'/trained_models/DEV_c_AB64_v1x0.sav', 'rb') as file:
     calib_model = pickle.load(file)
 
-model = Cal_AB_model
+model = Cal_GB_model
 
 # Make predictions
 prob = model.predict_proba(X_test[model.feature_names])[:,1]
