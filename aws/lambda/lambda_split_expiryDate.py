@@ -65,7 +65,7 @@ def lambda_handler(event, context):
             # Open a new file and write the header
             if expiryDate not in outputs:
                 expiryDates.append(expiryDate)
-                filename = "exported_" + exportDate + "_expires_" + expiryDate
+                filename = "/tmp/exported_" + exportDate + "_expires_" + expiryDate
                 fout = open("{}.csv".format(filename), "w")
                 dw = csv.DictWriter(fout, fieldnames=csvin.fieldnames)
                 dw.writeheader()

@@ -1,21 +1,23 @@
 {
-   "LambdaFunctionConfigurations": [
-       {
-           "Id": "kickSplitOnExpiryOff",
-           "LambdaFunctionArn": "arn:aws:sns:eu-west-1:343302203904:s3-notification-topic",
-           "Events": [
-               "s3:ObjectCreated:*"
-           ]
-           "Filter": {
-               "Key": {
-                   "FilterRules": [
-                       {
-                       "Name": "prefix",
-                       "Value": "rawdata/barchart/"
-                       }
-         ]
-       }
-     }
-       }
-   ]
+"LambdaFunctionConfigurations": [
+    {
+      "Id": "kickSplitOnExpiryOff",
+      "LambdaFunctionArn": "arn:aws:lambda:eu-west-1:343302203904:function:project-option-splitExpiryDate",
+      "Events": ["s3:ObjectCreated:*"],
+      "Filter": {
+        "Key": {
+          "FilterRules": [
+            {
+              "Name": "suffix",
+              "Value": ".csv"
+            },
+            {
+              "Name": "prefix",
+              "Value": "rawdata/barchart/"
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

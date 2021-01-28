@@ -9,6 +9,9 @@ aws lambda create-function  \
 --zip-file "fileb://lambda_split_expiryDate.zip"
 
 # Add trigger to lambda function
-aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration file://lambdaS3trigger.json
+# Giving an Error
+aws s3api put-bucket-notification-configuration \
+    --bucket "project-option-trading" \
+    --notification-configuration "file://lambdaS3trigger.json"
 
 # file notification.json and content:
