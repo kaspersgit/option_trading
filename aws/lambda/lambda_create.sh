@@ -6,7 +6,7 @@ aws lambda create-function  \
 --handler "lambda_function.lambda_handler"  \
 --timeout 5 \
 --memory-size 512  \
---code "lambda_split_expiryDate.py"
+--code "file://lambda_split_expiryDate.py"
 
 # Add trigger to lambda function
 aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration file://notification.json
