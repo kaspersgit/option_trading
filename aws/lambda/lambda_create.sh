@@ -1,36 +1,14 @@
 # Create lambda function to split data on expiry date
 aws lambda create-function  \
 --function-name "project-option-splitExpiryDate"  \
---runtime "pthon3.7"    \
+--runtime "python3.7"    \
 --role "arn:aws:iam::343302203904:role/LambdaS3dataTransfer"  \
---handler "lambda_function.lambda_handler"  \
+--handler "lambda_split_expiryDate.lambda_handler"  \
 --timeout 5 \
---memory-size 512  \
---code "file://lambda_split_expiryDate.py"
+--memory-size 256  \
+--zip-file "fileb://lambda_split_expiryDate.zip"
 
 # Add trigger to lambda function
-aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration file://notification.json
+aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration file://lambdaS3trigger.json
 
-s3:ObjectCreated:*
-
- {
-    "LambdaFunctionConfigurations": [
-        {
-            "Id": "kickSplitOnExpiryOff",
-            "LambdaFunctionArn": "arn:aws:sns:eu-west-1:343302203904:s3-notification-topic",
-            "Events": [
-                "s3:ObjectCreated:*"
-            ]
-            "Filter": {
-                "Key": {
-                    "FilterRules": [
-                        {
-                        "Name": "prefix",
-                        "Value": "rawdata/barchart/"
-                        }
-          ]
-        }
-      }
-        }
-    ]
-}
+# file notification.json and content:
