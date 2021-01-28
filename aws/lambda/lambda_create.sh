@@ -2,7 +2,7 @@
 aws lambda create-function  \
 --function-name "project-option-splitExpiryDate"  \
 --runtime "pthon3.7"    \
---role "arn:aws:eu-west-1:343302203904:role/LambdaOptions"  \
+--role "arn:aws:iam::343302203904:role/LambdaS3dataTransfer"  \
 --handler "lambda_function.lambda_handler"  \
 --timeout 5 \
 --memory-size 512  \
