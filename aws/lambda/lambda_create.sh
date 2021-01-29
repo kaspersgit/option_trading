@@ -1,3 +1,12 @@
+# Delete lambda function
+aws lambda delete-function \
+    --function-name "project-option-splitExpiryDate"
+
+# update lambda function
+aws lambda update-function-code \
+    --function-name "project-option-splitExpiryDate" \
+    --zip-file "fileb://lambda_split_expiryDate.zip"
+
 # Create lambda function to split data on expiry date
 aws lambda create-function  \
 --function-name "project-option-splitExpiryDate"  \
@@ -15,10 +24,11 @@ aws lambda add-permission --function-name project-option-splitExpiryDate --princ
 --source-account 343302203904
 
 # Add trigger to lambda function
-# Giving an Error
 aws s3api put-bucket-notification-configuration \
     --bucket "project-option-trading" \
     --notification-configuration "file://lambdaS3trigger.json"
 
 # Delete all bucket notification configurationss
-aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration="{}"
+aws s3api put-bucket-notification-configuration \
+    --bucket project-option-trading \
+    --notification-configuration "{}"
