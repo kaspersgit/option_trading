@@ -8,10 +8,17 @@ aws lambda create-function  \
 --memory-size 256  \
 --zip-file "fileb://lambda_split_expiryDate.zip"
 
+# give lambda invoke permissions to s3 bucket
+aws lambda add-permission --function-name project-option-splitExpiryDate --principal s3.amazonaws.com \
+--statement-id S3StatementId --action "lambda:InvokeFunction" \
+--source-arn arn:aws:s3:::project-option-trading \
+--source-account 343302203904
+
 # Add trigger to lambda function
 # Giving an Error
 aws s3api put-bucket-notification-configuration \
     --bucket "project-option-trading" \
     --notification-configuration "file://lambdaS3trigger.json"
 
-# file notification.json and content:
+# Delete all bucket notification configurationss
+aws s3api put-bucket-notification-configuration --bucket project-option-trading --notification-configuration="{}"
