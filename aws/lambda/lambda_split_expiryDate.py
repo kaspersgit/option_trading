@@ -84,7 +84,7 @@ def lambda_handler(event, context):
             # Upload all files to S3 bucket
             filename = fout.name
             s3_path = (
-                "on_expiry_date/expires" + fout.name.split(".")[0].split("expires")[1]
+                "on_expiry_date/expires" + fout.name.split(".")[0].split("expires")[1] + "/" + fout.name
             )
             bucket = "project-option-trading"
             print(
