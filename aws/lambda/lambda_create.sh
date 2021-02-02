@@ -3,6 +3,8 @@ aws lambda delete-function \
     --function-name "project-option-splitExpiryDate"
 
 # update lambda function
+rm lambda_split_expiryDate.zip
+zip lambda_split_expiryDate.zip lambda_split_expiryDate.py
 aws lambda update-function-code \
     --function-name "project-option-splitExpiryDate" \
     --zip-file "fileb://lambda_split_expiryDate.zip"
