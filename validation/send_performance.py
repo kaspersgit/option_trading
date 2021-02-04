@@ -17,6 +17,7 @@ import pickle
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
 from option_trading_nonprod.aws import *
+from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
 from option_trading_nonprod.process.stock_price_enriching import *
