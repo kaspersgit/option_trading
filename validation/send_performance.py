@@ -74,6 +74,11 @@ contracts_prices = getContractPrices(df)
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
 print('Enriching stocks...Done')
 
+# Upload enriched table to S3
+output_bucket = 'project-option-trading-output'
+output_key = 'enriched_data/barchart/expired_on_{}.csv'.format(last_friday)
+write_dataframe_to_csv_on_s3(profile="default", dataframe=df_enr, filename=output_key, bucket=output_bucket)
+
 # import model and score
 file_path = os.getcwd() + '/trained_models/' + model + '.sav'
 with open(file_path, 'rb') as file:

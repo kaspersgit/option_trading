@@ -80,15 +80,17 @@ def load_from_s3(
 
 
 # Upload file to S3 bucket
-def write_dataframe_to_csv_on_s3(s3_con, dataframe, filename, bucket):
+def write_dataframe_to_csv_on_s3(profile, dataframe, filename, bucket):
     """
     Write a dataframe to a CSV on S3
 
-    s3_con: boto3.resource("s3") connection type
+    profile: profile to connect to AWS with
     dataframe: pandas
     filename: path/key to file
     bucket: S3 bucket
     """
+
+    s3_resource = connect_to_s3(profile, type="resource")
     # Create buffer
     csv_buffer = StringIO()
     print("buffer created")
@@ -96,7 +98,7 @@ def write_dataframe_to_csv_on_s3(s3_con, dataframe, filename, bucket):
     dataframe.to_csv(csv_buffer, sep=",", index=False)
     print("dataframe written to buffer")
     # Write buffer to S3 object and give bucket owner full access
-    s3_con.Object(bucket, f"{filename}").put(
+    s3_resource.Object(bucket, f"{filename}").put(
         Body=csv_buffer.getvalue(), ACL="bucket-owner-full-control"
     )
     print("written to S3 object")
