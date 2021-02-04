@@ -80,10 +80,10 @@ df['model'] = model_name
 
 # %%
 # Subsetting the predictions for highly probable stocks
-threshold = 0.6
+threshold = 0.7
 maxBasePrice = 200
 minDaysToExp = 3
-maxDaysToExp = 20
+maxDaysToExp = 25
 minStrikeIncrease = 1.05
 
 high_prob = df[(df['prediction'] > threshold) &
@@ -98,10 +98,10 @@ high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 print('High probability table size: {}'.format(len(high_prob)))
 
 # Subsetting the predictions for highly profitable stocks
-hprof_threshold = 0.1
+hprof_threshold = 0.25
 hprof_maxBasePrice = 1000
 hprof_minDaysToExp = 3
-hprof_maxDaysToExp = 20
+hprof_maxDaysToExp = 25
 hprof_minStrikeIncrease = 1.20
 
 high_prof = df[(df['prediction'] > hprof_threshold) &

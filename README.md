@@ -12,3 +12,11 @@ models should be well documented
 - details of data trained on
 - features used
 - performance
+
+# notes
+The following Errors have been encountered on Raspberry PI
+when import numpy or matplotlib
+ImportError: /lib/arm-linux-gnueabihf/libc.so.6: version `GLIBC_2.28' not found
+
+Solved:
+pip install numpy --global-option="-mfloat-abi=hard" --force-reinstall
