@@ -179,8 +179,8 @@ html_content ="""
 	<br><img src="cid:image3"><br>
 	Looking good huh!
   </body>
-""".format(optionType, minIncrease, len(df_enr), df_enr['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), model_name)
+""".format(optionType, minIncrease, model_name, len(df_enr), df_enr['baseSymbol'].nunique()
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique())
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver = emaillist
