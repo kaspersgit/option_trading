@@ -36,6 +36,14 @@ if len(sys.argv) >= 3:
 			recipients = f.read().splitlines()
 		emaillist = recipients[0]
 
+	# print status of variables
+	print('Mode: {}'.format(mode))
+	print('Emaillist: {}'.format(emaillist))
+
+# Get model which should be used
+model = sys.argv[1]
+model = model.split('.')[0]
+
 # Set wd and other variables
 last_friday = (datetime.today()
     - timedelta(days=datetime.today().weekday())
@@ -43,28 +51,38 @@ last_friday = (datetime.today()
 bucket = 'project-option-trading'
 key = f'on_expiry_date/expires_{last_friday}/'
 
+# print status of variables
+print('Model : {}'.format(model))
+print('Last Friday: {}'.format(last_friday))
+print('Source bucket: {}'.format(bucket))
+print('Source key: {}'.format(key))
+
 # import data
 df = load_from_s3(profile="default", bucket=bucket, key_prefix=key)
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-01-19_expires_2021-01-29.csv')
 
+print('Shape of imported data: {}'.format(df.shape))
+
 # clean and format data
-df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
+# df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
 
 # enrich df
+print('Enriching stocks...')
 contracts_prices = getContractPrices(df)
 
 # Put dfs together to have all enriched data
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
+print('Enriching stocks...Done')
 
-# import model (from system argument) and score
-model = sys.argv[1]
-model = model.split('.')[0]
+# import model and score
 file_path = os.getcwd() + '/trained_models/' + model + '.sav'
 with open(file_path, 'rb') as file:
 	model = pickle.load(file)
 model_name = file_path.split('/')[-1]
 features = model.feature_names
 prob = model.predict_proba(df_enr[features])[:, 1]
+
+print('Loaded model and scored options')
 
 # Make high level summary
 # Add target variable
@@ -82,6 +100,7 @@ df_enr['strikePricePerc'] = df_enr['strikePrice'] / df_enr['baseLastPrice']
 # accuracy (split per days to expiration)
 # accuracy (split per strike price increase)
 
+print('Start creating plots')
 
 # scatter plot
 import matplotlib.pyplot as plt
@@ -99,14 +118,20 @@ ax.set_title('All Call options plotted')
 plt.show()
 fig.savefig("validation/scatter.png")
 
+print('Created and saved scatter plot')
+
 # confusion matrix
 # calibration curve
 plotCalibrationCurve(df_enr['reachedStrikePrice'], df_enr['prob'], title='', bins=10, savefig=True, saveFileName='validation/CalibCurve.png')
+
+print('Created and saved calibration plot')
 
 # model performance
 # AUC and similar
 auc_roc = plotCurveAUC(df_enr['prob'],df_enr['reachedStrikePrice'], title='', type='roc', savefig=True, saveFileName='validation/roc.png')
 
+print('Created and saved AUC plot')
+print('Composing email...')
 # Send email
 # recipient
 # lay out and content
@@ -146,3 +171,5 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content = html_content
 			  , inline_images = ['validation/scatter.png','validation/CalibCurve.png','validation/roc.png']
 			  , attachment = None)
+
+
