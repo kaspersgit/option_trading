@@ -154,7 +154,10 @@ def getContractPrices(df):
 	:return: df: Added several columns indicating the first, last, min and max price reached until strike date
 	also the dates of all these events is added
 	"""
-	df = limitDaysToExpiration(df)
+	# converting somewhat date columns to date strings
+	df['exportedAt']=pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
+	df['expirationDate']=pd.to_datetime(df['expirationDate']).dt.strftime('%Y-%m-%d')
+
 	contracts_enr = pd.DataFrame(
 		columns=['baseSymbol', 'exportedAt', 'expirationDate', 'minPrice', 'maxPrice', 'finalPrice', 'firstPrice'])
 	config_df = pd.DataFrame(columns=['baseSymbol', 'minDate', 'maxDate'])
@@ -184,14 +187,18 @@ def getContractPrices(df):
 		for _index, contract_row in contracts.iterrows():
 			# Check if time series is incomplete
 			if stock_price[contract_row['exportedAt']:contract_row['expirationDate']].empty:
+				print(f'Timeseries for {contract_row.baseSymbol.values[0]} is empty')
 				continue
+
 			minPrice, maxPrice, finalPrice, firstPrice, minPriceDate, maxPriceDate, finalPriceDate, firstPriceDate = getMinMaxLastFirst(
 				stock_price[contract_row['exportedAt']:contract_row['expirationDate']])
+			info_dict = {'minPrice': minPrice, 'maxPrice': maxPrice, 'finalPrice': finalPrice, 'firstPrice': firstPrice,
+						 'minPriceDate': minPriceDate, 'maxPriceDate': maxPriceDate, 'finalPriceDate': finalPriceDate, 'firstPriceDate': firstPriceDate}
 
 			# fill in into df
-			for col in ['minPrice', 'maxPrice', 'finalPrice', 'firstPrice', 'minPriceDate', 'maxPriceDate', 'finalPriceDate', 'firstPriceDate']:
+			for key in info_dict.keys():
 				contracts.at[(contracts['exportedAt'] == contract_row['exportedAt']) & (
-						contracts['expirationDate'] == contract_row['expirationDate']), col] = globals()[col]
+						contracts['expirationDate'] == contract_row['expirationDate']), key] = info_dict[key]
 		# Add contract to master df where stock time series is found
 		contracts = contracts[contracts['maxPrice'].notna()]
 		contracts_enr = contracts_enr.append(contracts, ignore_index=True)

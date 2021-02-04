@@ -65,7 +65,7 @@ for col in int_cols:
 
 # Filter df
 # on only short time to expiration
-df = limitDaysToExpiration(df)
+df = limitDaysToExpiration(df, min=3, max=20)
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 

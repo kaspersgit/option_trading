@@ -3,7 +3,16 @@ import numpy as np
 from sklearn import metrics 
 import itertools
 
-def plotCurveAUC(probs, actual, title, type='roc'):
+def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='test.png'):
+    """
+    :param probs: float models predicted probability
+    :param actual: int 1 or 0 for the actual outcome
+    :param title: str title of the plot
+    :param type: str either ROC or PR
+    :param savefig: boolean if plot should be saved
+    :param saveFileName: str where to save the plot to
+    :return:
+    """
     type = type.lower()
     if type == 'roc':
         xVar, yVar, thresholds = metrics.roc_curve(actual, probs)
@@ -35,6 +44,8 @@ def plotCurveAUC(probs, actual, title, type='roc'):
     plt.title(title)
     plt.legend(loc="lower right")
     plt.show()
+    if savefig:
+        plt.savefig(saveFileName)
     return(auc)
 
 def plotThresholdMetrics(pred, actual):
