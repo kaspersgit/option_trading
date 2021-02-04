@@ -1,0 +1,44 @@
+# Edit this file to introduce tasks to be run by cron.
+# 
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+# 
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').# 
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+# 
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+ 
+MAILTO="kasperde@hotmail.com"
+
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+# 
+# For more information see the manual pages of crontab(5) and cron(8)
+# 
+# m h  dom mon dow   command
+
+# System jobs
+# Reboot every 10th and 25th of the month at 04:00
+0 4 10,25 * reboot
+
+# Python scripts
+# Send 6 scientias extractive summaries to kasperde every Sunday morning at 6
+0 6 * * 0 /usr/bin/python3 /home/pi/Documents/python_scripts/send_summaries/scientias_extractive.py >> /home/pi/scripts/scientias_summaries.log
+
+# Scrape barchart website showing unusual option activity and save it as a csv at 21:00 every weekday 
+0 21 * * 1-5 /usr/bin/python3 /home/pi/Documents/python_scripts/option_trading/scraping/barchart_scraping.py >> /home/pi/scripts/barchart_scraping.log && aws s3 sync /home/pi/Documents/python_scripts/option_trading/data/barchart/. s3://project-option-trading/raw_data/barchart/
+
+# Scrape marketbeat website showing unusual option activity and save it as a csv at 21:00 every weekday
+0 21 * * 1-5 /usr/bin/python3 /home/pi/Documents/python_scripts/option_trading/scraping/marketbeat_scraping.py >> /home/pi/scripts/marketbeat_scraping.log
+
+# Send predictions on call option data from barchart every weekday evening 21:40.
+40 21 * * 1-5 python3 /home/pi/Documents/python_scripts/option_trading/predicting/predicting.py PROD_c_AB32_v1x2.sav PRODUCTION >> /home/pi/scripts/call_option_predicting.log
+# Running model trained on limited data (on D's request)
+42 21 * * 1-5 python3 /home/pi/Documents/python_scripts/option_trading/predicting/predicting.py PROD_c_AB32_v1x0.sav PRODUCTION
