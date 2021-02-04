@@ -95,12 +95,17 @@ print('Loaded model and scored options')
 df_enr['reachedStrikePrice'] = np.where(df_enr['maxPrice'] >= df_enr['strikePrice'],1,0)
 # Add prediction variable
 df_enr['prob'] = prob
-# filter set on applicable rows
-# only select Call option out of the money
-df_enr = df_enr[(df_enr['symbolType']=='Call') & (df_enr['strikePrice'] > df_enr['baseLastPrice'])]
 
 # Add columns
 df_enr['strikePricePerc'] = df_enr['strikePrice'] / df_enr['baseLastPrice']
+
+
+# filter set on applicable rows
+# only select Call option out of the money
+optionType = 'Call'
+minIncrease = 1.05
+
+df_enr = df_enr[(df_enr['symbolType']=='Call') & (df_enr['strikePrice'] > df_enr['baseLastPrice'] * minIncrease)]
 
 # basic performance
 # accuracy (split per days to expiration)
@@ -147,11 +152,18 @@ html_content ="""
   <head></head>
   <body>
 	A summary of the call options expired last Friday and the models performs.
-	Only call options being out of the money at moment of scraping are included.
-	<br><br>Total number of options (unique tickers): {} ({})
-	<br>Options reaching strike (unique tickers): {} ({})
+	<br>
+	Showing only options of type: {}
+	<br>
+	With minimal price increase of: {}
+	<br>
+	Model used: {}
+	<br><br>
+	Total number of options (unique tickers): {} ({})
+	<br>
+	Options reaching strike (unique tickers): {} ({})
 	
-	<br>Model used: {}
+
 	
 
 	<h3> Some graphs for visual interpretation</h3>
@@ -167,7 +179,7 @@ html_content ="""
 	<br><img src="cid:image3"><br>
 	Looking good huh!
   </body>
-""".format(len(df_enr), df_enr['baseSymbol'].nunique()
+""".format(optionType, minIncrease, len(df_enr), df_enr['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), model_name)
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
