@@ -29,13 +29,11 @@ if len(sys.argv) >= 3:
 	if mode.upper().startswith('PROD'):
 		mode = 'PRODUCTION'
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
-			recipients = f.read().splitlines()
-		emaillist = [elem.strip().split(',') for elem in recipients]
+			emaillist = f.read().splitlines()
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
-			recipients = f.read().splitlines()
-		emaillist = [elem.strip().split(',') for elem in recipients]
+			emaillist = f.read().splitlines()
 
 	# print status of variables
 	print('Mode: {}'.format(mode))
