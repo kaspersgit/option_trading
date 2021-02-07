@@ -50,7 +50,7 @@ last_friday = (datetime.today()
     - timedelta(days=datetime.today().weekday())
     + timedelta(days=4, weeks=-1)).strftime('%Y-%m-%d')
 bucket = 'project-option-trading'
-key = f'on_expiry_date/expires_{}/'.format(last_friday)
+key = 'on_expiry_date/expires_{}/'.format(last_friday)
 
 # print status of variables
 print('Model : {}'.format(model))
