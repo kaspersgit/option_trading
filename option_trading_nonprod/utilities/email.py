@@ -19,7 +19,7 @@ def sendRichEmail(sender, receiver, password, subject, content, inline_images, a
 	# Check types and makes correct one
 	# recipients
 	if isinstance(receiver, list):
-		receiver = ', '.join(receiver)
+		receiver = ', '.join(map(str, receiver))
 	# Create the root message and fill in the from, to, and subject headers
 	msgRoot = MIMEMultipart('related')
 	msgRoot['Subject'] = subject
