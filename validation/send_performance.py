@@ -10,6 +10,7 @@ make summary (split per score band, graph, different durations, estimate potenti
 import boto3
 import pandas as pd
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta, FR
 import os
 import sys
 import pickle
@@ -44,9 +45,8 @@ model = sys.argv[1]
 model = model.split('.')[0]
 
 # Set wd and other variables
-last_friday = (datetime.today()
-    - timedelta(days=datetime.today().weekday())
-    + timedelta(days=4, weeks=-1)).strftime('%Y-%m-%d')
+last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+
 bucket = 'project-option-trading'
 key = 'on_expiry_date/expires_{}/'.format(last_friday)
 
