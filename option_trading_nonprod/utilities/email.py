@@ -16,6 +16,10 @@ def sendRichEmail(sender, receiver, password, subject, content, inline_images, a
 	:param attachment: list with paths to the attachment
 	:return: The email will be send
 	"""
+	# Check types and makes correct one
+	# recipients
+	if isinstance(receiver, list):
+		receiver = ', '.join(receiver)
 	# Create the root message and fill in the from, to, and subject headers
 	msgRoot = MIMEMultipart('related')
 	msgRoot['Subject'] = subject
