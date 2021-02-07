@@ -33,9 +33,9 @@ if len(sys.argv) >= 3:
 		emaillist = [elem.strip().split(',') for elem in recipients]
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
-		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
+		with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
 			recipients = f.read().splitlines()
-		emaillist = recipients[0]
+		emaillist = [elem.strip().split(',') for elem in recipients]
 
 	# print status of variables
 	print('Mode: {}'.format(mode))
@@ -50,7 +50,7 @@ last_friday = (datetime.today()
     - timedelta(days=datetime.today().weekday())
     + timedelta(days=4, weeks=-1)).strftime('%Y-%m-%d')
 bucket = 'project-option-trading'
-key = f'on_expiry_date/expires_{last_friday}/'
+key = 'on_expiry_date/expires_{}/'.format(last_friday)
 
 # print status of variables
 print('Model : {}'.format(model))
