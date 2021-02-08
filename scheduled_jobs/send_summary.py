@@ -16,6 +16,7 @@ from dateutil.relativedelta import relativedelta, FR
 import os
 import sys
 import pickle
+from sklearn.metrics import brier_score_loss
 
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
@@ -98,6 +99,9 @@ df = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] 
 # basic performance
 # accuracy (split per days to expiration)
 # accuracy (split per strike price increase)
+# brier score
+brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
+
 
 print('Start creating plots')
 
@@ -132,6 +136,8 @@ print('Created and saved calibration plot')
 # AUC and similar
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/roc.png')
+auc_pr = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='pr', savefig=True,
+					   saveFileName='scheduled_jobs/summary_content/pr.png')
 
 print('Created and saved AUC plot')
 print('Composing email...')
@@ -154,6 +160,11 @@ html_content = """
 	Total number of options (unique tickers): {} ({})
 	<br>
 	Options reaching strike (unique tickers): {} ({})
+	<br>
+	<br>
+	Area Under Curve of ROC: {}
+	<br>
+	Brier loss score: {}
 
 
 
@@ -169,10 +180,14 @@ html_content = """
 
 	<b> Plotting the ROC, which gives an idea on how well the model performs </b>
 	<br><img src="cid:image3"><br>
+
+
+	<b> Plotting the Precision Recall curve, which gives an idea on how well the model performs </b>
+	<br><img src="cid:image4"><br>
 	Looking good huh!
   </body>
 """.format(optionType, minIncrease, model_name, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique())
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), auc_roc, brier_score)
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
@@ -180,7 +195,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , subject='Performance report expiry date {}'.format(last_friday)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
-							   'scheduled_jobs/summary_content/roc.png']
+							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/pr.png']
 			  , attachment=None)
 
 
