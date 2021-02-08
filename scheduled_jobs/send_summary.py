@@ -136,10 +136,14 @@ print('Created and saved calibration plot')
 # AUC and similar
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/roc.png')
+
+print('Created and saved AUC ROC plot')
+
 auc_pr = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='pr', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/pr.png')
 
-print('Created and saved AUC plot')
+print('Created and saved AUC Precision Recall plot')
+
 print('Composing email...')
 # Send email
 # recipient
