@@ -200,8 +200,9 @@ def getContractPrices(df):
 				contracts.at[(contracts['exportedAt'] == contract_row['exportedAt']) & (
 						contracts['expirationDate'] == contract_row['expirationDate']), key] = info_dict[key]
 		# Add contract to master df where stock time series is found
-		contracts = contracts[contracts['maxPrice'].notna()]
-		contracts_enr = contracts_enr.append(contracts, ignore_index=True)
+		if not contracts.empty:
+			contracts = contracts[contracts['maxPrice'].notna()]
+			contracts_enr = contracts_enr.append(contracts, ignore_index=True)
 
 	return contracts_enr
 
