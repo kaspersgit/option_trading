@@ -17,9 +17,10 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 # Get supplied system arguments
 if len(sys.argv) >= 2:
-	date = pd.to_datetime(sys.argv[2])
+	date = pd.to_datetime(sys.argv[1])
 	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 else:
+	print('Script can be run from command line as <script> <date (YYYY-MM-DD)>')
 	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 
 

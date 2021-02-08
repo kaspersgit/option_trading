@@ -187,7 +187,7 @@ def getContractPrices(df):
 		for _index, contract_row in contracts.iterrows():
 			# Check if time series is incomplete
 			if stock_price[contract_row['exportedAt']:contract_row['expirationDate']].empty:
-				print(f'Timeseries for {contract_row.baseSymbol.values[0]} is empty')
+				print('Timeseries for {} is empty'.format(contract_row.baseSymbol))
 				continue
 
 			minPrice, maxPrice, finalPrice, firstPrice, minPriceDate, maxPriceDate, finalPriceDate, firstPriceDate = getMinMaxLastFirst(

@@ -50,6 +50,9 @@ if len(sys.argv) >= 3:
 	print('Mode: {}'.format(mode))
 	print('Emaillist: {}'.format(emaillist))
 
+else:
+	print('Script can be run from command line as <script> <model> <env prod or dev> <date (optional)>')
+
 # Get model which should be used
 model = sys.argv[1]
 model = model.split('.')[0]
@@ -137,12 +140,12 @@ print('Created and saved calibration plot')
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/roc.png')
 
-print('Created and saved AUC ROC plot')
+print('Created and saved ROC plot')
 
 auc_pr = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='pr', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/pr.png')
 
-print('Created and saved AUC Precision Recall plot')
+print('Created and saved Precision Recall plot')
 
 print('Composing email...')
 # Send email
