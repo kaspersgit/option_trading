@@ -160,12 +160,14 @@ html_content = """
 	Total number of options (unique tickers): {} ({})
 	<br>
 	Options reaching strike (unique tickers): {} ({})
+	<br><br>
+	Area Under Curve of ROC: 	{}
 	<br>
+	AUC of Precision Recall: 	{}
 	<br>
-	Area Under Curve of ROC: {}
-	<br>
-	Brier loss score: {}
-
+	Brier loss score: 			{}
+	<br><br>
+	<hr>
 
 
 
@@ -187,7 +189,7 @@ html_content = """
 	Looking good huh!
   </body>
 """.format(optionType, minIncrease, model_name, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), auc_roc, brier_score)
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
