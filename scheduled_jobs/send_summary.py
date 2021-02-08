@@ -117,21 +117,21 @@ ax.set_xlabel('Strike price increase')
 ax.set_ylabel('Predicted probability')
 ax.set_title('All Call options plotted')
 plt.show()
-fig.savefig("validation/content/scatter.png")
+fig.savefig("scheduled_jobs/summary_content/scatter.png")
 
 print('Created and saved scatter plot')
 
 # confusion matrix
 # calibration curve
 plotCalibrationCurve(df['reachedStrikePrice'], df['prob'], title='', bins=10, savefig=True,
-					 saveFileName='validation/content/CalibCurve.png')
+					 saveFileName='scheduled_jobs/summary_content/CalibCurve.png')
 
 print('Created and saved calibration plot')
 
 # model performance
 # AUC and similar
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
-					   saveFileName='validation/content/roc.png')
+					   saveFileName='scheduled_jobs/summary_content/roc.png')
 
 print('Created and saved AUC plot')
 print('Composing email...')
@@ -179,8 +179,8 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , password=password
 			  , subject='Performance report expiry date {}'.format(last_friday)
 			  , content=html_content
-			  , inline_images=['validation/content/scatter.png', 'validation/content/CalibCurve.png',
-							   'validation/content/roc.png']
+			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
+							   'scheduled_jobs/summary_content/roc.png']
 			  , attachment=None)
 
 
