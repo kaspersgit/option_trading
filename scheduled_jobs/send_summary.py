@@ -25,8 +25,15 @@ from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
+
 # Get supplied system arguments
 # mode (development or production)
+if len(sys.argv) >= 4:
+	date = pd.to_datetime(sys.argv[3])
+	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+else:
+	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+
 if len(sys.argv) >= 3:
 	mode = sys.argv[2]
 	if mode.upper().startswith('PROD'):
@@ -47,8 +54,6 @@ model = sys.argv[1]
 model = model.split('.')[0]
 
 # Set wd and other variables
-last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
-
 bucket = 'project-option-trading-output'
 key = 'enriched_data/barchart/expired_on_{}.csv'.format(last_friday)
 
