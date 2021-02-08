@@ -158,6 +158,9 @@ def getContractPrices(df):
 	df['exportedAt']=pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
 	df['expirationDate']=pd.to_datetime(df['expirationDate']).dt.strftime('%Y-%m-%d')
 
+	# exclude entries where export and expiration date are the same
+	df = df[df['exportedAt'] != df['expirationDate']]
+
 	contracts_enr = pd.DataFrame(
 		columns=['baseSymbol', 'exportedAt', 'expirationDate', 'minPrice', 'maxPrice', 'finalPrice', 'firstPrice'])
 	config_df = pd.DataFrame(columns=['baseSymbol', 'minDate', 'maxDate'])
