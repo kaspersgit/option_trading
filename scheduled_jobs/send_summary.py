@@ -16,11 +16,13 @@ from dateutil.relativedelta import relativedelta, FR
 import os
 import sys
 import pickle
+import matplotlib.pyplot as plt
 from sklearn.metrics import brier_score_loss
 
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
 from option_trading_nonprod.aws import *
+from option_trading_nonprod.other.trading_strategies import *
 from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
@@ -69,7 +71,7 @@ print('Source key: {}'.format(key))
 
 # import data
 df = load_from_s3(profile="default", bucket=bucket, key_prefix=key)
-# df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-01-19_expires_2021-01-29.csv')
+# df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
 
 print('Shape of imported data: {}'.format(df.shape))
 
@@ -96,8 +98,11 @@ df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 # only select Call option out of the money
 optionType = 'Call'
 minIncrease = 1.05
+maxBasePrice = 200
+minDaysToExp = 3
+maxDaysToExp = 25
 
-df = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] * minIncrease)]
+df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease)]
 
 # basic performance
 # accuracy (split per days to expiration)
@@ -105,12 +110,34 @@ df = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] 
 # brier score
 brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
 
+# Simulating trading strategies
+print('Simulating simple trading strategies')
+
+# buy one of each stock of a certain amount worth of stocks (df['baseLastPrice'] vs 100)
+# below we implement 100 dollars worth of each stock
+df['stocksBought'] = 100 / df['baseLastPrice']
+df['cost'] = df['stocksBought'] * df['baseLastPrice']
+df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
+df['profit'] = df['revenue'] - df['cost']
+
+filterset = {'threshold': 0.7,
+			 'maxBasePrice': 200,
+			 'minStrikeIncrease': 1.05,
+			 'minDaysToExp': 3,
+			 'maxDaysToExp': 25}
+roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df,filterset, plot=False)
+
+
+filterset = {'threshold': 0.25,
+			 'maxBasePrice': 100,
+			 'minStrikeIncrease': 1.2,
+			 'minDaysToExp': 3,
+			 'maxDaysToExp': 25}
+roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df,filterset, plot=False)
 
 print('Start creating plots')
 
 # scatter plot
-import matplotlib.pyplot as plt
-
 ReachedStrike = df[df['reachedStrikePrice'] == 1]
 notReachedStrike = df[df['reachedStrikePrice'] == 0]
 
@@ -168,6 +195,15 @@ html_content = """
 	<br>
 	Options reaching strike (unique tickers): {} ({})
 	<br><br>
+	<h3>Implementing a simple trading strategy</h3>
+	<br>
+	Purely buying selling stocks which are mentioned in the email
+	<br>
+	Return on investment (ROI):
+	<br>
+	High probability: {}
+	High profitability: {}
+	
 	Area Under Curve of ROC: 	{}
 	<br>
 	AUC of Precision Recall: 	{}
@@ -179,24 +215,25 @@ html_content = """
 
 
 	<h3> Some graphs for visual interpretation</h3>
-	<b> Plotting all options based on their profitability and probability </b>
+	Plotting all options based on their profitability and probability
 	<br><img src="cid:image1"><br>
 
 
-	<b> Plotting the calibration curve to see if the probabilities made sense </b>
+	Plotting the calibration curve to see if the probabilities made sense
 	<br><img src="cid:image2"><br>
 
 
-	<b> Plotting the ROC, which gives an idea on how well the model performs </b>
+	Plotting the ROC, which gives an idea on how well the model performs
 	<br><img src="cid:image3"><br>
 
 
-	<b> Plotting the Precision Recall curve, which gives an idea on how well the model performs </b>
+	Plotting the Precision Recall curve, which gives an idea on how well the model performs
 	<br><img src="cid:image4"><br>
 	Looking good huh!
   </body>
 """.format(optionType, minIncrease, model_name, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(roi_highprob,3)
+		   , round(roi_highprof,3),round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist

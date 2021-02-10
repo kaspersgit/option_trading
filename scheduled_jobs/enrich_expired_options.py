@@ -43,6 +43,9 @@ df = load_from_s3(profile="default", bucket=source_bucket, key_prefix=source_key
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-01-19_expires_2021-01-29.csv')
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-02-05_expires_2021-02-05.csv')
 
+# Delete duplicates
+df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
+
 print('Shape of imported data: {}'.format(df.shape))
 
 # enrich df

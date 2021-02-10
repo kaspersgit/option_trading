@@ -92,7 +92,7 @@ high_prob = df[(df['prediction'] > threshold) &
     (df['priceDiffPerc'] > minStrikeIncrease) &
     (df['daysToExpiration'] > minDaysToExp) &
     (df['baseLastPrice'] < maxBasePrice)].copy()
-high_prob = high_prob[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction','model']]
+high_prob = high_prob[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 
 print('High probability table size: {}'.format(len(high_prob)))
@@ -110,7 +110,7 @@ high_prof = df[(df['prediction'] > hprof_threshold) &
     (df['priceDiffPerc'] > hprof_minStrikeIncrease) &
     (df['daysToExpiration'] > hprof_minDaysToExp) &
     (df['baseLastPrice'] < hprof_maxBasePrice)].copy()
-high_prof = high_prof[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction','model']]
+high_prof = high_prof[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prof = high_prof.sort_values('priceDiffPerc').reset_index(drop=True)
 
 print('High profitability table size: {}'.format(len(high_prof)))
