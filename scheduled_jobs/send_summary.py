@@ -251,7 +251,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 							   'expirationDate', 'lastPrice', 'exportedAt',
 							   'finalPrice', 'finalPriceDate', 'firstPrice', 'firstPriceDate',
 							   'maxPrice', 'maxPriceDate', 'minPrice', 'minPriceDate',
-							   'prob']]
+							   'prob']].reset_index(drop=True)
 )
 
 
