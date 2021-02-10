@@ -1,9 +1,16 @@
 # Send an HTML email with an embedded image and a plain text message for
 # email clients that don't want to display the HTML.
 
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
+import io
+
+def df_to_bytes(df):
+	with io.StringIO() as buffer:
+		df.to_csv(buffer)
+		return buffer.getvalue()
 
 def sendRichEmail(sender, receiver, password, subject, content, inline_images, attachment):
 	"""
@@ -34,6 +41,11 @@ def sendRichEmail(sender, receiver, password, subject, content, inline_images, a
 
 	msgText = MIMEText('This is the alternative plain text message.')
 	msgAlternative.attach(msgText)
+
+	# Add attachment
+	attachment = MIMEApplication(df_to_bytes(attachment))
+	attachment['Content-Disposition'] = 'attachment; filename="{}"'.format('enriched_data.csv')
+	msgRoot.attach(attachment)
 
 	# We reference the image in the IMG SRC attribute by the ID we give it below
 	msgText = MIMEText(content, 'html')
