@@ -247,6 +247,11 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/pr.png']
-			  , attachment=df)
+			  , attachment=df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
+							   'expirationDate', 'lastPrice', 'exportedAt',
+							   'finalPrice', 'finalPriceDate', 'firstPrice', 'firstPriceDate',
+							   'maxPrice', 'maxPriceDate', 'minPrice', 'minPriceDate',
+							   'prob']]
+)
 
 
