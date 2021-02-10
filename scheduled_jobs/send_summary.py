@@ -195,6 +195,7 @@ html_content = """
 	<br>
 	Options reaching strike (unique tickers): {} ({})
 	<br><br>
+	<hr>
 	<h3>Implementing a simple trading strategy</h3>
 	<br>
 	Purely buying selling stocks which are mentioned in the email
@@ -202,7 +203,11 @@ html_content = """
 	Return on investment (ROI):
 	<br>
 	High probability: {}
+	<br>
 	High profitability: {}
+	<br><br>
+	<hr>
+	<h3>Model performance metrics</h3>
 	
 	Area Under Curve of ROC: 	{}
 	<br>
