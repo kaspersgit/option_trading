@@ -19,13 +19,13 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 	df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 
 	df_filtered = df[(df['prob'] > filterset['threshold']) &
-		(df['symbolType']=='Call') &
+		(df['symbolType'] == 'Call') &
 		(df['daysToExpiration'] < filterset['maxDaysToExp']) &
 		(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
 		(df['daysToExpiration'] > filterset['minDaysToExp']) &
 		(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
 
-	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False)
+	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()
 	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()
 	df_profit['cumProfit'] = df_profit['profit'].cumsum()

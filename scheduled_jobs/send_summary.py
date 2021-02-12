@@ -98,11 +98,19 @@ df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 # only select Call option out of the money
 optionType = 'Call'
 minIncrease = 1.05
+maxIncrease = 2
 maxBasePrice = 200
 minDaysToExp = 3
 maxDaysToExp = 25
 
-df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease)]
+df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease)]
+
+# Basic summary
+df.sort_values('profit')[['baseSymbol','baseLastPrice','strikePrice','maxPrice']].head(10)
+df[['baseSymbol','baseLastPrice']].groupby('baseSymbol').count().sort_values('baseLastPrice')
+df_ordered = df.groupby('baseSymbol').agg({'profit':'sum', 'baseLastPrice':'count', 'reachedStrikePrice':'mean', 'strikePricePerc':'mean'}).sort_values('profit')
+
+
 
 # basic performance
 # accuracy (split per days to expiration)
@@ -143,9 +151,9 @@ notReachedStrike = df[df['reachedStrikePrice'] == 0]
 
 fig = plt.figure()
 ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], color='r', alpha=0.5,
+ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 7, color='g', alpha=0.7, label='Did reach strike')
+ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], s = 7, color='r', alpha=0.7,
 		   label='Not reached strike')
-ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], color='g', alpha=0.5, label='Did reach strike')
 ax.legend(loc="upper right")
 ax.set_xlabel('Strike price increase')
 ax.set_ylabel('Predicted probability')
@@ -187,24 +195,13 @@ html_content = """
 	<br>
 	Showing only options of type: {}
 	<br>
-	With minimal price increase of: {}
+	With minimal price increase between: {} and {}
 	<br>
 	Model used: {}
 	<br><br>
 	Total number of options (unique tickers): {} ({})
 	<br>
 	Options reaching strike (unique tickers): {} ({})
-	<br><br>
-	<hr>
-	<h3>Implementing a simple trading strategy</h3>
-	<br>
-	Purely buying selling stocks which are mentioned in the email
-	<br>
-	Return on investment (ROI):
-	<br>
-	High probability: {}
-	<br>
-	High profitability: {}
 	<br><br>
 	<hr>
 	<h3>Model performance metrics</h3>
@@ -234,9 +231,21 @@ html_content = """
 
 	Plotting the Precision Recall curve, which gives an idea on how well the model performs
 	<br><img src="cid:image4"><br>
-	Looking good huh!
+
+	<br><br>
+	<hr>
+	<h3>Implementing a simple trading strategy</h3>
+	<br>
+	Purely buying selling stocks which are mentioned in the email
+	<br>
+	Return on investment (ROI):
+	<br>
+	High probability: {}
+	<br>
+	High profitability: {}
+	
   </body>
-""".format(optionType, minIncrease, model_name, len(df), df['baseSymbol'].nunique()
+""".format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(roi_highprob,3)
 		   , round(roi_highprof,3),round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
