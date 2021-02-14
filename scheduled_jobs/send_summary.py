@@ -106,9 +106,9 @@ maxDaysToExp = 25
 df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease)]
 
 # Basic summary
-df.sort_values('profit')[['baseSymbol','baseLastPrice','strikePrice','maxPrice']].head(10)
+#df.sort_values('profit')[['baseSymbol','baseLastPrice','strikePrice','maxPrice']].head(10)
 df[['baseSymbol','baseLastPrice']].groupby('baseSymbol').count().sort_values('baseLastPrice')
-df_ordered = df.groupby('baseSymbol').agg({'profit':'sum', 'baseLastPrice':'count', 'reachedStrikePrice':'mean', 'strikePricePerc':'mean'}).sort_values('profit')
+#df_ordered = df.groupby('baseSymbol').agg({'profit':'sum', 'baseLastPrice':'count', 'reachedStrikePrice':'mean', 'strikePricePerc':'mean'}).sort_values('profit')
 
 
 
@@ -246,8 +246,8 @@ html_content = """
 	
   </body>
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(roi_highprob,3)
-		   , round(roi_highprof,3),round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
+		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3), round(roi_highprob,3), round(roi_highprof,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
