@@ -91,8 +91,15 @@ df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
 # Add prediction variable
 df['prob'] = prob
 
+# progress towards strikeprice
+df['strikePriceProgress'] = (df['maxPrice'] - df['baseLastPrice']) / (df['strikePrice'] - df['baseLastPrice'])
+df['strikePriceProgressCapped'] = np.where(df['strikePriceProgress'] >= 1, 1.0, df['strikePriceProgress'])
 # Add columns
 df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
+# expected profit
+df['expPercIncrease'] = df['strikePricePerc'] * df['prob']
+# profitability (percentage increase from stock price to max price)
+df['profitability'] = df['maxPrice']/df['baseLastPrice']
 
 # filter set on applicable rows
 # only select Call option out of the money
@@ -106,11 +113,9 @@ maxDaysToExp = 25
 df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease)]
 
 # Basic summary
-df.sort_values('profit')[['baseSymbol','baseLastPrice','strikePrice','maxPrice']].head(10)
-df[['baseSymbol','baseLastPrice']].groupby('baseSymbol').count().sort_values('baseLastPrice')
-df_ordered = df.groupby('baseSymbol').agg({'profit':'sum', 'baseLastPrice':'count', 'reachedStrikePrice':'mean', 'strikePricePerc':'mean'}).sort_values('profit')
-
-
+# Get top performing stocks (included/not included in email)
+biggest_increase_df = df.sort_values('profitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','profitability','prob']].drop_duplicates(subset=['baseSymbol'],ignore_index=True).head(5)
+# biggest_increase_df['in_email'] = np.where()
 
 # basic performance
 # accuracy (split per days to expiration)
@@ -145,7 +150,7 @@ roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingSt
 
 print('Start creating plots')
 
-# scatter plot
+# scatter plot (strike percentage increase against predicted probability)
 ReachedStrike = df[df['reachedStrikePrice'] == 1]
 notReachedStrike = df[df['reachedStrikePrice'] == 0]
 
@@ -161,7 +166,26 @@ ax.set_title('All Call options plotted')
 plt.show()
 fig.savefig("scheduled_jobs/summary_content/scatter.png")
 
-print('Created and saved scatter plot')
+print('Created and saved scatter plot (percentage increase vs predicted probability')
+
+#################################### Unsure
+# Create scatter plot (strike price progress vs predicted probability)
+# filter to make plot readable
+df_plot = df[(df['strikePriceProgressCapped'] < 1.1) & (df['strikePricePerc'] > 1.0) & (df['strikePricePerc'] < 10)]
+df_plot = df
+fig = plt.figure()
+# cm = plt.cm.get_cmap('Blues')
+ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+im = ax.scatter(df_plot['strikePriceProgressCapped'], df_plot['expPercIncrease'], s=20, alpha=0.7)
+# fig.colorbar(im, ax=ax)
+ax.set_xlabel('% of strike price reached')
+ax.set_ylabel('Expected profit')
+ax.set_title('All Call options plotted')
+plt.show()
+fig.savefig("scheduled_jobs/summary_content/scatter_strikeProgress.png")
+
+print('Created and saved scatter plot (percentage increase vs predicted probability')
+##############################
 
 # confusion matrix
 # calibration curve
@@ -228,10 +252,6 @@ html_content = """
 	Plotting the ROC, which gives an idea on how well the model performs
 	<br><img src="cid:image3"><br>
 
-
-	Plotting the Precision Recall curve, which gives an idea on how well the model performs
-	<br><img src="cid:image4"><br>
-
 	<br><br>
 	<hr>
 	<h3>Implementing a simple trading strategy</h3>
@@ -255,7 +275,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , subject='Performance report expiry date {}'.format(last_friday)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
-							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/pr.png']
+							   'scheduled_jobs/summary_content/roc.png']
 			  , attachment=df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
 							   'expirationDate', 'lastPrice', 'exportedAt',
 							   'finalPrice', 'finalPriceDate', 'firstPrice', 'firstPriceDate',
