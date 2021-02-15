@@ -117,6 +117,7 @@ df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPric
 biggest_increase_df = df.sort_values('profitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','profitability','prob']].drop_duplicates(subset=['baseSymbol'],ignore_index=True).head(5)
 # biggest_increase_df['in_email'] = np.where()
 
+
 # basic performance
 # accuracy (split per days to expiration)
 # accuracy (split per strike price increase)
@@ -266,8 +267,8 @@ html_content = """
 	
   </body>
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique(), round(roi_highprob,3)
-		   , round(roi_highprof,3),round(auc_roc,3), round(auc_pr,3) , round(brier_score,3))
+		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
+		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3), round(roi_highprob,3), round(roi_highprof,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
