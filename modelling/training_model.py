@@ -20,9 +20,16 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 # only select Call option out of the money
 df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
+
 # clean unwanted columns
 df = df.drop(columns=['Unnamed: 0','baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
        'finalPrice', 'firstPrice'])
+
+print('Train data shape: {}'.format(df.shape))
+print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min()), 3))
+print('Maximum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).max()), 3))
+print('Minimum nr days until expiration: {}'.format(df['daysToExpiration'].min()))
+print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()))
 
 ########################
 # Split in train and test
@@ -49,16 +56,22 @@ elif train_type == 'PROD':
     X_fit = pd.concat([X_train, X_test])
     y_fit = pd.concat([y_train, y_test])
 
+print('Train type: {}\nVersions: {}\nAlgorithm: {}'.format(train_type, version, algorithm))
+print('Training uncalibrated model...')
+
 getwd = os.getcwd()
 if model == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
+    uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
 elif model == 'GB':
     params = {'n_estimators':1000, 'learning_rate': 0.05, 'max_features': 3, 'random_state':42}
-uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
+    uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
 
-model_prob = uncal_model.predict_proba(X_val)[:,1]
+print('Training uncalibrated model... Done!')
 
+print('Calibrate and save model...')
 # calibrate and save classifier
 Cal_AB_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}32_{}'.format(train_type, algorithm, version))
 
 
+print('Calibrate and save model... Done!')
