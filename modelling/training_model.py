@@ -60,10 +60,10 @@ print('Train type: {}\nVersions: {}\nAlgorithm: {}'.format(train_type, version, 
 print('Training uncalibrated model...')
 
 getwd = os.getcwd()
-if model == 'AB':
+if algorithm == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
     uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
-elif model == 'GB':
+elif algorithm == 'GB':
     params = {'n_estimators':1000, 'learning_rate': 0.05, 'max_features': 3, 'random_state':42}
     uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
 
@@ -71,7 +71,7 @@ print('Training uncalibrated model... Done!')
 
 print('Calibrate and save model...')
 # calibrate and save classifier
-Cal_AB_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}32_{}'.format(train_type, algorithm, version))
+cal_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}32_{}'.format(train_type, algorithm, version))
 
 
 print('Calibrate and save model... Done!')
