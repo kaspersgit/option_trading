@@ -52,7 +52,7 @@ if len(sys.argv) >= 3:
 	print('Mode: {}'.format(mode))
 	print('Emaillist: {}'.format(emaillist))
 	# decide if attachment should be send or not
-	if len(sys.argv) >= 5 & sys.argv[4].lower() == 'false':
+	if len(sys.argv) >= 4 & sys.argv[3].lower() == 'false':
 		add_attachment = True
 	else:
 		add_attachment = False
