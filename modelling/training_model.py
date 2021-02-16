@@ -25,9 +25,9 @@ df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['ba
 df = df.drop(columns=['Unnamed: 0','baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
        'finalPrice', 'firstPrice'])
 
-print('Train data shape: {}'.format(df.shape))
-print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min()), 3))
-print('Maximum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).max()), 3))
+print('Total train data shape: {}'.format(df.shape))
+print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min(), 2)))
+print('Maximum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).max(), 2)))
 print('Minimum nr days until expiration: {}'.format(df['daysToExpiration'].min()))
 print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()))
 
@@ -70,7 +70,9 @@ elif train_type == 'PROD':
     X_fit = pd.concat([X_train, X_test])
     y_fit = pd.concat([y_train, y_test])
 
-print('Train type: {}\nVersions: {}\nAlgorithm: {}'.format(train_type, version, algorithm))
+print('Train data shape: {}'.format(X_fit.shape))
+print('Calibration data shape: {}'.format(X_val.shape))
+print('Train type: {}\nVersion: {}\nAlgorithm: {}'.format(train_type, version, algorithm))
 print('Training uncalibrated model...')
 
 getwd = os.getcwd()
