@@ -51,13 +51,19 @@ if len(sys.argv) >= 3:
 	# print status of variables
 	print('Mode: {}'.format(mode))
 	print('Emaillist: {}'.format(emaillist))
+	# decide if attachment should be send or not
+	if len(sys.argv) >= 5 & sys.argv[4].lower() == 'false':
+		add_attachment = True
+	else:
+		add_attachment = False
 
 else:
-	print('Script can be run from command line as <script> <model> <env prod or dev> <date (optional)>')
+	print('Script can be run from command line as <script> <model> <env prod or dev> <add attachment true/false> <date (optional)>')
 
 # Get model which should be used
 model = sys.argv[1]
 model = model.split('.')[0]
+
 
 # Set wd and other variables
 bucket = 'project-option-trading-output'
@@ -277,6 +283,16 @@ html_content = """
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
 		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
 
+if add_attachment:
+	attachment = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
+							   'expirationDate', 'lastPrice', 'exportedAt',
+							   'finalPrice', 'finalPriceDate', 'firstPrice', 'firstPriceDate',
+							   'maxPrice', 'maxPriceDate', 'minPrice', 'minPriceDate',
+							   'prob']].reset_index(drop=True)
+else:
+	attachment = None
+
+
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
@@ -285,11 +301,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/roc.png']
-			  , attachment=df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
-							   'expirationDate', 'lastPrice', 'exportedAt',
-							   'finalPrice', 'finalPriceDate', 'firstPrice', 'firstPriceDate',
-							   'maxPrice', 'maxPriceDate', 'minPrice', 'minPriceDate',
-							   'prob']].reset_index(drop=True)
+			  , attachment=attachment
 )
 
 
