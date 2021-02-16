@@ -12,7 +12,7 @@ def df_to_bytes(df):
 		df.to_csv(buffer)
 		return buffer.getvalue()
 
-def sendRichEmail(sender, receiver, password, subject, content, inline_images, attachment):
+def sendRichEmail(sender = None, receiver = None, password = None, subject = 'Default sendout', content = None, inline_images= None, attachment = None):
 	"""
 	:param sender: str email address from whom email is send
 	:param receiver: str of comma seperated email addresses
@@ -20,7 +20,7 @@ def sendRichEmail(sender, receiver, password, subject, content, inline_images, a
 	:param subject: str subject of email
 	:param content: str HTML formatted string (reference the images as <img src="cid:image1"> in the content)
 	:param inline_images: list with paths to the images
-	:param attachment: list with paths to the attachment
+	:param attachment: with path to the attachment
 	:return: The email will be send
 	"""
 	# Check types and makes correct one
@@ -42,10 +42,11 @@ def sendRichEmail(sender, receiver, password, subject, content, inline_images, a
 	msgText = MIMEText('This is the alternative plain text message.')
 	msgAlternative.attach(msgText)
 
-	# Add attachment
-	attachment = MIMEApplication(df_to_bytes(attachment))
-	attachment['Content-Disposition'] = 'attachment; filename="{}"'.format('enriched_data.csv')
-	msgRoot.attach(attachment)
+	if attachment != None:
+		# Add attachment
+		attachment = MIMEApplication(df_to_bytes(attachment))
+		attachment['Content-Disposition'] = 'attachment; filename="{}"'.format('enriched_data.csv')
+		msgRoot.attach(attachment)
 
 	# We reference the image in the IMG SRC attribute by the ID we give it below
 	msgText = MIMEText(content, 'html')
