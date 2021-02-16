@@ -114,7 +114,8 @@ df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPric
 
 # Basic summary
 # Get top performing stocks (included/not included in email)
-biggest_increase_df = df.sort_values('profitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','profitability','prob']].drop_duplicates(subset=['baseSymbol'],ignore_index=True).head(5)
+biggest_increase_df = df.sort_values('profitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','profitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
+biggest_increase_df.reset_index(drop=True, inplace=True)
 # biggest_increase_df['in_email'] = np.where()
 
 
@@ -255,6 +256,10 @@ html_content = """
 
 	<br><br>
 	<hr>
+	<h3>Most profitable stocks</h3>
+	<br>
+	{}
+	<br><br>
 	<h3>Implementing a simple trading strategy</h3>
 	<br>
 	Purely buying selling stocks which are mentioned in the email
@@ -268,7 +273,8 @@ html_content = """
   </body>
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
-		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3), round(roi_highprob,3), round(roi_highprof,3))
+		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
+		   , biggest_increase_df, ound(roi_highprob,3), round(roi_highprof,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
