@@ -31,6 +31,20 @@ print('Maximum strike price increase: {}'.format(round((df['strikePrice'] / df['
 print('Minimum nr days until expiration: {}'.format(df['daysToExpiration'].min()))
 print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()))
 
+features = ['reachedStrikePrice'
+    , 'baseLastPrice'
+    , 'strikePrice'
+    , 'daysToExpiration'
+    , 'bidPrice'
+    , 'midpoint'
+    , 'askPrice'
+    , 'lastPrice'
+    , 'volume'
+    , 'openInterest'
+    , 'volumeOpenInterestRatio'
+    , 'volatility']
+
+df = df[features]
 ########################
 # Split in train and test
 X = df.drop(columns='reachedStrikePrice')
