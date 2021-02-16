@@ -186,7 +186,7 @@ ax.set_title('All Call options plotted')
 plt.show()
 fig.savefig("scheduled_jobs/summary_content/scatter_strikeProgress.png")
 
-print('Created and saved scatter plot (percentage increase vs predicted probability')
+print('Created and saved scatter plot (percentage of Strike reached vs predicted probability')
 ##############################
 
 # confusion matrix
@@ -274,7 +274,7 @@ html_content = """
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
-		   , biggest_increase_df, ound(roi_highprob,3), round(roi_highprof,3))
+		   , biggest_increase_df, round(roi_highprob,3), round(roi_highprof,3))
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
