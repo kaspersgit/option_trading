@@ -60,7 +60,7 @@ from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
 version = 'v1x3'
-algorithm = 'GB'
+algorithm = 'AB'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
