@@ -31,26 +31,24 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 # Get supplied system arguments
 # mode (development or production)
-if len(sys.argv) >= 5:
+if len(sys.argv) >= 4:
 	date = pd.to_datetime(sys.argv[4])
 	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 else:
 	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 
+# Set mode prod or dev and base email recipients on that
 # decide if attachment should be send or not
-if (len(sys.argv) >= 4) & (sys.argv[3].lower() == 'false'):
-	add_attachment = True
-else:
-	add_attachment = False
-
 if len(sys.argv) >= 3:
 	mode = sys.argv[2]
 	if mode.upper().startswith('PROD'):
 		mode = 'PRODUCTION'
+		add_attachment = True
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
 			emaillist = f.read().splitlines()
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
+		add_attachment = False
 		with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
 			emaillist = f.read().splitlines()
 
