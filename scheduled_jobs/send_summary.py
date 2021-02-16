@@ -108,7 +108,7 @@ minIncrease = 1.05
 maxIncrease = 2
 maxBasePrice = 200
 minDaysToExp = 3
-maxDaysToExp = 25
+maxDaysToExp = 60
 
 df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease)]
 
@@ -139,7 +139,7 @@ filterset = {'threshold': 0.7,
 			 'maxBasePrice': 200,
 			 'minStrikeIncrease': 1.05,
 			 'minDaysToExp': 3,
-			 'maxDaysToExp': 25}
+			 'maxDaysToExp': 60}
 roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df,filterset, plot=False)
 
 
@@ -147,7 +147,7 @@ filterset = {'threshold': 0.25,
 			 'maxBasePrice': 100,
 			 'minStrikeIncrease': 1.2,
 			 'minDaysToExp': 3,
-			 'maxDaysToExp': 25}
+			 'maxDaysToExp': 60}
 roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df,filterset, plot=False)
 
 print('Start creating plots')
@@ -260,6 +260,7 @@ html_content = """
 	<br>
 	{}
 	<br><br>
+	<hr>
 	<h3>Implementing a simple trading strategy</h3>
 	<br>
 	Purely buying selling stocks which are mentioned in the email
@@ -274,7 +275,8 @@ html_content = """
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
-		   , biggest_increase_df, round(roi_highprob,3), round(roi_highprof,3))
+		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
+
 password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
