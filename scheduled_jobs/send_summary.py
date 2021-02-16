@@ -38,7 +38,7 @@ else:
 	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 
 # decide if attachment should be send or not
-if len(sys.argv) >= 4 & sys.argv[3].lower() == 'false':
+if (len(sys.argv) >= 4) & (sys.argv[3].lower() == 'false'):
 	add_attachment = True
 else:
 	add_attachment = False
