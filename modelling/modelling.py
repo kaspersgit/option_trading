@@ -4,6 +4,7 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 
+from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.process.stock_price_enriching import *
@@ -27,7 +28,9 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 df = df_all[(df_all['symbolType'] == 'Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
 # feature selection
-features = ['baseLastPrice'
+features = ['exportedAt'
+    , 'reachedStrikePrice'
+    , 'baseLastPrice'
     , 'strikePrice'
     , 'daysToExpiration'
     , 'bidPrice'
@@ -41,18 +44,18 @@ features = ['baseLastPrice'
 
 
 
-# df = df[features]
+df = df[features]
 
 ########################
 # Split in train, validation, test and out of time
-df_oot = df.sort_values('exportedAt', ascending=True)[-1000::]
+df_oot = df.sort_values('exportedAt', ascending=True)[-5000::]
 df_rest = df.drop(df_oot.index, axis=0)
 
 # clean unwanted columns for model training
 df_oot = df_oot.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'])
+       'finalPrice', 'firstPrice'], errors='ignore')
 df_rest = df_rest.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'])
+       'finalPrice', 'firstPrice'], errors='ignore')
 
 X = df_rest.drop(columns='reachedStrikePrice')
 y = df_rest['reachedStrikePrice']
@@ -68,13 +71,13 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 # v1x1 trained on data with max expirationDate 2020-12-18
 
 train_type = 'DEV'
-version = 'v1x2'
+version = 'v1x3'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
     df_test = df_all.loc[X_test.index,:]
-    df_test.to_csv("validation/test_df.csv")
-    df_oot.to_csv("validation/oot_df.csv")
+    df_test.to_csv("data/validation/test_df.csv")
+    df_oot.to_csv("data/validation/oot_df.csv")
 elif train_type == 'PROD':
     X_fit = pd.concat([X_train, X_test])
     y_fit = pd.concat([y_train, y_test])
@@ -94,12 +97,12 @@ Cal_GB_model = calibrate_model(GBC_model, X_val, y_val, method='sigmoid', save_m
 # Choose model
 # Load model
 getwd = os.getcwd()
-with open(getwd+'/trained_models/AB_v1.sav', 'rb') as file:
-    model = pickle.load(file)
-with open(getwd+'/trained_models/DEV_c_AB64_v1x0.sav', 'rb') as file:
-    calib_model = pickle.load(file)
+with open(getwd+'/trained_models/DEV_c_GB64_v1x3.sav', 'rb') as file:
+    gb_model = pickle.load(file)
+with open(getwd+'/trained_models/DEV_c_AB64_v1x3.sav', 'rb') as file:
+    ab_model = pickle.load(file)
 
-model = Cal_GB_model
+model = gb_model
 
 # Make predictions
 prob = model.predict_proba(X_test[model.feature_names])[:,1]
@@ -118,7 +121,7 @@ plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all data', type='roc')
 showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
 # Calibration plot
-plotCalibrationCurve(pred_df['actual'], pred_df['prob'], bins=10)
+plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all data', bins=10)
 
 #####################
 # Visualize

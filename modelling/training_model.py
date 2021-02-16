@@ -34,11 +34,12 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 
 #####################
 # Train
-# AdaBoost classifier
+# Classifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v1x2'
+version = 'v1x3'
+algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
@@ -49,12 +50,15 @@ elif train_type == 'PROD':
     y_fit = pd.concat([y_train, y_test])
 
 getwd = os.getcwd()
-params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-AB_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = True, ab_path=getwd+'/trained_models/', name=train_type+'_AB32_'+version)
+if model == 'AB':
+    params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
+elif model == 'GB':
+    params = {'n_estimators':1000, 'learning_rate': 0.05, 'max_features': 3, 'random_state':42}
+uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
 
-Adaprob = AB_model.predict_proba(X_val)[:,1]
+model_prob = uncal_model.predict_proba(X_val)[:,1]
 
 # calibrate and save classifier
-Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_AB32_'+version)
+Cal_AB_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}32_{}'.format(train_type, algorithm, version))
 
 
