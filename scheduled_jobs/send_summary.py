@@ -31,11 +31,17 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 # Get supplied system arguments
 # mode (development or production)
-if len(sys.argv) >= 4:
-	date = pd.to_datetime(sys.argv[3])
+if len(sys.argv) >= 5:
+	date = pd.to_datetime(sys.argv[4])
 	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
 else:
 	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+
+# decide if attachment should be send or not
+if (len(sys.argv) >= 4) & (sys.argv[3].lower() == 'false'):
+	add_attachment = True
+else:
+	add_attachment = False
 
 if len(sys.argv) >= 3:
 	mode = sys.argv[2]
@@ -51,11 +57,6 @@ if len(sys.argv) >= 3:
 	# print status of variables
 	print('Mode: {}'.format(mode))
 	print('Emaillist: {}'.format(emaillist))
-	# decide if attachment should be send or not
-	if len(sys.argv) >= 4 & sys.argv[3].lower() == 'false':
-		add_attachment = True
-	else:
-		add_attachment = False
 
 else:
 	print('Script can be run from command line as <script> <model> <env prod or dev> <add attachment true/false> <date (optional)>')
