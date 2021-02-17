@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def simpleTradingStrategy(df,filterset={}, plot=True):
+def dfFilterOnGivenSet(df, filterset={}):
 	# Fill up filterset with default in case of non existing
 	if "threshold" not in filterset:
 		filterset['threshold'] = 0.0
@@ -14,7 +14,6 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 	if "minStrikeIncrease" not in filterset:
 		filterset['minStrikeIncrease'] = 1.0
 	print('Filtering data set on following rules: \n{}'.format(filterset))
-
 	# in case column did not exist yet
 	df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 
@@ -24,6 +23,10 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 		(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
 		(df['daysToExpiration'] > filterset['minDaysToExp']) &
 		(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
+	return(df_filtered)
+
+def simpleTradingStrategy(df,filterset={}, plot=True):
+	df_filtered = dfFilterOnGivenSet(df, filterset)
 
 	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()

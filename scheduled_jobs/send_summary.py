@@ -90,6 +90,7 @@ prob = model.predict_proba(df[features])[:, 1]
 
 print('Loaded model and scored options')
 
+####### Adding columns ########################
 # Make high level summary
 # Add target variable
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
@@ -104,7 +105,16 @@ df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 # expected profit
 df['expPercIncrease'] = df['strikePricePerc'] * df['prob']
 # profitability (percentage increase from stock price to max price)
-df['profitability'] = df['maxPrice']/df['baseLastPrice']
+df['maxProfitability'] = df['maxPrice']/df['baseLastPrice']
+
+# buy one of each stock of a certain amount worth of stocks (df['baseLastPrice'] vs 100)
+# below we implement 100 dollars worth of each stock
+df['stocksBought'] = 100 / df['baseLastPrice']
+df['cost'] = df['stocksBought'] * df['baseLastPrice']
+df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
+df['profit'] = df['revenue'] - df['cost']
+df['profitPerc'] = df['profit'] / df['cost']
+################################################
 
 # filter set on applicable rows
 # only select Call option out of the money
@@ -115,13 +125,15 @@ maxBasePrice = 200
 minDaysToExp = 3
 maxDaysToExp = 60
 
-df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease)]
+df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease) & (df['daysToExpiration'] >= minDaysToExp)]
 
 # Basic summary
 # Get top performing stocks (included/not included in email)
-biggest_increase_df = df.sort_values('profitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','profitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
+biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(10)
 biggest_increase_df.reset_index(drop=True, inplace=True)
-# biggest_increase_df['in_email'] = np.where()
+
+biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
+biggest_decrease_df.reset_index(drop=True, inplace=True)
 
 
 # basic performance
@@ -133,27 +145,20 @@ brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
 # Simulating trading strategies
 print('Simulating simple trading strategies')
 
-# buy one of each stock of a certain amount worth of stocks (df['baseLastPrice'] vs 100)
-# below we implement 100 dollars worth of each stock
-df['stocksBought'] = 100 / df['baseLastPrice']
-df['cost'] = df['stocksBought'] * df['baseLastPrice']
-df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
-df['profit'] = df['revenue'] - df['cost']
-
-filterset = {'threshold': 0.7,
+filterset_highprob = {'threshold': 0.7,
 			 'maxBasePrice': 200,
 			 'minStrikeIncrease': 1.05,
 			 'minDaysToExp': 3,
 			 'maxDaysToExp': 60}
-roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df,filterset, plot=False)
+roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, filterset_highprob, plot=False)
 
 
-filterset = {'threshold': 0.25,
+filterset_highprof = {'threshold': 0.25,
 			 'maxBasePrice': 100,
 			 'minStrikeIncrease': 1.2,
 			 'minDaysToExp': 3,
 			 'maxDaysToExp': 60}
-roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df,filterset, plot=False)
+roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, filterset_highprof, plot=False)
 
 print('Start creating plots')
 
@@ -177,21 +182,41 @@ print('Created and saved scatter plot (percentage increase vs predicted probabil
 
 #################################### Unsure
 # Create scatter plot (strike price progress vs predicted probability)
-# filter to make plot readable
-df_plot = df[(df['strikePriceProgressCapped'] < 1.1) & (df['strikePricePerc'] > 1.0) & (df['strikePricePerc'] < 10)]
-df_plot = df
+# Filter on options appearing in high probability, profitability or in neither of the two
+high_prob_df = dfFilterOnGivenSet(df, filterset_highprob)
+high_prof_df = dfFilterOnGivenSet(df, filterset_highprof)
+# rows not appearing in any of the above
+not_email_df = df[(~df.index.isin(high_prob_df.index)) & (~df.index.isin(high_prof_df.index))]
+
 fig = plt.figure()
 # cm = plt.cm.get_cmap('Blues')
 ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-im = ax.scatter(df_plot['strikePriceProgressCapped'], df_plot['expPercIncrease'], s=20, alpha=0.7)
-# fig.colorbar(im, ax=ax)
-ax.set_xlabel('% of strike price reached')
+ax.scatter(not_email_df['profitPerc'], not_email_df['expPercIncrease'], s=7, color='r', alpha=0.7, label='Not in email')
+ax.scatter(high_prob_df['profitPerc'], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
+ax.scatter(high_prof_df['profitPerc'], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
+ax.legend(loc="upper left")
+ax.set_xlabel('Actual profit')
 ax.set_ylabel('Expected profit')
-ax.set_title('All Call options plotted')
+ax.set_title('Expected vs actual profitability')
 plt.show()
-fig.savefig("scheduled_jobs/summary_content/scatter_strikeProgress.png")
+fig.savefig("scheduled_jobs/summary_content/scatter_profitability.png")
 
-print('Created and saved scatter plot (percentage of Strike reached vs predicted probability')
+print('Created and saved scatter plot (expected vs actual profitability')
+
+fig = plt.figure()
+# cm = plt.cm.get_cmap('Blues')
+ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+ax.scatter(not_email_df['maxProfitability'], not_email_df['expPercIncrease'], s=7, color='r', alpha=0.7, label='Not in email')
+ax.scatter(high_prof_df['maxProfitability'], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
+ax.scatter(high_prob_df['maxProfitability'], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
+ax.legend(loc="upper right")
+ax.set_xlabel('Max profit')
+ax.set_ylabel('Expected profit')
+ax.set_title('Expected vs max profitability')
+plt.show()
+fig.savefig("scheduled_jobs/summary_content/scatter_maxProfitability.png")
+
+print('Created and saved scatter plot (expected vs max profitability')
 ##############################
 
 # confusion matrix
@@ -275,6 +300,22 @@ html_content = """
 	High probability: {}
 	<br>
 	High profitability: {}
+	<br><br>
+	<hr>
+	
+	Plotting expected profitability vs actual profitability
+	<small> 
+	Expected: (difference in stock and strike price * predicted probability) / stock price
+	Actual:	(difference in either strike price (if reached) or stock price on close before expiration and stock price) / stock price
+	</small>
+	<br><img src="cid:image4"><br>
+	
+	Plotting expected profitability vs max profitability
+	<small> 
+	Expected: (difference in stock and strike price * predicted probability) / stock price
+	Max:	(difference in max reached price before expiration and stock price) / stock price
+	</small>
+	<br><img src="cid:image5"><br>
 	
   </body>
 """.format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
@@ -299,7 +340,8 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , subject='Performance report expiry date {}'.format(last_friday)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
-							   'scheduled_jobs/summary_content/roc.png']
+							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/scatter_profitability.png',
+							   'scheduled_jobs/summary_content/scatter_maxProfitability.png']
 			  , attachment=attachment
 )
 
