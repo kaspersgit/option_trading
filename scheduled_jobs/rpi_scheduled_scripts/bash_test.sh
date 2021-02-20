@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "Kasper"
 echo "is...... Great"
 python3 -c "print('this is within python')"

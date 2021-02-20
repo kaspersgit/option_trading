@@ -129,10 +129,10 @@ df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPric
 
 # Basic summary
 # Get top performing stocks (included/not included in email)
-biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(10)
+biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(10)
 biggest_increase_df.reset_index(drop=True, inplace=True)
 
-biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','strikePrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
+biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
 biggest_decrease_df.reset_index(drop=True, inplace=True)
 
 
@@ -210,6 +210,7 @@ ax.scatter(not_email_df['maxProfitability'], not_email_df['expPercIncrease'], s=
 ax.scatter(high_prof_df['maxProfitability'], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
 ax.scatter(high_prob_df['maxProfitability'], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
 ax.legend(loc="upper right")
+ax.set_xlim(xmax=3)
 ax.set_xlabel('Max profit')
 ax.set_ylabel('Expected profit')
 ax.set_title('Expected vs max profitability')
@@ -306,6 +307,7 @@ html_content = """
 	Plotting expected profitability vs actual profitability
 	<small> 
 	Expected: (difference in stock and strike price * predicted probability) / stock price
+	<br>
 	Actual:	(difference in either strike price (if reached) or stock price on close before expiration and stock price) / stock price
 	</small>
 	<br><img src="cid:image4"><br>
@@ -313,6 +315,7 @@ html_content = """
 	Plotting expected profitability vs max profitability
 	<small> 
 	Expected: (difference in stock and strike price * predicted probability) / stock price
+	<br>
 	Max:	(difference in max reached price before expiration and stock price) / stock price
 	</small>
 	<br><img src="cid:image5"><br>

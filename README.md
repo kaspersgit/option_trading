@@ -13,6 +13,9 @@ models should be well documented
 - features used
 - performance
 
+# hyperparamter search
+- use optuna package for bayesian search with TPE surrogate
+
 # notes
 The following Errors have been encountered on Raspberry PI
 when import numpy or matplotlib

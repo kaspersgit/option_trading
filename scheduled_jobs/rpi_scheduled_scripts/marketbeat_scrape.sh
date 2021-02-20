@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "Starting marketbeat scraping..."
 python3 /home/pi/Documents/python_scripts/option_trading/scraping/marketbeat_scraping.py >> /home/pi/scripts/marketbeat_scraping.log
 echo "Marketbeat scraping... Done"

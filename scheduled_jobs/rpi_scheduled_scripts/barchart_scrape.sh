@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "Starting barchart scraping..."
 python3 /home/pi/Documents/python_scripts/option_trading/scraping/barchart_scraping.py >> /home/pi/scripts/barchart_scraping.log
 echo "Barchart scraping... Done"
