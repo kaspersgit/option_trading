@@ -42,7 +42,7 @@ def sendRichEmail(sender = None, receiver = None, password = None, subject = 'De
 	msgText = MIMEText('This is the alternative plain text message.')
 	msgAlternative.attach(msgText)
 
-	if attachment != None:
+	if attachment is not None:
 		# Add attachment
 		attachment = MIMEApplication(df_to_bytes(attachment))
 		attachment['Content-Disposition'] = 'attachment; filename="{}"'.format('enriched_data.csv')

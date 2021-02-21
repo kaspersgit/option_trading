@@ -30,9 +30,7 @@ df_all['percStrikeReached'] = (df_all['maxPrice'] - df_all['baseLastPrice']) / (
 df = df_all[(df_all['symbolType'] == 'Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
 # feature selection
-features = ['exportedAt'
-    , 'percStrikeReached'
-    , 'baseLastPrice'
+features = ['baseLastPrice'
     , 'strikePrice'
     , 'daysToExpiration'
     , 'bidPrice'
@@ -44,26 +42,23 @@ features = ['exportedAt'
     , 'volumeOpenInterestRatio'
     , 'volatility']
 
-
-
-df = df[features]
-
 ########################
 # Split in train, validation, test and out of time
 df_oot = df.sort_values('exportedAt', ascending=True)[-5000::]
 df_rest = df.drop(df_oot.index, axis=0)
 
+df_train, df_test = train_test_split(df_rest, test_size=0.25, random_state=42)
+df_train, df_val = train_test_split(df_train, test_size=0.25, random_state=42)
+
 # clean unwanted columns for model training
-df_oot = df_oot.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'], errors='ignore')
-df_rest = df_rest.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'], errors='ignore')
+X_train = df_train[features]
+y_train = df_train['percStrikeReached']
 
-X = df_rest.drop(columns='percStrikeReached')
-y = df_rest['percStrikeReached']
+X_val = df_val[features]
+y_val = df_val['percStrikeReached']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=42)
+X_test = df_test[features]
+y_test = df_test['percStrikeReached']
 
 #####################
 # Train and predict
@@ -95,16 +90,16 @@ reg.fit(X_fit, y_fit)
 
 r_pred = reg.predict(X_test)
 
+df_test['r_pred'] = r_pred
+
 mse = mean_squared_error(y_test, r_pred)
 print("The mean squared error (MSE) on test set: {:.4f}".format(mse))
 
-X_test['r_pred'] = r_pred
-X_test['r_actual'] = y_test
 
 # plot prediction vs actual
 fig = plt.figure()
 ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(X_test['r_pred'], X_test['r_actual'], s = 7, color='g', alpha=0.7, label='Increase wrt strike price')
+ax.scatter(df_test['r_pred'], df_test['percStrikeReached'], s = 7, color='g', alpha=0.7, label='Increase wrt strike price')
 ax.legend(loc="upper right")
 ax.set_xlim(-3,8)
 ax.set_ylim(-1,8)
@@ -115,18 +110,17 @@ plt.show()
 
 ########
 # estimating profitability
-df = X_test
-df['stocksBought'] = 100 / df['baseLastPrice']
-df['cost'] = df['stocksBought'] * df['baseLastPrice']
-df['revenue'] = df['stocksBought'] * np.where(df['r_actual'] >= df['r_pred'], df['r_pred'], df['baseLastPrice'] * 0.9)
-df['profit'] = df['revenue'] - df['cost']
-df['profitPerc'] = df['profit'] / df['cost']
-df['reachedPrediction'] = np.where(df['r_actual'] >= df['r_pred'], 1, 0)
+df_test['stocksBought'] = 100 / df_test['baseLastPrice']
+df_test['cost'] = df_test['stocksBought'] * df_test['baseLastPrice']
+df_test['revenue'] = df_test['stocksBought'] * np.where(df_test['percStrikeReached'] >= df_test['r_pred'], df_test['r_pred'], df_test['finalPrice'])
+df_test['profit'] = df_test['revenue'] - df_test['cost']
+df_test['profitPerc'] = df_test['profit'] / df_test['cost']
+df_test['reachedPrediction'] = np.where(df_test['percStrikeReached'] >= df_test['r_pred'], 1, 0)
 
-df['profit'].sum()
+df_test['profit'].sum()
 # below gives big profit?
-minThreshold = 2
-maxThreshold = 4
-total_profit = df[(df['r_pred'] > minThreshold) & (df['r_pred'] < maxThreshold)]['profit'].sum()
-total_cost = df[(df['r_pred'] > minThreshold) & (df['r_pred'] < maxThreshold)]['cost'].sum()
+minThreshold = 1.5
+maxThreshold = 9
+total_profit = df_test[(df_test['r_pred'] > minThreshold) & (df_test['r_pred'] < maxThreshold)]['profit'].sum()
+total_cost = df_test[(df_test['r_pred'] > minThreshold) & (df_test['r_pred'] < maxThreshold)]['cost'].sum()
 print(total_profit / total_cost)
