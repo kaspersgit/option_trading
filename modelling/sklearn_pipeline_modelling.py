@@ -16,46 +16,21 @@ from option_trading_nonprod.process.stock_price_enriching import *
 class CustomTransformer(BaseEstimator, TransformerMixin):
   # add another additional parameter, just for fun, while we are at it
 	def __init__(self, feature_names):
-		print('\n>>>>>>>init() called.\n')
+		# print('>init() called.')
 		self.feature_names = feature_names
+		print('Attached feature names to object')
 
 	def fit(self, X, y = None):
-		print('\n>>>>>>>fit() called.\n')
+		# print('>fit() called.')
 		return self
 
 	def transform(self, X, y = None):
-		print('\n>>>>>>>transform() called.\n')
+		# print('>transform() called.')
 		X_ = X.copy() # creating a copy to avoid changes to original dataset
-		X_ = enrich_df(X_)
+		# X_ = enrich_df(X_)
 		X_ = X_[self.feature_names]
+		print('Only selected feature included')
 		return X_
-
-# clean out duplicates to be sure
-df_all = df_all.drop(axis=1, columns='Unnamed: 0')
-df_all = df_all.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
-
-# Add internal (within same batch) information
-df_all = enrich_df(df_all)
-
-# Set target
-df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
-df_all['percStrikeReached'] = (df_all['maxPrice'] - df_all['baseLastPrice']) / (df_all['strikePrice'] - df_all['baseLastPrice'])
-
-# filter set on applicable rows
-# only select Call option out of the money
-df = df_all[(df_all['symbolType'] == 'Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
-
-
-## creating pipeline
-classifiers = [
-    KNeighborsClassifier(3),
-    SVC(kernel="rbf", C=0.025, probability=True),
-    NuSVC(probability=True),
-    DecisionTreeClassifier(),
-    RandomForestClassifier(),
-    AdaBoostClassifier(),
-    GradientBoostingClassifier()
-    ]
 
 #######################
 # Load and prepare data
@@ -67,6 +42,8 @@ df['percStrikeReached'] = (df['maxPrice'] - df['baseLastPrice']) / (
 		df['strikePrice'] - df['baseLastPrice'])
 
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
+
+df = enrich_df(df)
 # filter set on applicable rows
 # only select Call option out of the money
 df_calls = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'])].copy()
@@ -102,15 +79,43 @@ features = ['baseLastPrice'
     , 'volume'
     , 'openInterest'
     , 'volumeOpenInterestRatio'
-    , 'volatility']
+    , 'volatility'
+	# information from scraped batch
+	, 'nrCalls'
+	, 'meanStrikeCall'
+	, 'meanStrikePut'
+]
+
+###########
+# Test different classifiers
+## creating pipeline
+classifiers = [
+	# KNeighborsClassifier(3),
+	# SVC(kernel="rbf", C=0.025, probability=True),
+	# NuSVC(probability=True),
+	# DecisionTreeClassifier(),
+	RandomForestClassifier(n_estimators=1000),
+	AdaBoostClassifier(learning_rate=0.1, n_estimators=1000),
+	GradientBoostingClassifier(learning_rate=0.05, n_estimators=1000)
+]
+
+for classifier in classifiers:
+	print(classifier)
+	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
+					  ('classifier', classifier)])
+	pipe.fit(X_train, y_train)
+	probs = pipe.predict_proba(X_test)[:,1]
+	print("model score: %.3f" % pipe.score(X_test, y_test))
+	print("AUC ROC: {}".format(roc_auc_score(y_test, probs)))
+
 
 ############
 # Test different parameters
 # parameter names are the <classifier name>__<parameter name> (classifier as named in the pipeline)
 param_dist = {
- 'classifier__n_estimators': [500,1000],
- 'classifier__learning_rate': [0.01,0.05,0.1]
- }
+	'classifier__n_estimators': [500,1000],
+	'classifier__learning_rate': [0.01,0.05,0.1]
+}
 
 pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
 					   ('classifier', AdaBoostClassifier())])
@@ -118,14 +123,7 @@ pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
 grid = GridSearchCV(pipe, param_grid=param_dist, scoring=make_scorer(roc_auc_score), cv=5)
 grid.fit(X_train, y_train)
 
-print("score = %3.2f" %(grid.score(X_test,y_test)))
+probs = pipe.predict_proba(X_test)[:,1]
+print("score = %3.2f" % (grid.score(X_test, y_test)))
+print("AUC ROC: {}".format(roc_auc_score(y_test, probs)))
 print(grid.best_params_)
-
-###########
-# Test different classifiers
-for classifier in classifiers:
-    pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
-                      ('classifier', classifier)])
-    pipe.fit(X_train, y_train)
-    print(classifier)
-    print("model score: %.3f" % pipe.score(X_test, y_test))

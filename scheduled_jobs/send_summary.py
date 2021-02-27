@@ -10,14 +10,10 @@ example:
 """
 
 # import packages
-import pandas as pd
-from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta, FR
 import os
 import sys
 import pickle
-import matplotlib.pyplot as plt
-from sklearn.metrics import brier_score_loss
 
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
