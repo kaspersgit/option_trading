@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 import numpy as np
 import pickle
+import json
 
 # Get supplied system arguments
 # mode (development or production)
@@ -37,9 +38,15 @@ day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
 print('Model: {}'.format(model))
 print('Using data from {}'.format(day))
-# current_path = os.getcwd()
-current_path = '/home/pi'
-df = pd.read_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+day+'.csv')
+# set working directory
+os.chdir('/home/pi/Documents/python_scripts/option_trading')
+current_path = os.getcwd()
+df = pd.read_csv(current_path + '/data/barchart/barchart_unusual_activity_'+day+'.csv')
+with open('other_files/config_file.json') as json_file:
+	config = json.load(json_file)
+
+hprob_config = config['high_probability']
+hprof_config = config['high_profitability']
 
 
 # Adding some additional columns
@@ -60,14 +67,14 @@ df['const'] = 1.0
 # Load model and predict
 if model == 'LogisticRegression':
     # Logistic Regression
-    file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/'+model
+    file_path = current_path + '/trained_models/'+model
     model = LogitResults.load(file_path)
     model_name = file_path.split('/')[-1]
     # Select columns which are model needs as input but leave out the constant
     features = model.params.index
     prob = model.predict(df[features])
 elif model != 'Logit':
-	file_path = current_path + '/Documents/python_scripts/option_trading/trained_models/'+model+'.sav'
+	file_path = current_path + '/trained_models/'+model+'.sav'
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
 	model_name = file_path.split('/')[-1]
@@ -86,12 +93,12 @@ minDaysToExp = 3
 maxDaysToExp = 25
 minStrikeIncrease = 1.05
 
-high_prob = df[(df['prediction'] > threshold) &
+high_prob = df[(df['prediction'] > hprob_config['threshold']) &
     (df['symbolType']=='Call') &
-    (df['daysToExpiration'] < maxDaysToExp) &
-    (df['priceDiffPerc'] > minStrikeIncrease) &
-    (df['daysToExpiration'] > minDaysToExp) &
-    (df['baseLastPrice'] < maxBasePrice)].copy()
+    (df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
+    (df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
+    (df['daysToExpiration'] > hprob_config['minDaysToExp']) &
+    (df['baseLastPrice'] < hprob_config['maxBasePrice'])].copy()
 high_prob = high_prob[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 
@@ -104,12 +111,12 @@ hprof_minDaysToExp = 3
 hprof_maxDaysToExp = 25
 hprof_minStrikeIncrease = 1.20
 
-high_prof = df[(df['prediction'] > hprof_threshold) &
+high_prof = df[(df['prediction'] > hprof_config['hprof_threshold']) &
     (df['symbolType']=='Call') &
-    (df['daysToExpiration'] < hprof_maxDaysToExp) &
-    (df['priceDiffPerc'] > hprof_minStrikeIncrease) &
-    (df['daysToExpiration'] > hprof_minDaysToExp) &
-    (df['baseLastPrice'] < hprof_maxBasePrice)].copy()
+    (df['daysToExpiration'] < hprof_config['hprof_maxDaysToExp']) &
+    (df['priceDiffPerc'] > hprof_config['hprof_minStrikeIncrease']) &
+    (df['daysToExpiration'] > hprof_config['hprof_minDaysToExp']) &
+    (df['baseLastPrice'] < hprof_config['hprof_maxBasePrice'])].copy()
 high_prof = high_prof[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prof = high_prof.sort_values('priceDiffPerc').reset_index(drop=True)
 
