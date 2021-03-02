@@ -4,6 +4,7 @@ import numpy as np
 import os
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
+from sklearn.metrics import auc, roc_curve
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.process.stock_price_enriching import *
@@ -60,7 +61,6 @@ features = ['priceDiffPerc'
 
 print('Nr of features included: {}'.format(len(features)))
 
-df_rest = df[features]
 ########################
 # Split in train and test
 # test to split keeping exportedAt column always in same group
@@ -68,26 +68,26 @@ gss = GroupShuffleSplit(n_splits=1, train_size=.75, random_state=42)
 gss.get_n_splits()
 
 # split off test set
-test_groupsplit = gss.split(df_rest, groups = df_rest['exportedAt'])
+test_groupsplit = gss.split(df, groups = df['exportedAt'])
 train_idx, test_idx = next(test_groupsplit)
-df_rest2 = df_rest.loc[train_idx]
-df_test = df_rest.loc[test_idx]
+df2 = df.loc[train_idx]
+df_test = df.loc[test_idx]
 
 # split off validation set
-df_rest2 = df_rest2.reset_index(drop=True)
-val_groupsplit = gss.split(df_rest2, groups = df_rest2['exportedAt'])
+df2 = df2.reset_index(drop=True)
+val_groupsplit = gss.split(df2, groups = df2['exportedAt'])
 train_idx, val_idx = next(val_groupsplit)
-df_train = df_rest2.loc[train_idx]
-df_val = df_rest2.loc[val_idx]
+df_train = df2.loc[train_idx]
+df_val = df2.loc[val_idx]
 
 # clean unwanted columns for model training
-X_train = df_train.drop(columns=[target])
+X_train = df_train[features]
 y_train = df_train[target]
 
-X_val = df_val.drop(columns=[target])
+X_val = df_val[features]
 y_val = df_val[target]
 
-X_test = df_test.drop(columns=[target])
+X_test = df_test[features]
 y_test = df_test[target]
 
 #####################
@@ -121,6 +121,10 @@ elif algorithm == 'GB':
     uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
 
 print('Training uncalibrated model... Done!')
+
+xVar, yVar, thresholds = roc_curve(y_val, uncal_model.predict_proba(X_val)[:, 1])
+roc_auc = auc(xVar, yVar)
+print('Model has a ROC on validation set of: {}'.format(roc_auc))
 
 print('Calibrate and save model...')
 # calibrate and save classifier
