@@ -24,6 +24,7 @@ df_all = batch_enrich_df(df_all)
 # filter set on applicable rows
 # only select Call option out of the money
 df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
+df = df.reset_index(drop=True)
 
 print('Total train data shape: {}'.format(df.shape))
 print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min(), 2)))
