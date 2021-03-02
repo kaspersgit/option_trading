@@ -34,7 +34,7 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 	df_profit['cumProfit'] = df_profit['profit'].cumsum()
 	df_profit['cumProfitPerc'] = df_profit['cumProfit'] / df_profit['cumCost']
 
-	# If plot is True then plot the prob on x axis and cumulative return on investment on y axix
+	# If plot is True then plot the prob on x axis and cumulative return on investment on y axis
 	if plot:
 		fig = plt.figure()
 		ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
@@ -42,8 +42,8 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 		plt.show()
 
 	# Return the return on investment
-	roi = (df_profit['revenue'].sum() - df_profit['cost'].sum()) / df_profit['cost'].sum()
 	cost = df_profit['cost'].sum()
 	revenue = df_profit['revenue'].sum()
 	profit = df_profit['profit'].sum()
+	roi = (revenue - cost) / cost
 	return roi, cost, revenue, profit

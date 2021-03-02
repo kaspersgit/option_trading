@@ -237,7 +237,7 @@ def limitDaysToExpiration(df, min=15, max=25):
 	return (df)
 
 
-def enrich_df(df):
+def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']):
 	"""
 	Adding information about the other option data within the same batch
 	together with some ratios
@@ -252,25 +252,26 @@ def enrich_df(df):
 	df['nrOptions'] = 1
 	df['strikePriceCum'] = df['strikePrice']
 
+	df['volumeTimesStrike'] = df['strikePrice'] * df['volume']
+
 	df.sort_values(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice'
 					], inplace=True)
 
 	df_symbol = df[['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'inTheMoney', 'volume',
-					'openInterest'
-					]].groupby(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney'
-								]).agg(
-		{'baseSymbol': 'count', 'strikePrice': 'mean', 'volume': 'sum', 'openInterest': 'sum'
-		 }).rename(columns={'baseSymbol': 'nrOccurences', 'strikePrice': 'meanStrikePrice'
+					'openInterest', 'volumeTimesStrike'
+					]].groupby(groupByColumns).agg(
+		{'baseSymbol': 'count', 'strikePrice': 'mean', 'volume': 'sum', 'openInterest': 'sum', 'volumeTimesStrike': 'sum'
+		 }).rename(columns={'baseSymbol': 'nrOccurences', 'strikePrice': 'meanStrikePrice', 'volume': 'sumVolume', 'openInterest': 'sumOpenInterest', 'volumeTimesStrike': 'sumVolumeTimesStrike'
 							}).reset_index()
+	df_symbol['weightedStrike'] = df_symbol['sumVolumeTimesStrike'] / df_symbol['sumVolume']
 
 	# only give info about calls with higher strike price
 	df_option_inv_cum = df[
 		['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'strikePriceCum', 'inTheMoney',
 		 'volume', 'openInterest', 'nrOptions'
-		 ]].groupby(['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney', 'strikePrice'
-					 ]).sum().sort_values('strikePrice', ascending=False
+		 ]].groupby(groupByColumns + ['strikePrice']).sum().sort_values('strikePrice', ascending=False
 										  ).groupby(
-		['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']
+		groupByColumns
 	).agg({'volume': 'cumsum', 'openInterest': 'cumsum', 'nrOptions': 'cumsum', 'strikePriceCum': 'cumsum'
 		   }).rename(
 		columns={'volume': 'volumeCumSum', 'openInterest': 'openInterestCumSum', 'nrOptions': 'nrHigherOptions',
@@ -283,13 +284,15 @@ def enrich_df(df):
 		'strikePrice']
 
 	df_call = df_symbol[df_symbol['symbolType'] == 'Call'].copy()
-	df_call.rename(columns={'nrOccurences': 'nrCalls', 'meanStrikePrice': 'meanStrikeCall', 'volume': 'volumeCall',
-							'openInterest': 'openInterestCall'}, inplace=True)
+	df_call.rename(columns={'nrOccurences': 'nrCalls', 'meanStrikePrice': 'meanStrikeCall', 'sumVolume': 'sumVolumeCall',
+							'sumOpenInterest': 'sumOpenInterestCall', 'sumVolumeTimesStrike': 'sumVolumeTimesStrikeCall',
+							'weightedStrike': 'weightedStrikeCall'}, inplace=True)
 	df_call.drop(columns=['symbolType'], inplace=True)
 
 	df_put = df_symbol[df_symbol['symbolType'] == 'Put'].copy()
-	df_put.rename(columns={'nrOccurences': 'nrPuts', 'meanStrikePrice': 'meanStrikePut', 'volume': 'volumePut',
-						   'openInterest': 'openInterestPut'}, inplace=True)
+	df_put.rename(columns={'nrOccurences': 'nrPuts', 'meanStrikePrice': 'meanStrikePut', 'sumVolume': 'sumVolumePut',
+						   'sumOpenInterest': 'sumOpenInterestPut', 'sumVolumeTimesStrike': 'sumVolumeTimesStrikePut',
+						   'weightedStrike': 'weightedStrikePut'}, inplace=True)
 	df_put.drop(columns=['symbolType'], inplace=True)
 
 	# Add summarized data from Calls and Puts to df
@@ -306,8 +309,10 @@ def enrich_df(df):
 
 	# Set to 0 when NaN
 	df.fillna({'nrCalls': 0, 'nrPuts': 0,
-			   'volumeCall': 0, 'volumePut': 0,
-			   'openInterestCall': 0, 'openInterestPut': 0}, inplace=True)
+			   'sumVolumeCall': 0, 'sumVolumePut': 0,
+			   'sumOpenInterestCall': 0, 'sumOpenInterestPut': 0,
+			   'sumVolumeTimesStrikeCall': 0, 'sumVolumeTimesStrikePut':0,
+			   'weightedStrikeCall': 0, 'weightedStrikePut': 0}, inplace=True)
 	cols = ['meanStrikeCall', 'meanStrikePut']
 	for col in cols:
 		df[col] = df.apply(
