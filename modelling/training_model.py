@@ -96,8 +96,8 @@ y_test = df_test[target]
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v1x3'
-algorithm = 'AB'
+version = 'v2x3'
+algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
