@@ -25,11 +25,6 @@ df_all = batch_enrich_df(df_all)
 # only select Call option out of the money
 df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
-
-# clean unwanted columns
-df = df.drop(columns=['Unnamed: 0','baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'])
-
 print('Total train data shape: {}'.format(df.shape))
 print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min(), 2)))
 print('Maximum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).max(), 2)))
