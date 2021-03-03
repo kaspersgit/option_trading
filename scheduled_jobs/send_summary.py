@@ -73,6 +73,8 @@ print('Source key: {}'.format(key))
 # import data
 df = load_from_s3(profile="default", bucket=bucket, key_prefix=key)
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
+# enrich data within batches
+df = batch_enrich_df(df)
 
 print('Shape of imported data: {}'.format(df.shape))
 
