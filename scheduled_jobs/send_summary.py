@@ -178,8 +178,8 @@ print('Created and saved scatter plot (percentage increase vs predicted probabil
 #################################### Unsure
 # Create scatter plot (strike price progress vs predicted probability)
 # Filter on options appearing in high probability, profitability or in neither of the two
-high_prob_df = dfFilterOnGivenSet(df, filterset_highprob)
-high_prof_df = dfFilterOnGivenSet(df, filterset_highprof)
+high_prob_df = dfFilterOnGivenSet(df, hprob_config)
+high_prof_df = dfFilterOnGivenSet(df, hprof_config)
 # rows not appearing in any of the above
 not_email_df = df[(~df.index.isin(high_prob_df.index)) & (~df.index.isin(high_prof_df.index))]
 
