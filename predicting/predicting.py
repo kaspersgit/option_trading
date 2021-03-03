@@ -116,12 +116,12 @@ hprof_minDaysToExp = 3
 hprof_maxDaysToExp = 25
 hprof_minStrikeIncrease = 1.20
 
-high_prof = df[(df['prediction'] > hprof_config['hprof_threshold']) &
+high_prof = df[(df['prediction'] > hprof_config['threshold']) &
     (df['symbolType']=='Call') &
-    (df['daysToExpiration'] < hprof_config['hprof_maxDaysToExp']) &
-    (df['priceDiffPerc'] > hprof_config['hprof_minStrikeIncrease']) &
-    (df['daysToExpiration'] > hprof_config['hprof_minDaysToExp']) &
-    (df['baseLastPrice'] < hprof_config['hprof_maxBasePrice'])].copy()
+    (df['daysToExpiration'] < hprof_config['maxDaysToExp']) &
+    (df['priceDiffPerc'] > hprof_config['minStrikeIncrease']) &
+    (df['daysToExpiration'] > hprof_config['minDaysToExp']) &
+    (df['baseLastPrice'] < hprof_config['maxBasePrice'])].copy()
 high_prof = high_prof[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prof = high_prof.sort_values('priceDiffPerc').reset_index(drop=True)
 
