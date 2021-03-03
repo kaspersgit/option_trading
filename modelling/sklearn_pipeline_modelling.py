@@ -4,15 +4,7 @@ from sklearn.pipeline import FeatureUnion, Pipeline, make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import roc_auc_score, make_scorer
 from sklearn.metrics import accuracy_score, log_loss
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC, LinearSVC, NuSVC
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import RidgeClassifier
-from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.gaussian_process import GaussianProcessClassifier
 
 from sklearn.model_selection import GridSearchCV
 

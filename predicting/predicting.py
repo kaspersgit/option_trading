@@ -42,6 +42,11 @@ print('Using data from {}'.format(day))
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 current_path = os.getcwd()
 df = pd.read_csv(current_path + '/data/barchart/barchart_unusual_activity_'+day+'.csv')
+
+if mode == 'DEVELOPMENT':
+	from option_trading_nonprod.process.stock_price_enriching import *
+	df = batch_enrich_df(df)
+
 with open('other_files/config_file.json') as json_file:
 	config = json.load(json_file)
 
