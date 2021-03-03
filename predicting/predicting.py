@@ -162,10 +162,10 @@ html = """\
     </p>
   </body>
 </html>
-""".format(high_prob.to_html(),threshold,maxBasePrice,
-  minDaysToExp,maxDaysToExp,minStrikeIncrease,
-		   high_prof.to_html(),hprof_threshold, hprof_maxBasePrice,
-  hprof_minDaysToExp,hprof_maxDaysToExp,hprof_minStrikeIncrease,
+""".format(high_prob.to_html(),hprob_config['threshold'],hprob_config['maxBasePrice'],
+		   hprob_config['minDaysToExp'],hprob_config['maxDaysToExp'],hprob_config['minStrikeIncrease'],
+		   high_prof.to_html(),hprof_config['threshold'],hprof_config['maxBasePrice'],
+		   hprof_config['minDaysToExp'],hprof_config['maxDaysToExp'],hprof_config['minStrikeIncrease'],
 		   )
 
 part1 = MIMEText(html, 'html')
