@@ -116,14 +116,19 @@ df['profitPerc'] = df['profit'] / df['cost']
 
 # filter set on applicable rows
 # only select Call option out of the money
-optionType = 'Call'
-minIncrease = 1.05
-maxIncrease = 2
-maxBasePrice = 200
-minDaysToExp = 3
-maxDaysToExp = 60
+with open('other_files/config_file.json') as json_file:
+	config = json.load(json_file)
 
-df = df[(df['symbolType'] == optionType) & (df['strikePrice'] > df['baseLastPrice'] * minIncrease) & (df['strikePricePerc'] < maxIncrease) & (df['daysToExpiration'] >= minDaysToExp)]
+hprob_config = config['high_probability']
+hprof_config = config['high_profitability']
+
+
+df = df[(df['symbolType']==hprob_config['optionType']) &
+		(df['daysToExpiration'] >= hprob_config['minDaysToExp']) &
+		(df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
+		(df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
+		(df['baseLastPrice'] < hprob_config['maxBasePrice'])]
+
 
 # Basic summary
 # Get top performing stocks (included/not included in email)
@@ -143,20 +148,11 @@ brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
 # Simulating trading strategies
 print('Simulating simple trading strategies')
 
-filterset_highprob = {'threshold': 0.7,
-			 'maxBasePrice': 200,
-			 'minStrikeIncrease': 1.05,
-			 'minDaysToExp': 3,
-			 'maxDaysToExp': 60}
-roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, filterset_highprob, plot=False)
+# High probability
+roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, hprob_config, plot=False)
 
-
-filterset_highprof = {'threshold': 0.25,
-			 'maxBasePrice': 100,
-			 'minStrikeIncrease': 1.2,
-			 'minDaysToExp': 3,
-			 'maxDaysToExp': 60}
-roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, filterset_highprof, plot=False)
+# High profitability
+roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, hprof_config, plot=False)
 
 print('Start creating plots')
 
@@ -319,7 +315,8 @@ html_content = """
 	<br><img src="cid:image5"><br>
 	
   </body>
-""".format(optionType, minIncrease, maxIncrease, model_name, len(df), df['baseSymbol'].nunique()
+""".format(hprob_config['optionType'], hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
+		   , model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
 		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))

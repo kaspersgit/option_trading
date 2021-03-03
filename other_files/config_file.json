@@ -1,18 +1,20 @@
 {
     "high_probability": {
+        "optionType": "Call",
         "maxBasePrice": 200,
         "maxDaysToExp": 60,
         "minDaysToExp": 3,
         "minStrikeIncrease": 1.05,
         "maxStrikeIncrease": 10,
-        "threshold": 0.7
+        "threshold": 0.75
     },
     "high_profitability": {
+        "optionType": "Call",
         "maxBasePrice": 100,
         "maxDaysToExp": 60,
         "minDaysToExp": 3,
         "minStrikeIncrease": 1.2,
         "maxStrikeIncrease": 10,
-        "threshold": 0.25
+        "threshold": 0.3
     }
 }
