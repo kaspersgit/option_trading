@@ -1,5 +1,3 @@
-print(__doc__)
-
 # Author: Alexandre Gramfort <alexandre.gramfort@telecom-paristech.fr>
 #         Jan Hendrik Metzen <jhm@informatik.uni-bremen.de>
 # License: BSD Style.
