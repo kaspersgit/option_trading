@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
 def dfFilterOnGivenSet(df, filterset={}):
@@ -26,8 +27,15 @@ def dfFilterOnGivenSet(df, filterset={}):
 	return(df_filtered)
 
 def simpleTradingStrategy(df,filterset={}, plot=True):
+	if 'stocksBought' not in df.columns:
+		df['stocksBought'] = 100 / df['baseLastPrice']
+	if 'cost' not in df.columns:
+		df['cost'] = df['stocksBought'] * df['baseLastPrice']
+	if 'revenue' not in df.columns:
+		df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
+	if 'profit' not in df.columns:
+		df['profit'] = df['revenue'] - df['cost']
 	df_filtered = dfFilterOnGivenSet(df, filterset)
-
 	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()
 	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()
@@ -39,6 +47,9 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 		fig = plt.figure()
 		ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 		ax.plot(df_profit['prob'], df_profit['cumProfitPerc'])
+		plt.title('Inverse cumulative profit per threshold')
+		plt.xlabel('Predicted probability')
+		plt.ylabel('Profit percentage')
 		plt.show()
 
 	# Return the return on investment

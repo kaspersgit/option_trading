@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-
+import pandas as pd
 
 def featureImportance1(model, features, make_plot=True, plot_top=20):
 	feat_imp = pd.DataFrame({'feature': features, 'importance': model.feature_importances_}).sort_values('importance', ascending=False).reset_index(drop=True)

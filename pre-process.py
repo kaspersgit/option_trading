@@ -45,7 +45,7 @@ df = load_from_s3(profile="default", bucket=source_bucket, key_prefix=source_key
 
 # Data mature until 10 days ago
 cutoff_date = (datetime.today() - timedelta(days=10)).strftime('%Y-%m-%d')
-print('Cutoff date used: {}'.format(today_m10))
+print('Cutoff date used: {}'.format(cutoff_date))
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
@@ -96,11 +96,18 @@ df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirat
 
 
 # Using above functions
-contracts_prices = getContractPrices(df)
+contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax')
+
+# Get technical indicators
+# Get stock prices from 35 days before export date to calculate them
+df['exportedAt'] = pd.to_datetime(df['exportedAt'])
+df['start_date'] = df['exportedAt'] - timedelta(days=35)
+indicators_df = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
 
 # Put dfs together
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
+df_enr = df_enr.merge(indicators_df, on=['baseSymbol','exportedAt'])
 
 # Save enriched df as csv
-df_enr.to_csv('data/barchart_yf_enr_1.csv')
-
+# x2 as we add technical indicators here
+df_enr.to_csv('data/barchart_yf_enr_1x2.csv')

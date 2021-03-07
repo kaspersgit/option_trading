@@ -26,13 +26,14 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
 		# print('>transform() called.')
 		X_ = X.copy() # creating a copy to avoid changes to original dataset
 		# X_ = enrich_df(X_)
+		# X_.fillna(0, inplace=True)
 		X_ = X_[self.feature_names]
 		print('Features included: {}'.format(len(self.feature_names)))
 		return X_
 
 #######################
 # Load and prepare data
-df = pd.read_csv('data/barchart_yf_enr_1.csv')
+df = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 
 # Set target
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
@@ -88,6 +89,57 @@ X_oot = df_oot.drop(columns=[target])
 y_oot = df_oot[target]
 
 # features to train on
+features_all = ['strikePrice'
+	, 'daysToExpiration'
+	, 'bidPrice'
+	, 'midpoint'
+	, 'askPrice'
+	, 'lastPrice'
+	, 'openInterest'
+	, 'volumeOpenInterestRatio'
+	, 'volatility'
+	, 'open'
+	, 'high'
+	, 'low'
+	, 'close'
+	, 'adj_close'
+	, 'volume'
+	, 'MACD_2_4_9'
+	, 'MACDh_2_4_9'
+	, 'MACDs_2_4_9'
+	, 'RSI_14'
+	, 'OBV'
+	, 'BBL_5_2.0'
+	, 'BBM_5_2.0'
+	, 'BBU_5_2.0'
+	, 'BBB_5_2.0'
+	, 'priceDiff'
+	, 'priceDiffPerc'
+	, 'inTheMoney'
+	, 'nrOptions'
+	, 'strikePriceCum'
+	, 'volumeTimesStrike'
+	, 'nrCalls'
+	, 'meanStrikeCall'
+	, 'sumVolumeCall'
+	, 'sumOpenInterestCall'
+	, 'sumVolumeTimesStrikeCall'
+	, 'weightedStrikeCall'
+	, 'nrPuts'
+	, 'meanStrikePut'
+	, 'sumVolumePut'
+	, 'sumOpenInterestPut'
+	, 'sumVolumeTimesStrikePut'
+	, 'weightedStrikePut'
+	, 'volumeCumSum'
+	, 'openInterestCumSum'
+	, 'nrHigherOptions'
+	, 'higherStrikePriceCum'
+	, 'meanStrikeCallPerc'
+	, 'meanStrikePutPerc'
+	, 'midpointPerc'
+	, 'meanHigherStrike']
+
 features = ['baseLastPrice'
 	, 'strikePrice'
 	, 'daysToExpiration'
@@ -138,7 +190,8 @@ classifiers = [
 	# MLPClassifier(),
 	# RandomForestClassifier(n_estimators=1000, min_samples_leaf = 50, random_state=42),
 	AdaBoostClassifier(learning_rate=0.01, n_estimators=2000, random_state=42),
-	GradientBoostingClassifier(learning_rate=0.005, n_estimators=2000, min_samples_split=8, max_depth=4 , random_state=42, subsample=0.8)
+	# GradientBoostingClassifier(learning_rate=0.005, n_estimators=2000, min_samples_split=8, max_depth=4 , random_state=42, subsample=0.8),
+	GradientBoostingClassifier(learning_rate=0.01, n_estimators=1000, min_samples_split=8, max_depth=4, random_state=42, subsample=1)
 ]
 
 # best AUC ROC
@@ -149,9 +202,14 @@ classifiers = [
 
 for classifier in classifiers:
 	print(classifier)
-	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
+	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features_all)),
 					  ('classifier', classifier)])
 	pipe.fit(X_train, y_train)
+	print('Validation dataset')
+	probs = pipe.predict_proba(X_val)[:,1]
+	print("model score: %.3f" % pipe.score(X_val, y_val))
+	print("AUC ROC: {}".format(roc_auc_score(y_val, probs)))
+
 	print('Test dataset')
 	probs = pipe.predict_proba(X_test)[:,1]
 	print("model score: %.3f" % pipe.score(X_test, y_test))
@@ -183,10 +241,10 @@ gb_param_dist = {
 }
 gb_param_dist = {
 	'classifier__n_estimators': [3000],
-	'classifier__max_depth': [6],
-	'classifier__min_samples_split': [4],
+	'classifier__max_depth': [4,6],
+	'classifier__min_samples_split': [4,8],
 	'classifier__subsample': [0.8,1],
-	'classifier__learning_rate': [0.01],
+	'classifier__learning_rate': [0.01, 0.005],
 	'classifier__random_state': [42]
 }
 
@@ -214,10 +272,9 @@ print(grid.best_params_)
 # Test set: 0.816
 # Oot set: 0.846
 
-best_estimator = grid.best_estimator_
 best_model = best_estimator.steps[1][1]
-best_model.feature_importances_
 
 #plot feature importance
+from option_trading_nonprod.validation.feature_importances import *
 featureImportance1(model=best_model, features=features)
-feat_imp = featureImportance1(model=pipe.steps[1][1], features=features)
+feat_imp = featureImportance1(model=pipe.steps[1][1], features=features_all)

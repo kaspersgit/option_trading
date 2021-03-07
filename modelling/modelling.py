@@ -11,14 +11,14 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 #######################
 # Load and prepare data
-df_all = pd.read_csv('data/barchart_yf_enr_1.csv')
+df_all = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 
 # clean out duplicates to be sure
 df_all = df_all.drop(axis=1, columns='Unnamed: 0')
 df_all = df_all.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 
 # Add internal (within same batch) information
-df_all = enrich_df(df_all)
+df_all = batch_enrich_df(df_all)
 
 # Set target
 df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
@@ -28,6 +28,57 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 df = df_all[(df_all['symbolType'] == 'Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
 
 # feature selection
+features_all = ['strikePrice'
+    , 'daysToExpiration'
+    , 'bidPrice'
+    , 'midpoint'
+    , 'askPrice'
+    , 'lastPrice'
+    , 'openInterest'
+    , 'volumeOpenInterestRatio'
+    , 'volatility'
+    , 'open'
+    , 'high'
+    , 'low'
+    , 'close'
+    , 'adj_close'
+    , 'volume'
+    , 'MACD_2_4_9'
+    , 'MACDh_2_4_9'
+    , 'MACDs_2_4_9'
+    , 'RSI_14'
+    , 'OBV'
+    , 'BBL_5_2.0'
+    , 'BBM_5_2.0'
+    , 'BBU_5_2.0'
+    , 'BBB_5_2.0'
+    , 'priceDiff'
+    , 'priceDiffPerc'
+    , 'inTheMoney'
+    , 'nrOptions'
+    , 'strikePriceCum'
+    , 'volumeTimesStrike'
+    , 'nrCalls'
+    , 'meanStrikeCall'
+    , 'sumVolumeCall'
+    , 'sumOpenInterestCall'
+    , 'sumVolumeTimesStrikeCall'
+    , 'weightedStrikeCall'
+    , 'nrPuts'
+    , 'meanStrikePut'
+    , 'sumVolumePut'
+    , 'sumOpenInterestPut'
+    , 'sumVolumeTimesStrikePut'
+    , 'weightedStrikePut'
+    , 'volumeCumSum'
+    , 'openInterestCumSum'
+    , 'nrHigherOptions'
+    , 'higherStrikePriceCum'
+    , 'meanStrikeCallPerc'
+    , 'meanStrikePutPerc'
+    , 'midpointPerc'
+    , 'meanHigherStrike']
+
 features = ['exportedAt'
     , 'reachedStrikePrice'
     , 'baseLastPrice'
