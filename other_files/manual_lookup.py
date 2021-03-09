@@ -47,7 +47,7 @@ try:
 	df['model'] = model_name
 
 	print("Interesting columns")
-	print(df[df['baseSymbol'] == ticker][['strikePrice','prediction']])
+	print(df[df['baseSymbol'] == ticker][['baseLastPrice','strikePrice','prediction']])
 except:
 	print('No scraped data found')
 
