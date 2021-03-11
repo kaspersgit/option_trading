@@ -155,19 +155,22 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	:return: df: Added several columns indicating the first, last, min and max price reached until strike date
 	also the dates of all these events is added
 	"""
+	# Make copy to not adjust original
+	df_ = df.copy()
+
 	# converting somewhat date columns to date strings
-	df[startDateCol]=pd.to_datetime(df[startDateCol]).dt.strftime('%Y-%m-%d')
-	df[endDateCol]=pd.to_datetime(df[endDateCol]).dt.strftime('%Y-%m-%d')
+	df_[startDateCol]=pd.to_datetime(df_[startDateCol]).dt.strftime('%Y-%m-%d')
+	df_[endDateCol]=pd.to_datetime(df_[endDateCol]).dt.strftime('%Y-%m-%d')
 
 	# exclude entries where export and expiration date are the same
-	df = df[df[startDateCol] != df[endDateCol]]
+	df_ = df_[df_[startDateCol] != df_[endDateCol]]
 
 	contracts_enr = pd.DataFrame(
 		columns=['baseSymbol', startDateCol, endDateCol])
 	config_df = pd.DataFrame(columns=['baseSymbol', 'minDate', 'maxDate'])
-	config_df['baseSymbol'] = df['baseSymbol'].unique()
+	config_df['baseSymbol'] = df_['baseSymbol'].unique()
 	for symbol in config_df['baseSymbol']:
-		temp_df = df[df['baseSymbol'] == symbol]
+		temp_df = df_[df_['baseSymbol'] == symbol]
 		minDate = temp_df[startDateCol].min()
 		maxDate = temp_df[endDateCol].max()
 		config_df.at[config_df['baseSymbol'] == symbol, 'minDate'] = minDate
@@ -180,12 +183,12 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	for index, row in config_df.iterrows():
 		if index % 100 == 0:
 			print('Rows done: {}'.format(index))
-		stock_price = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
+		stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
 		# Check for empty dataframe
-		if len(stock_price) == 0:
+		if len(stock_df) == 0:
 			continue
-		stock_price = stock_price[row['minDate']::]
-		contracts = df[df['baseSymbol'] == row['baseSymbol']][['baseSymbol', startDateCol, endDateCol]]
+		stock_df = stock_df[row['minDate']::]
+		contracts = df_[df_['baseSymbol'] == row['baseSymbol']][['baseSymbol', startDateCol, endDateCol]]
 		contracts.drop_duplicates(inplace=True)
 
 		if type == 'minmax':
@@ -194,7 +197,7 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 											  'finalPriceDate', 'firstPriceDate'])
 			# For every different option contract get the prices
 			for _index, contract_row in contracts.iterrows():
-				wanted_timeserie = stock_price[contract_row[startDateCol]:contract_row[endDateCol]]
+				wanted_timeserie = stock_df[contract_row[startDateCol]:contract_row[endDateCol]]
 				# Check if time series is incomplete
 				if wanted_timeserie.empty:
 					print('Timeseries for {} is empty'.format(contract_row.baseSymbol))
@@ -207,10 +210,6 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 							 'minPriceDate': minPriceDate, 'maxPriceDate': maxPriceDate, 'finalPriceDate': finalPriceDate, 'firstPriceDate': firstPriceDate}
 
 				df_minmax = df_minmax.append(info_dict, ignore_index=True)
-				# fill in into df
-				# for key in info_dict.keys():
-				# 	contracts.at[(contracts[startDateCol] == contract_row[startDateCol]) & (
-				# 			contracts[endDateCol] == contract_row[endDateCol]), key] = info_dict[key]
 
 			# Merge extracted prices with contracts table
 			contracts = contracts.merge(df_minmax, how='left',
@@ -218,11 +217,11 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 
 		if type == 'indicators':
 			# Add technical indicators
-			df_indicators = getTechnicalIndicators(stock_price, indicators=['macd','rsi','obv','bbands'], fast=2, slow=4)
+			df_indicators = getTechnicalIndicators(stock_df, indicators=['macd','rsi','obv','bbands'], fast=2, slow=20)
 			df_indicators.index = df_indicators.index + timedelta(days=1)
 			df_indicators.index = df_indicators.index.astype(str)
 			# Merge extracted indicators with contracts table
-			contracts = contracts.merge(df_indicators, how='left',
+			contracts = contracts.merge(df_indicators.drop(columns=['Open', 'High', 'Low', 'Close', 'Adj_close', 'Volume'], errors='ignore'), how='left',
 										left_on=endDateCol, right_index=True)
 
 		# Add contract to master df where stock time series is found
@@ -238,18 +237,27 @@ def getTechnicalIndicators(stock_df, indicators=['rsi', 'obv', 'bbands'], fast=5
 	An overview of all available indicators: run pd.DataFrame().ta.indicators()
 
 	:param stock_df: pandas dataframe with only Date as index
-	:return: Any of the indicators specified
+	:return: Any of the indicators specified in a pandas dataframe
 	"""
-	if len(stock_df) > slow + 10:
+	# Create copy to not adjust original
+	stock_df_ = stock_df.copy()
+
+	if len(stock_df_) > slow - 10:
 		# Add different indicators
 		for i in indicators:
 			class_method = getattr(stock_df.ta, i)
-			result = class_method(fast=fast, slow=slow)
-			stock_df = stock_df.join(result)
-	else:
-		print("Stock data going {} days back not available \nFor stock: {}".format(slow+10,stock_df['baseSymbol']))
 
-	return (stock_df)
+			try:
+				result = class_method(fast=fast, slow=slow)
+			except:
+				print("Data not sufficient to calculate {}".format(i))
+				continue
+			else:
+				stock_df_ = stock_df_.join(result)
+	else:
+		print("Stock data going {} days back not available".format(slow+10))
+
+	return (stock_df_)
 
 
 def getMinMaxLastFirst(stock_df):
@@ -369,3 +377,6 @@ def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType'
 		)
 
 	return (df)
+
+if __name__ == '__main__':
+	df_prices = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')

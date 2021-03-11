@@ -15,10 +15,6 @@ pd.set_option('display.width', 1000)
 cwd = os.getcwd()
 directory = os.path.join(cwd,"data/barchart")
 
-# Set source and target for bucket and keys
-source_bucket = 'project-option-trading'
-source_key = 'raw_data/barchart/'
-
 #### from local
 # create empty df
 df = pd.DataFrame()
@@ -32,15 +28,17 @@ for root,dirs,files in os.walk(directory):
 df.reset_index(drop=True, inplace=True)
 #####
 
-
-
 ###### import data from S3
+# Set source and target for bucket and keys
+source_bucket = 'project-option-trading'
+source_key = 'raw_data/barchart/'
 # print status of variables
 print('Source bucket: {}'.format(source_bucket))
 print('Source key: {}'.format(source_key))
 
 
-df = load_from_s3(profile="default", bucket=source_bucket, key_prefix=source_key)
+df = load_from_s3(profile="mrOption", bucket=source_bucket, key_prefix=source_key)
+print("Raw imported data shape: {}".format(df.shape))
 ######
 
 # Data mature until 10 days ago
@@ -49,12 +47,14 @@ print('Cutoff date used: {}'.format(cutoff_date))
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
+print("After dropping duplicates: {}".format(df.shape))
 
 # Select columns
 df = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate', 'daysToExpiration', 'bidPrice', 'midpoint', 'askPrice', 'lastPrice', 'volume', 'openInterest', 'volumeOpenInterestRatio', 'volatility', 'tradeTime', 'exportedAt']]
 
 # filter on only mature options
 df = df[df['expirationDate'] < cutoff_date]
+print("After filtering on the cutoff date: {}".format(df.shape))
 
 # Helper functions
 def colType2Float(series, decimal_sep='.'):
@@ -90,18 +90,23 @@ for col in int_cols:
 
 # Filter df
 # on only short time to expiration
-df = limitDaysToExpiration(df, min=3, max=60)
-# Delete duplicates
-df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
-
+minDaysToExp = 3
+maxDaysToExp = 60
+df = limitDaysToExpiration(df, min=minDaysToExp, max=maxDaysToExp)
+print("After filtering on having days to expiration between {} and {} \nThe left over data shape: {}".format(minDaysToExp, maxDaysToExp, df.shape))
 
 # Using above functions
 contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax')
 
+# incase it goes wrong somewhere, start from close to that row
+# df_last_few = df.drop_duplicates(subset=['baseSymbol'], keep='first')
+# df_last_few = df_last_few.iloc[2099::]
+# df_last_few = df_last_few.head(1)
+
 # Get technical indicators
 # Get stock prices from 35 days before export date to calculate them
 df['exportedAt'] = pd.to_datetime(df['exportedAt'])
-df['start_date'] = df['exportedAt'] - timedelta(days=35)
+df['start_date'] = df['exportedAt'] - timedelta(days=45)
 indicators_df = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
 
 # Put dfs together
