@@ -11,8 +11,7 @@ example:
 
 # import packages
 from dateutil.relativedelta import relativedelta, FR
-import os
-import sys
+import os, sys, platform
 import pickle
 import json
 
@@ -57,7 +56,10 @@ else:
 	print('Script can be run from command line as <script> <model> <env prod or dev> <add attachment true/false> <date (optional)>')
 
 # Get model which should be used
-model = sys.argv[1]
+if platform.system() == 'Darwin':
+	model = 'DEV_c_GB64_v1x3'
+else:
+	model = sys.argv[1]
 model = model.split('.')[0]
 
 
@@ -72,7 +74,12 @@ print('Source bucket: {}'.format(bucket))
 print('Source key: {}'.format(key))
 
 # import data
-df = load_from_s3(profile="default", bucket=bucket, key_prefix=key)
+if platform.system() == 'Darwin':
+	s3_profile = 'mrOption'
+else:
+	s3_profile = 'default'
+
+df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
 # enrich data within batches
 df = batch_enrich_df(df)
@@ -123,8 +130,8 @@ with open('other_files/config_file.json') as json_file:
 hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
 
-
-df = df[(df['symbolType']==hprob_config['optionType']) &
+# Filter on basics (like days to expiration and contract type)
+df = df[(df['symbolType'] == hprob_config['optionType']) &
 		(df['daysToExpiration'] >= hprob_config['minDaysToExp']) &
 		(df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
 		(df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
@@ -150,10 +157,10 @@ brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
 print('Simulating simple trading strategies')
 
 # High probability
-roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, hprob_config, plot=False)
+roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, actualCol = 'reachStrikePrice', filterset=hprob_config, plot=False)
 
 # High profitability
-roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, hprof_config, plot=False)
+roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, actualCol = 'reachStrikePrice', filterset=hprof_config, plot=False)
 
 print('Start creating plots')
 
@@ -175,12 +182,60 @@ fig.savefig("scheduled_jobs/summary_content/scatter.png")
 
 print('Created and saved scatter plot (percentage increase vs predicted probability')
 
-#################################### Unsure
-# Create scatter plot (strike price progress vs predicted probability)
+## Extra df transformations for plots below
+# Bucket strike price increase
+bins = [-np.inf, 1.1, 1.15, 1.20, 1.25, 1.3, 1.4, 1.5, np.inf]
+labels = ['5%-10%', '10%-15%', '15%-20%', '20%-25%', '25%-30%', '30%-40%', '40%-50%', '>50%']
+
+df['strikePricePercBin'] = pd.cut(df['strikePricePerc'], bins=bins, labels=labels)
+
 # Filter on options appearing in high probability, profitability or in neither of the two
 high_prob_df = dfFilterOnGivenSet(df, hprob_config)
 high_prof_df = dfFilterOnGivenSet(df, hprof_config)
-# rows not appearing in any of the above
+
+####################################
+# Create bar plots showing share of successes per strike price increase bucket
+all_strikeIncreaseBin = df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
+all_binPercentage = all_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+												 100 * x / float(x.sum())).reset_index(drop=False)
+
+hprob_strikeIncreaseBin = high_prob_df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
+hprob_binPercentage = hprob_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+																 100 * x / float(x.sum())).reset_index(drop=False)
+
+hprof_strikeIncreaseBin = high_prof_df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
+hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+																 100 * x / float(x.sum())).reset_index(drop=False)
+
+
+fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+# All contracts
+axs[0].bar(all_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
+axs[0].bar(all_binPercentage['strikePricePercBin'].unique(), all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+axs[0].tick_params('x', labelrotation=45)
+axs[0].title.set_text('All Calls')
+axs[0].set_ylabel('Fraction reaching strike price')
+
+# high probability contracts
+axs[1].bar(hprob_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
+axs[1].bar(hprob_binPercentage['strikePricePercBin'].unique(), hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+axs[1].tick_params('x', labelrotation=45)
+axs[1].title.set_text('High probability')
+
+# high probability contracts
+axs[2].bar(hprof_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
+axs[2].bar(hprof_binPercentage['strikePricePercBin'].unique(), hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+axs[2].tick_params('x', labelrotation=45)
+axs[2].title.set_text('High profitability')
+
+plt.xlabel("Strike price increase with respect to last price")
+
+fig.suptitle('Fraction reaching strike price (y) vs strike price increase (x)')
+fig.savefig("scheduled_jobs/summary_content/strikePerBins.png")
+
+#################################### Unsure
+# Create scatter plot (strike price progress vs predicted probability)
+# rows not appearing in any of the email tables
 not_email_df = df[(~df.index.isin(high_prob_df.index)) & (~df.index.isin(high_prof_df.index))]
 
 fig = plt.figure()
@@ -315,6 +370,9 @@ html_content = """
 	</small>
 	<br><img src="cid:image5"><br>
 	
+	Plotting share of options which reached their strike price
+	<br><img src="cid:image6"><br>
+	
   </body>
 """.format(hprob_config['optionType'], hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
 		   , model_name, len(df), df['baseSymbol'].nunique()
@@ -340,7 +398,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/scatter_profitability.png',
-							   'scheduled_jobs/summary_content/scatter_maxProfitability.png']
+							   'scheduled_jobs/summary_content/scatter_maxProfitability.png', 'scheduled_jobs/summary_content/strikePerBins.png']
 			  , attachment=attachment
 )
 

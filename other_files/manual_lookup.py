@@ -38,6 +38,7 @@ features = model.feature_names
 #df = load_from_s3(profile="default", bucket=source_bucket, key_prefix=source_key)
 try:
 	df = pd.read_csv('data/barchart/barchart_unusual_activity_{}.csv'.format(date))
+	df = df[df['type'] == 'Call']
 	print(df[df['baseSymbol'] == ticker])
 
 	prob = model.predict_proba(df[features])[:, 1]

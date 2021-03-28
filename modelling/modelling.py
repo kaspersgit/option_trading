@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 import os
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.models.tree_based import *
@@ -14,7 +14,6 @@ from option_trading_nonprod.process.stock_price_enriching import *
 df_all = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 
 # clean out duplicates to be sure
-df_all = df_all.drop(axis=1, columns='Unnamed: 0')
 df_all = df_all.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 
 # Add internal (within same batch) information
@@ -94,26 +93,48 @@ features = ['exportedAt'
     , 'volatility']
 
 
-
-df = df[features]
-
 ########################
 # Split in train, validation, test and out of time
-df_oot = df.sort_values('exportedAt', ascending=True)[-5000::]
-df_rest = df.drop(df_oot.index, axis=0)
+# target  used
+target = 'reachedStrikePrice'
+
+# Split in train, validation, test and out of time
+# Take most recent observations for out of time set (apprx last 5000 observations)
+exportDateLast5000 = df.iloc[-5000]['exportedAt']
+df_oot = df[df['exportedAt'] >= exportDateLast5000]
+df_rest = df.drop(df_oot.index, axis=0).reset_index(drop=True)
+
+# test to split keeping exportedAt column always in same group
+gss = GroupShuffleSplit(n_splits=1, train_size=.8, random_state=42)
+gss.get_n_splits()
+
+# split off test set
+test_groupsplit = gss.split(df_rest, groups = df_rest['exportedAt'])
+train_idx, test_idx = next(test_groupsplit)
+df_rest2 = df_rest.loc[train_idx]
+df_test = df_rest.loc[test_idx]
+
+# split off validation set
+df_rest2 = df_rest2.reset_index(drop=True)
+val_groupsplit = gss.split(df_rest2, groups = df_rest2['exportedAt'])
+train_idx, val_idx = next(val_groupsplit)
+df_train = df_rest2.loc[train_idx]
+df_val = df_rest2.loc[val_idx]
 
 # clean unwanted columns for model training
-df_oot = df_oot.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'], errors='ignore')
-df_rest = df_rest.drop(columns=['baseSymbol','symbolType','tradeTime','exportedAt','expirationDate', 'minPrice', 'maxPrice',
-       'finalPrice', 'firstPrice'], errors='ignore')
+X_train = df_train.drop(columns=[target])
+y_train = df_train[target]
 
-X = df_rest.drop(columns='reachedStrikePrice')
-y = df_rest['reachedStrikePrice']
+X_val = df_val.drop(columns=[target])
+y_val = df_val[target]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=42)
+X_test = df_test.drop(columns=[target])
+y_test = df_test[target]
 
+X_oot = df_oot.drop(columns=[target])
+y_oot = df_oot[target]
+
+print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape: {}".format(X_train.shape,X_val.shape,X_test.shape,X_oot.shape))
 #####################
 # Train and predict
 # AdaBoost classifier
@@ -122,7 +143,7 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.
 # v1x1 trained on data with max expirationDate 2020-12-18
 
 train_type = 'DEV'
-version = 'v1x3'
+version = 'v3x3'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
@@ -139,8 +160,11 @@ AB_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, 
 # Calibrate pre trained model
 Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_AB64_'+version)
 
-params = {'n_estimators':1000, 'learning_rate': 0.05, 'max_features': 3, 'random_state':42}
-GBC_model = fit_GBclf(X_train, y_train, X_val, y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
+# Fillna with 0 (missing indicators due to short history)
+X_train.fillna(0, inplace=True)
+X_val.fillna(0, inplace=True)
+params = {'n_estimators':1000, 'learning_rate': 0.01, 'min_samples_split':8, 'max_depth':4, 'random_state':42, 'subsample':1}
+GBC_model = fit_GBclf(X_train[features_all], y_train, X_val[features_all], y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
 # Calibrate pre trained model
 Cal_GB_model = calibrate_model(GBC_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_GB64_'+version)
 
@@ -158,8 +182,8 @@ model = gb_model
 # Make predictions
 prob = model.predict_proba(X_test[model.feature_names])[:,1]
 
-pred_df = pd.DataFrame({'prob':prob, 'actual':y_test})
-pred_df['pred'] = np.where(pred_df['prob'] >= 0.5,1,0)
+pred_df = pd.DataFrame({'prob': prob, 'actual': y_test})
+pred_df['pred'] = np.where(pred_df['prob'] >= 0.5, 1, 0)
 
 #####################
 # Measure performance
@@ -173,50 +197,3 @@ showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
 # Calibration plot
 plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all data', bins=10)
-
-#####################
-# Visualize
-
-
-######################
-# Test out predictions
-pd.set_option('display.max_rows', 50)
-pd.set_option('display.max_columns', 10)
-pd.set_option('display.width', 1000)
-# profitability
-df_test = df_all.loc[pred_df.index,:]
-df_test['prob'] =  pred_df['prob']
-df_test['priceDiffPerc'] = df_test['strikePrice'] / df_test['baseLastPrice']
-df_test['maxProfit'] = df_test['maxPrice'] - df_test['baseLastPrice']
-df_test['aimedProfit'] = np.where(df_test['maxPrice'] >= df_test['strikePrice'],df_test['strikePrice'], df_test['finalPrice']) - df_test['baseLastPrice']
-# Select based on parameters
-# Subsetting the predictions
-threshold = 0.5
-maxBasePrice = 200
-minDaysToExp = 3
-maxDaysToExp = 20
-minStrikeIncrease = 1.05
-
-df_select = df_test[
-    (df_test['prob'] > threshold) &
-    (df_test['symbolType']=='Call') &
-    (df_test['daysToExpiration'] < maxDaysToExp) &
-    (df_test['priceDiffPerc'] > minStrikeIncrease) &
-    (df_test['daysToExpiration'] > minDaysToExp) &
-    (df_test['baseLastPrice'] < maxBasePrice)
-]
-
-df_select.describe()
-plotCurveAUC(df_select['prob'],df_select['actual'],type='roc')
-
-# Subset based on highest profit (%)
-df_test['profitPerc'] = df_test['aimedProfit'] / df_test['baseLastPrice']
-df_highest = df_test.sort_values('profitPerc', ascending=False).head(400)
-df_highest['profTimesProb'] = df_highest['priceDiffPerc'] * df_highest['prob']
-df_highest[['baseSymbol','baseLastPrice','strikePrice','priceDiffPerc','maxPrice','aimedProfit','profitPerc','prob','profTimesProb','reachedStrikePrice']].head(50)
-
-# calibration plot
-plotCalibrationCurve(df_highest['reachedStrikePrice'], df_highest['prob'], bins=10)
-
-######################
-# Tune hyperparameters

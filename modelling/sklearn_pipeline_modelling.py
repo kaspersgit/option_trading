@@ -9,10 +9,11 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, Gradien
 from sklearn.model_selection import GridSearchCV
 
 from option_trading_nonprod.process.stock_price_enriching import *
+from option_trading_nonprod.models.calibrate import *
+from option_trading_nonprod.models.tree_based import *
 
 ## functions
 class CustomTransformer(BaseEstimator, TransformerMixin):
-  # add another additional parameter, just for fun, while we are at it
 	def __init__(self, feature_names):
 		# print('>init() called.')
 		self.feature_names = feature_names
@@ -26,7 +27,7 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
 		# print('>transform() called.')
 		X_ = X.copy() # creating a copy to avoid changes to original dataset
 		# X_ = enrich_df(X_)
-		# X_.fillna(0, inplace=True)
+		X_.fillna(X_.mean(), inplace=True)
 		X_ = X_[self.feature_names]
 		print('Features included: {}'.format(len(self.feature_names)))
 		return X_
@@ -46,7 +47,7 @@ df = batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType
 
 # filter set on applicable rows
 # only select Call option out of the money
-df_calls = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'])].copy()
+df_calls = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] * 1.05)].copy()
 df_calls = df_calls.sort_values('exportedAt', ascending=True)
 
 # target  used
@@ -54,8 +55,8 @@ target = 'reachedStrikePrice'
 
 # Split in train, validation, test and out of time
 # Take most recent observations for out of time set (apprx last 5000 observations)
-exportDateLast5000 = df_calls.iloc[-5000]['exportedAt']
-df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast5000]
+exportDateLast3000 = df_calls.iloc[-3000]['exportedAt']
+df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast3000]
 df_rest = df_calls.drop(df_oot.index, axis=0).reset_index(drop=True)
 
 # test to split keeping exportedAt column always in same group
@@ -88,6 +89,13 @@ y_test = df_test[target]
 X_oot = df_oot.drop(columns=[target])
 y_oot = df_oot[target]
 
+print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape: {}".format(X_train.shape,X_val.shape,X_test.shape,X_oot.shape))
+# Start of tuning
+# general approach
+# Use all features and create descent model (tiny bit of hyper parameter optimization
+# Use trained model to do feature selection
+# Use these features to perform hyper paramter optimization with
+
 # features to train on
 features_all = ['strikePrice'
 	, 'daysToExpiration'
@@ -98,24 +106,22 @@ features_all = ['strikePrice'
 	, 'openInterest'
 	, 'volumeOpenInterestRatio'
 	, 'volatility'
-	, 'open'
-	, 'high'
-	, 'low'
-	, 'close'
-	, 'adj_close'
 	, 'volume'
-	, 'MACD_2_4_9'
-	, 'MACDh_2_4_9'
-	, 'MACDs_2_4_9'
+	# simple calculated features
+	, 'priceDiff'
+	, 'priceDiffPerc'
+	, 'inTheMoney'
+	# Features from technical indicators
+	, 'MACD_2_20_9'
+	, 'MACDh_2_20_9'
+	, 'MACDs_2_20_9'
 	, 'RSI_14'
 	, 'OBV'
 	, 'BBL_5_2.0'
 	, 'BBM_5_2.0'
 	, 'BBU_5_2.0'
 	, 'BBB_5_2.0'
-	, 'priceDiff'
-	, 'priceDiffPerc'
-	, 'inTheMoney'
+	# Features from in batch enriching
 	, 'nrOptions'
 	, 'strikePriceCum'
 	, 'volumeTimesStrike'
@@ -140,45 +146,21 @@ features_all = ['strikePrice'
 	, 'midpointPerc'
 	, 'meanHigherStrike']
 
-features = ['baseLastPrice'
-	, 'strikePrice'
-	, 'daysToExpiration'
-	, 'bidPrice'
-	, 'midpoint'
-	, 'askPrice'
-	, 'lastPrice'
-	, 'volume'
-	, 'openInterest'
-	, 'volumeOpenInterestRatio'
-	, 'volatility'
-	, 'priceDiff'
-	, 'priceDiffPerc'
-	, 'inTheMoney'
-	# variables under are batch related
-	, 'nrOptions'
-	, 'strikePriceCum'
-	, 'volumeTimesStrike'
-	, 'nrCalls'
-	, 'meanStrikeCall'
-	, 'sumVolumeCall'
-	, 'sumOpenInterestCall'
-	, 'sumVolumeTimesStrikeCall'
-	, 'weightedStrikeCall'
-	, 'nrPuts'
-	, 'meanStrikePut'
-	, 'sumVolumePut'
-	, 'sumOpenInterestPut'
-	, 'sumVolumeTimesStrikePut'
-	, 'weightedStrikePut'
-	, 'volumeCumSum'
-	, 'openInterestCumSum'
-	, 'nrHigherOptions'
-	, 'higherStrikePriceCum'
-	, 'meanStrikeCallPerc'
-	, 'meanStrikePutPerc'
-	, 'midpointPerc'
-	, 'meanHigherStrike'
-]
+
+
+features_adj = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
+				'strikePriceCum', 'midpoint', 'lastPrice', 'weightedStrikeCall',
+				'strikePrice', 'meanStrikeCall', 'sumVolumeTimesStrikeCall',
+				'askPrice', 'meanStrikePut', 'daysToExpiration',
+				'meanStrikeCallPerc', 'sumVolumeTimesStrikePut',
+				'weightedStrikePut', 'volumeTimesStrike', 'OBV', 'BBU_5_2.0',
+				'BBB_5_2.0', 'volatility', 'BBM_5_2.0', 'sumOpenInterestCall',
+				'BBL_5_2.0', 'MACD_2_20_9', 'sumOpenInterestPut', 'volumeCumSum',
+				'MACDs_2_20_9', 'higherStrikePriceCum']
+
+# topFeatures = feat_imp[feat_imp['importance'] > 0.009]['feature']
+features = features_all
+# top30features = feat_imp['feature'].head(30)
 
 ###########
 # Test different classifiers
@@ -191,18 +173,19 @@ classifiers = [
 	# RandomForestClassifier(n_estimators=1000, min_samples_leaf = 50, random_state=42),
 	AdaBoostClassifier(learning_rate=0.01, n_estimators=2000, random_state=42),
 	# GradientBoostingClassifier(learning_rate=0.005, n_estimators=2000, min_samples_split=8, max_depth=4 , random_state=42, subsample=0.8),
-	GradientBoostingClassifier(learning_rate=0.01, n_estimators=1000, min_samples_split=8, max_depth=4, random_state=42, subsample=1)
+	GradientBoostingClassifier(learning_rate=0.01, n_estimators=1000, min_samples_split=500, max_features='sqrt', max_depth=4, random_state=42, subsample=0.8)
 ]
 
 # best AUC ROC
 # model GradientBoostingClassifier(learning_rate=0.01, n_estimators=3000, min_samples_split=4, max_depth=4 , random_state=42, subsample=0.8)
 # all features
+# val set = 0.807
 # Test set: 0.816
 # Oot set: 0.852
 
 for classifier in classifiers:
 	print(classifier)
-	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features_all)),
+	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
 					  ('classifier', classifier)])
 	pipe.fit(X_train, y_train)
 	print('Validation dataset')
@@ -240,19 +223,25 @@ gb_param_dist = {
 	'classifier__min_samples_split': [4,10]
 }
 gb_param_dist = {
-	'classifier__n_estimators': [3000],
-	'classifier__max_depth': [4,6],
-	'classifier__min_samples_split': [4,8],
-	'classifier__subsample': [0.8,1],
-	'classifier__learning_rate': [0.01, 0.005],
+	'classifier__n_estimators': [200],
+	'classifier__max_depth': [2,3,4,5],
+	'classifier__max_features': [2,4,6],
+	'classifier__min_samples_split': [800,1200,1600,2000],
+	'classifier__subsample': [0.3,0.5,0.7],
+	'classifier__learning_rate': [0.05],
 	'classifier__random_state': [42]
 }
 
-pipe_cv = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
+pipe_cv = Pipeline(steps=[('preprocessor', CustomTransformer(features_adj)),
 					   ('classifier', GradientBoostingClassifier())])
 
 grid = GridSearchCV(pipe_cv, param_grid=gb_param_dist, scoring=make_scorer(roc_auc_score), cv=2)
 grid.fit(X_train, y_train)
+
+print('Validation dataset')
+probs = grid.predict_proba(X_val)[:,1]
+print("score = %3.2f" % (grid.score(X_val, y_val)))
+print("AUC ROC: {}".format(roc_auc_score(y_val, probs)))
 
 print('Test dataset')
 probs = grid.predict_proba(X_test)[:,1]
@@ -266,15 +255,46 @@ print("AUC ROC: {}".format(roc_auc_score(y_oot, probs)))
 print(grid.best_params_)
 
 # best AUC ROC
-# model GradientBoostingClassifier('classifier__learning_rate': 0.01, 'classifier__max_depth': 6, 'classifier__min_samples_split': 4, 'classifier__n_estimators': 3000, 'classifier__subsample': 0.8, 'classifier__random_state': 42)
+# model GradientBoostingClassifier({'classifier__learning_rate': 0.01, 'classifier__max_depth': 2, 'classifier__min_samples_split': 16, 'classifier__n_estimators': 1000, 'classifier__random_state': 42, 'classifier__subsample': 0.6})
 # features top 20 after fitting all (with within batch enriched)
 # midpointPerc, meanStrikeCallPerc, volatility, nrCalls, meanHigherStrike, nrHigherOptions, daysToExpiration, baseLastPrice, bidPrice, volumeCall, higherStrikePriceCum, strikePriceCum, nrPuts, strikePrice, meanStrikeCall, meanStrikePutPerc, volumeCumSum, openInterestPut, openInterestCall, meanStrikePut
-# Test set: 0.816
-# Oot set: 0.846
+# val set: 0.8094
+# Test set: 0.7622
+# Oot set: 0.7924
 
-best_model = best_estimator.steps[1][1]
+best_model = grid.best_estimator.steps[1][1]
 
 #plot feature importance
 from option_trading_nonprod.validation.feature_importances import *
 featureImportance1(model=best_model, features=features)
 feat_imp = featureImportance1(model=pipe.steps[1][1], features=features_all)
+
+# calculate trading profit
+simpleTradingStrategy(df_val)
+
+#########
+# Calibrate and save model
+from option_trading_nonprod.models.calibrate import *
+import os
+getwd = os.getcwd()
+# Calibrate pre trained model
+model = pipe.steps[1][1]
+model.feature_names = features
+train_type = 'DEV'
+version = 'v3x3'
+
+if train_type == 'DEV':
+	X_fit = X_train
+	y_fit = y_train
+	df_test.to_csv("data/validation/test_df.csv")
+	df_oot.to_csv("data/validation/oot_df.csv")
+elif train_type == 'PROD':
+	X_fit = pd.concat([X_train, X_test])
+	y_fit = pd.concat([y_train, y_test])
+
+X_val.fillna(0, inplace=True)
+
+opunta_params = {'n_estimators': 1550, 'max_depth': 4, 'max_features': 12, 'min_samples_split': 292, 'subsample': 0.853500248686749, 'learning_rate': 0.009901294743945055}
+params = {'n_estimators': 3000, 'max_depth': 4, 'max_features': 12, 'min_samples_split': 300, 'subsample': 0.853500248686749, 'learning_rate': 0.005}
+model = fit_GBclf(X_train[features_adj], y_train, X_val[features_adj], y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
+Cal_model = calibrate_model(model, X_val, y_val, method='sigmoid', save_model=True, path=getwd + '/trained_models/', name=train_type+'_c_GB64_'+version)

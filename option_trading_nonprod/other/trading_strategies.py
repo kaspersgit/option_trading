@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 
 def dfFilterOnGivenSet(df, filterset={}):
 	# Fill up filterset with default in case of non existing
-	if "threshold" not in filterset:
-		filterset['threshold'] = 0.0
+	if "minThreshold" not in filterset:
+		filterset['minThreshold'] = 0.0
+	if "maxThreshold" not in filterset:
+		filterset['maxThreshold'] = 1.0
 	if "maxBasePrice" not in filterset:
 		filterset['maxBasePrice'] = 200
 	if "minDaysToExp" not in filterset:
@@ -18,7 +20,8 @@ def dfFilterOnGivenSet(df, filterset={}):
 	# in case column did not exist yet
 	df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 
-	df_filtered = df[(df['prob'] > filterset['threshold']) &
+	df_filtered = df[(df['prob'] > filterset['minThreshold']) &
+		(df['prob'] <= filterset['maxThreshold']) &
 		(df['symbolType'] == 'Call') &
 		(df['daysToExpiration'] < filterset['maxDaysToExp']) &
 		(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
@@ -26,13 +29,13 @@ def dfFilterOnGivenSet(df, filterset={}):
 		(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
 	return(df_filtered)
 
-def simpleTradingStrategy(df,filterset={}, plot=True):
+def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title=''):
 	if 'stocksBought' not in df.columns:
 		df['stocksBought'] = 100 / df['baseLastPrice']
 	if 'cost' not in df.columns:
 		df['cost'] = df['stocksBought'] * df['baseLastPrice']
 	if 'revenue' not in df.columns:
-		df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
+		df['revenue'] = df['stocksBought'] * np.where(df[actualCol] == 1, df['strikePrice'], df['finalPrice'])
 	if 'profit' not in df.columns:
 		df['profit'] = df['revenue'] - df['cost']
 	df_filtered = dfFilterOnGivenSet(df, filterset)
@@ -47,7 +50,8 @@ def simpleTradingStrategy(df,filterset={}, plot=True):
 		fig = plt.figure()
 		ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 		ax.plot(df_profit['prob'], df_profit['cumProfitPerc'])
-		plt.title('Inverse cumulative profit per threshold')
+		plot_title = 'Inverse cumulative profit per threshold ' + title
+		plt.title(plot_title)
 		plt.xlabel('Predicted probability')
 		plt.ylabel('Profit percentage')
 		plt.show()

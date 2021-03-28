@@ -6,7 +6,7 @@
         "minDaysToExp": 3,
         "minStrikeIncrease": 1.05,
         "maxStrikeIncrease": 10,
-        "threshold": 0.75
+        "minThreshold": 0.75
     },
     "high_profitability": {
         "optionType": "Call",
@@ -15,6 +15,6 @@
         "minDaysToExp": 3,
         "minStrikeIncrease": 1.2,
         "maxStrikeIncrease": 10,
-        "threshold": 0.3
+        "minThreshold": 0.3
     }
 }
