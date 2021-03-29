@@ -98,7 +98,7 @@ minDaysToExp = 3
 maxDaysToExp = 25
 minStrikeIncrease = 1.05
 
-high_prob = df[(df['prediction'] > hprob_config['threshold']) &
+high_prob = df[(df['prediction'] > hprob_config['minThreshold']) &
     (df['symbolType']=='Call') &
     (df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
     (df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
@@ -116,7 +116,7 @@ hprof_minDaysToExp = 3
 hprof_maxDaysToExp = 25
 hprof_minStrikeIncrease = 1.20
 
-high_prof = df[(df['prediction'] > hprof_config['threshold']) &
+high_prof = df[(df['prediction'] > hprof_config['minThreshold']) &
     (df['symbolType']=='Call') &
     (df['daysToExpiration'] < hprof_config['maxDaysToExp']) &
     (df['priceDiffPerc'] > hprof_config['minStrikeIncrease']) &
@@ -162,9 +162,9 @@ html = """\
     </p>
   </body>
 </html>
-""".format(high_prob.to_html(),hprob_config['threshold'],hprob_config['maxBasePrice'],
+""".format(high_prob.to_html(),hprob_config['minThreshold'],hprob_config['maxBasePrice'],
 		   hprob_config['minDaysToExp'],hprob_config['maxDaysToExp'],hprob_config['minStrikeIncrease'],
-		   high_prof.to_html(),hprof_config['threshold'],hprof_config['maxBasePrice'],
+		   high_prof.to_html(),hprof_config['minThreshold'],hprof_config['maxBasePrice'],
 		   hprof_config['minDaysToExp'],hprof_config['maxDaysToExp'],hprof_config['minStrikeIncrease'],
 		   )
 

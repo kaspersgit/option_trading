@@ -138,4 +138,4 @@ if __name__=='__main__':
 
     model.version = model_name
 
-    modelPerformanceReport(model, df_test, plots=True)
+    modelPerformanceReport(model, df_test, plots=False)

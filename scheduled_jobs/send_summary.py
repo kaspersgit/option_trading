@@ -57,7 +57,7 @@ else:
 
 # Get model which should be used
 if platform.system() == 'Darwin':
-	model = 'DEV_c_GB64_v1x3'
+	model = 'DEV_c_GB64_v3x3'
 else:
 	model = sys.argv[1]
 model = model.split('.')[0]
@@ -85,6 +85,19 @@ df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 df = batch_enrich_df(df)
 
 print('Shape of imported data: {}'.format(df.shape))
+
+# enriching based on platform with tehcnical indicators
+if platform.system() == 'Darwin':
+	# Get technical indicators
+	# Get stock prices from 35 days before export date to calculate them
+	df['exportedAt'] = pd.to_datetime(df['exportedAt'])
+	df['start_date'] = df['exportedAt'] - timedelta(days=45)
+	indicators_df = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
+	indicators_df['exportedAt'] = pd.to_datetime(indicators_df['exportedAt'])
+
+	# Put dfs together
+	df = df.merge(indicators_df, on=['baseSymbol','exportedAt'])
+	df.fillna(0,inplace=True)
 
 # import model and score
 file_path = os.getcwd() + '/trained_models/' + model + '.sav'
@@ -208,7 +221,7 @@ hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
 																 100 * x / float(x.sum())).reset_index(drop=False)
 
 
-fig, axs = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(12, 3), sharey=True)
 # All contracts
 axs[0].bar(all_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
 axs[0].bar(all_binPercentage['strikePricePercBin'].unique(), all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
@@ -221,6 +234,7 @@ axs[1].bar(hprob_binPercentage.dropna()['strikePricePercBin'].unique(), 100, col
 axs[1].bar(hprob_binPercentage['strikePricePercBin'].unique(), hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
 axs[1].tick_params('x', labelrotation=45)
 axs[1].title.set_text('High probability')
+axs[1].set_xlabel("Strike price increase with respect to stock price")
 
 # high probability contracts
 axs[2].bar(hprof_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
@@ -228,9 +242,7 @@ axs[2].bar(hprof_binPercentage['strikePricePercBin'].unique(), hprof_binPercenta
 axs[2].tick_params('x', labelrotation=45)
 axs[2].title.set_text('High profitability')
 
-plt.xlabel("Strike price increase with respect to last price")
-
-fig.suptitle('Fraction reaching strike price (y) vs strike price increase (x)')
+fig.tight_layout(rect=[0,0,0.9,0.9])
 fig.savefig("scheduled_jobs/summary_content/strikePerBins.png")
 
 #################################### Unsure
