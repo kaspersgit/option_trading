@@ -13,7 +13,7 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 #######################
 # Load and prepare data
-df_all = pd.read_csv('data/barchart_yf_enr_1.csv')
+df_all = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 
 # Set target
 df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
