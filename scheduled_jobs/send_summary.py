@@ -53,7 +53,7 @@ else:
 	mode = 'DEVELOPMENT'
 	add_attachment = False
 	with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
-	emaillist = f.read().splitlines()
+		emaillist = f.read().splitlines()
 
 # print status of variables
 print('Mode: {}'.format(mode))
