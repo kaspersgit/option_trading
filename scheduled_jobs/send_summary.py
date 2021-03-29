@@ -48,12 +48,16 @@ if len(sys.argv) >= 3:
 		with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
 			emaillist = f.read().splitlines()
 
-	# print status of variables
-	print('Mode: {}'.format(mode))
-	print('Emaillist: {}'.format(emaillist))
-
 else:
 	print('Script can be run from command line as <script> <model> <env prod or dev> <add attachment true/false> <date (optional)>')
+	mode = 'DEVELOPMENT'
+	add_attachment = False
+	with open('/home/pi/Documents/trusted/option_email_list_dev.txt') as f:
+	emaillist = f.read().splitlines()
+
+# print status of variables
+print('Mode: {}'.format(mode))
+print('Emaillist: {}'.format(emaillist))
 
 # Get model which should be used
 if platform.system() == 'Darwin':
