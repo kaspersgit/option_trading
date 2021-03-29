@@ -87,7 +87,7 @@ df = batch_enrich_df(df)
 print('Shape of imported data: {}'.format(df.shape))
 
 # enriching based on platform with tehcnical indicators
-if platform.system() == 'Darwin':
+if 'v3' in model:
 	# Get technical indicators
 	# Get stock prices from 35 days before export date to calculate them
 	df['exportedAt'] = pd.to_datetime(df['exportedAt'])
