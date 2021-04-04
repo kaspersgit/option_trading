@@ -95,7 +95,7 @@ maxDaysToExp = 60
 df = limitDaysToExpiration(df, min=minDaysToExp, max=maxDaysToExp)
 print("After filtering on having days to expiration between {} and {} \nThe left over data shape: {}".format(minDaysToExp, maxDaysToExp, df.shape))
 
-# Using above functions
+# Get min max first and last price
 contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax')
 
 # incase it goes wrong somewhere, start from close to that row

@@ -39,9 +39,12 @@ print('Output bucket: {}'.format(output_bucket))
 print('Output key: {}'.format(output_key))
 
 # import data
-df = load_from_s3(profile="default", bucket=source_bucket, key_prefix=source_key)
-# df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-01-19_expires_2021-01-29.csv')
-# df = pd.read_csv('/Users/kasper.de-harder/Downloads/exported_2021-02-05_expires_2021-02-05.csv')
+if platform.system() == 'Darwin':
+	s3_profile = 'mrOption'
+else:
+	s3_profile = 'default'
+
+df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
@@ -52,9 +55,12 @@ print('Shape of imported data: {}'.format(df.shape))
 print('Enriching stocks...')
 contracts_prices = getContractPrices(df)
 
+# Changed to fit format of contract prices to be able to merge
+df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
+
 # Put dfs together to have all enriched data
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
 print('Enriching stocks...Done')
 
 # Upload enriched table to S3
-write_dataframe_to_csv_on_s3(profile="default", dataframe=df_enr, filename=output_key, bucket=output_bucket)
+write_dataframe_to_csv_on_s3(profile=s3_profile, dataframe=df_enr, filename=output_key, bucket=output_bucket)

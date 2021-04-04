@@ -294,7 +294,7 @@ elif train_type == 'PROD':
 
 X_val.fillna(0, inplace=True)
 
-opunta_params = {'n_estimators': 330, 'max_depth': 10, 'max_features': 2, 'min_samples_split': 296, 'subsample': 0.7083670694345199, 'learning_rate': 0.0005820281739407149}
+opunta_params = {'n_estimators': 3000, 'max_depth': 10, 'max_features': 8, 'min_samples_split': 225, 'subsample': 0.808392563444737, 'learning_rate': 0.00010030663168798627}
 params = {'n_estimators': 3000, 'max_depth': 4, 'max_features': 12, 'min_samples_split': 300, 'subsample': 0.853500248686749, 'learning_rate': 0.005}
 model = fit_GBclf(X_train[features_adj], y_train, X_val[features_adj], y_val, opunta_params, save_model = False, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
 Cal_model = calibrate_model(model, X_val, y_val, method='sigmoid', save_model=True, path=getwd + '/trained_models/', name=train_type+'_c_GB64_'+version)

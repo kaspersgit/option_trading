@@ -30,10 +30,10 @@ def objective(trial):
 
 	params = {
 		"criterion": "friedman_mse",
-		"n_estimators": 1000,
+		"n_estimators": 3000,
 		"max_depth": trial.suggest_int("max_depth", 2, 12),
 		"max_features": trial.suggest_int("max_features", 2, 14),
-		"min_samples_split": trial.suggest_int("min_samples_split", 50, 300),
+		"min_samples_split": trial.suggest_int("min_samples_split", 50, 500),
 		"subsample": trial.suggest_float("subsample", 0.7, 0.9),
 		"learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
 		"random_state": 42,

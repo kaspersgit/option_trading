@@ -66,6 +66,7 @@ def modelPerformanceReport(model, dataset, plots):
     # Measure performance
     # AUC
     auc_roc = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='roc')
+    auc_pr = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='pr')
     # Brier score
     brier_score = brier_score_loss(pred_df['actual'],pred_df['prob'])
 
@@ -90,7 +91,7 @@ def modelPerformanceReport(model, dataset, plots):
             print('Nr observations {} out of {} ({})'.format(len(select_df),len(pred_df),round(len(select_df)/len(pred_df),2)))
 
             auc_roc = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='roc')
-            # auc_pr = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='pr')
+            auc_pr = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='pr')
             print('AUC ROC: {}'.format(round(auc_roc,3)))
             # print('AUC PR: {}'.format(round(auc_pr,3)))
             plotCalibrationCurve(select_df['actual'], select_df['prob'], title = title, bins=10)
@@ -99,6 +100,7 @@ def modelPerformanceReport(model, dataset, plots):
 
 
     print('AUC ROC: {}'.format(auc_roc))
+    print('AUC PR: {}'.format(auc_pr))
     print('Brier score: {}'.format(brier_score))
     ###########
     # profitablity
@@ -113,12 +115,12 @@ def modelPerformanceReport(model, dataset, plots):
 
     ###########
     # Feature importance
-    from sklearn.inspection import permutation_importance
-    permutation_imp = permutation_importance(model, pred_df[model.feature_names], pred_df['actual'])
-    feat_permutation_imp = pd.DataFrame({'feature': model.feature_names, 'importance': permutation_imp.importances_mean}).sort_values('importance', ascending=False).reset_index(drop=True)
-    feat_impurity_imp = pd.DataFrame({'feature': model.feature_names, 'importance': model.feature_importances_}).sort_values('importance', ascending=False).reset_index(drop=True)
-
-    print("Feature permutation importance: \n{}\n\n".format(feat_permutation_imp.head(10)))
+    # from sklearn.inspection import permutation_importance
+    # permutation_imp = permutation_importance(model, pred_df[model.feature_names], pred_df['actual'])
+    # feat_permutation_imp = pd.DataFrame({'feature': model.feature_names, 'importance': permutation_imp.importances_mean}).sort_values('importance', ascending=False).reset_index(drop=True)
+    # feat_impurity_imp = pd.DataFrame({'feature': model.feature_names, 'importance': model.feature_importances_}).sort_values('importance', ascending=False).reset_index(drop=True)
+    #
+    # print("Feature permutation importance: \n{}\n\n".format(feat_permutation_imp.head(10)))
     # print("Feature impurity importance: \n{}".format(feat_impurity_imp))
 
 if __name__=='__main__':
