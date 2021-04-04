@@ -1,6 +1,8 @@
 import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
+from http.client import IncompleteRead
+from requests.exceptions import ChunkedEncodingError
 from datetime import datetime, timedelta
 import numpy as np
 
@@ -165,16 +167,24 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	# exclude entries where export and expiration date are the same
 	df_ = df_[df_[startDateCol] != df_[endDateCol]]
 
+	# Final df to be filled
 	contracts_enr = pd.DataFrame(
 		columns=['baseSymbol', startDateCol, endDateCol])
+
 	config_df = pd.DataFrame(columns=['baseSymbol', 'minDate', 'maxDate'])
-	config_df['baseSymbol'] = df_['baseSymbol'].unique()
-	for symbol in config_df['baseSymbol']:
-		temp_df = df_[df_['baseSymbol'] == symbol]
-		minDate = temp_df[startDateCol].min()
-		maxDate = temp_df[endDateCol].max()
-		config_df.at[config_df['baseSymbol'] == symbol, 'minDate'] = minDate
-		config_df.at[config_df['baseSymbol'] == symbol, 'maxDate'] = maxDate
+
+	# vectorize dtype='U10' is enough to fit date in string format
+	tickers = df_['baseSymbol'].unique()
+	minDates = np.zeros(len(tickers), dtype='U10')
+	maxDates = np.zeros(len(tickers), dtype='U10')
+
+	for s in range(len(tickers)):
+		temp_df = df_[df_['baseSymbol'] == tickers[s]]
+		minDates[s] = temp_df[startDateCol].min()
+		maxDates[s] = temp_df[endDateCol].max()
+	config_df['baseSymbol'] = tickers
+	config_df['minDate'] = minDates
+	config_df['maxDate'] = maxDates
 
 	# Print status
 	print('Unique tickers: {}'.format(config_df['baseSymbol'].nunique()))
@@ -183,7 +193,15 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	for index, row in config_df.iterrows():
 		if index % 100 == 0:
 			print('Rows done: {}'.format(index))
-		stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
+		try:
+			print(f"Trying stock: {row['baseSymbol']}")
+			stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
+		# this error has not been catched properly
+		except ChunkedEncodingError as err:
+			# print(err.partial)
+			print(f"ChunkedEncodingError for ticker: {row['baseSymbol']}")
+			continue
+
 		# Check for empty dataframe
 		if len(stock_df) == 0:
 			continue
