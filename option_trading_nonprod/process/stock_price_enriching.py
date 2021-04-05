@@ -1,152 +1,13 @@
 import yfinance as yf
+import yahooquery as yq
 import pandas as pd
-import pandas_ta as ta
-from http.client import IncompleteRead
-from requests.exceptions import ChunkedEncodingError
 from datetime import datetime, timedelta
 import numpy as np
+import time
+from requests.exceptions import ConnectionError
 
 
-def get_mature_options(df, symbolType=['Call'], minDays=4, maxDays=18):
-	# Select only mature cases (and exclude options with less then 5 days to expiration)
-	df = df[pd.to_datetime(df['expirationDate']) < datetime.today()]
-	df = df[(df['daysToExpiration'] > minDays) & (df['daysToExpiration'] < maxDays)]
-	df = df[df['symbolType'].isin(symbolType)]
-	return (df)
-
-
-def get_interesting_options(df, minPrice=0, maxPrice=200):
-	# In the money based on the last base price
-	df = df[df['inTheMoney'] != 1]
-	# In the money based on the 1.025 * baseLastPrice
-	df = df[(~df['nextBDopen'].isnull()) & (df['strikePrice'] > 1.025 * df['baseLastPrice'])]
-	# Stock price lower than 200 $
-	df = df[df['baseLastPrice'] < maxPrice]
-	# Return result
-	return (df)
-
-
-def add_weekday_dummies(df):
-	names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-	for i, x in enumerate(names):
-		df[x] = (df.index.get_level_values(0).weekday == i).astype(int)
-	return (df)
-
-
-def add_stock_price(df):
-	## Adding actual stockprices
-	# create empty list
-	final_df = []
-	# Loop through all different scraping date
-	start_dates = df['exportedAt'].unique()
-	for start_date in start_dates:
-		data_df = df[df['exportedAt'] == start_date]
-		# Get the different dates
-		start_date = pd.to_datetime(start_date)
-		start_date_p1 = (start_date + pd.DateOffset(1)).strftime('%Y-%m-%d')
-		nextBD = (1 * pd.offsets.BDay() + start_date).strftime('%Y-%m-%d')
-		start_date = start_date.strftime('%Y-%m-%d')
-		print('Working with data scraped on {}'.format(start_date))
-
-		# Get all different expiration dates
-		expiration_dates = data_df['expirationDate'].unique()
-
-		for end in expiration_dates:
-			if end <= start_date_p1:
-				continue
-			print('Working with enddate {}'.format(end))
-			tickers_list = data_df[data_df['expirationDate'] == end]['baseSymbol'].unique()
-			tickers = ','.join(tickers_list)
-			data = yf.download(tickers, start=start_date, end=end)
-
-			# next business day opening
-			# first check if avaialable
-			if nextBD not in data.index:
-				continue
-			openbd = data.loc[nextBD]['Open']
-
-			# Get max high and min low
-			highs = data.loc[start_date_p1::]['High'].max()
-			lows = data.loc[start_date_p1::]['Low'].min()
-			last_close = data['Close'].tail(1).mean()
-
-			if len(tickers_list) == 1:
-				highs = pd.DataFrame({'baseSymbol': [tickers], 'maxPrice': [highs]})
-				lows = pd.DataFrame({'baseSymbol': [tickers], 'minPrice': [lows]})
-				openbd = pd.DataFrame({'baseSymbol': [tickers], 'nextBDopen': [openbd]})
-				last_close = pd.DataFrame({'baseSymbol': [tickers], 'lastClose': [last_close]})
-			else:
-				highs = highs.reset_index()
-				highs.columns = ['baseSymbol', 'maxPrice']
-				lows = lows.reset_index()
-				lows.columns = ['baseSymbol', 'minPrice']
-				openbd = openbd.reset_index()
-				openbd.columns = ['baseSymbol', 'nextBDopen']
-				last_close = last_close.reset_index()
-				last_close.columns = ['baseSymbol', 'lastClose']
-
-			# temp_df = pd.merge(temp_df, highs, how='left', on='baseSymbol')
-			temp_df = pd.merge(highs, lows, how='left', on=['baseSymbol'])
-			temp_df = pd.merge(temp_df, openbd, how='left', on=['baseSymbol'])
-			temp_df = pd.merge(temp_df, last_close, how='left', on=['baseSymbol'])
-			temp_df['expirationDate'] = end
-			temp_df['exportedAt'] = start_date
-			if len(final_df) == 0:
-				final_df = temp_df
-			else:
-				final_df = final_df.append(temp_df)
-	final_df.reset_index(drop=True, inplace=True)
-	return (final_df)
-
-
-def last_10d_avg(df):
-	## Adding actual stockprices
-	# create empty list
-	final_df = []
-	# Loop through all different scraping date
-	end_dates = df['exportedAt'].unique()
-	for end_date in end_dates:
-		data_df = df[df['exportedAt'] == end_date]
-		# Get the different dates
-		end_date = pd.to_datetime(end_date)
-		end_date_m10 = (end_date - pd.DateOffset(10)).strftime('%Y-%m-%d')
-		end_date = end_date.strftime('%Y-%m-%d')
-		print('Working with data scraped on {}'.format(end_date))
-
-		tickers_list = data_df[data_df['exportedAt'] == end_date]['baseSymbol'].unique()
-		tickers = ','.join(tickers_list)
-		data = yf.download(tickers, start=end_date_m10, end=end_date)
-
-		# Get max high and min low
-		highs = data.loc[end_date_m10::]['High'].max()
-		lows = data.loc[end_date_m10::]['Low'].min()
-		means = data['Close'].mean()
-
-		if len(tickers_list) == 1:
-			highs = pd.DataFrame({'baseSymbol': [tickers], 'maxPrice': [highs]})
-			lows = pd.DataFrame({'baseSymbol': [tickers], 'minPrice': [lows]})
-			means = pd.DataFrame({'baseSymbol': [tickers], 'meanLast10D': [means]})
-		else:
-			highs = highs.reset_index()
-			highs.columns = ['baseSymbol', 'maxPrice']
-			lows = lows.reset_index()
-			lows.columns = ['baseSymbol', 'minPrice']
-			means = means.reset_index()
-			means.columns = ['baseSymbol', 'meanLast10D']
-
-		# temp_df = pd.merge(temp_df, highs, how='left', on='baseSymbol')
-		temp_df = pd.merge(highs, lows, how='left', on=['baseSymbol'])
-		temp_df = pd.merge(temp_df, means, how='left', on=['baseSymbol'])
-		temp_df['exportedAt'] = end_date
-		if len(final_df) == 0:
-			final_df = temp_df
-		else:
-			final_df = final_df.append(temp_df)
-	final_df.reset_index(drop=True, inplace=True)
-	return (final_df)
-
-
-def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationDate', type='minmax'):
+def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationDate', type='minmax', use_package='yf'):
 	"""
 	For each unique ticker (column name 'baseSymbol') it will extract the
 	daily stock prices between export date and expiration date. Of this time series
@@ -154,6 +15,11 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	will be added as columns to the dataframe
 
 	:param df: Must include 'baseSymbol' and the columns specified in startDateCol and endDateCol
+	:param startDateCol
+	:param endDateCol
+	:param type
+	:param use_package: which package to use for extracting stock prices either yfinance (yf) or yahooquery (yq)
+
 	:return: df: Added several columns indicating the first, last, min and max price reached until strike date
 	also the dates of all these events is added
 	"""
@@ -187,23 +53,26 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	config_df['maxDate'] = maxDates
 
 	# Print status
-	print('Unique tickers: {}'.format(config_df['baseSymbol'].nunique()))
+	print('Unique tickers: {}'.format(len(tickers)))
 
 	# For each symbol extract the stock price series
+	baseSymbols = config_df['baseSymbol']
+	minDates = config_df['minDate']
+	maxDates = config_df['maxDate']
 	for index, row in config_df.iterrows():
 		if index % 100 == 0:
 			print('Rows done: {}'.format(index))
-		try:
-			print(f"Trying stock: {row['baseSymbol']}")
-			stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
-		# this error has not been catched properly
-		except ChunkedEncodingError as err:
-			# print(err.partial)
-			print(f"ChunkedEncodingError for ticker: {row['baseSymbol']}")
-			continue
+		# if use_package == 'yf':
+		# 	print(f"Trying stock: {row['baseSymbol']}")
+		# 	stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
+		# if use_package == 'yq':
+		# 	print(f"Trying stock: {row['baseSymbol']}")
+		# 	stock_df = yq.Ticker(row['baseSymbol']).history(start=row['minDate'], end=row['maxDate'])
+		# 	time.sleep(0.1)
+		stock_df = extractHistoricPrices(row['baseSymbol'], minDate=row['minDate'], maxDate=row['maxDate'], use_package='yf')
 
 		# Check for empty dataframe
-		if len(stock_df) == 0:
+		if len(stock_df) == 0 | (len(stock_df) == 1 and 'delisted' in list(stock_df.values())[0]):
 			continue
 		stock_df = stock_df[row['minDate']::]
 		contracts = df_[df_['baseSymbol'] == row['baseSymbol']][['baseSymbol', startDateCol, endDateCol]]
@@ -249,6 +118,18 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 
 	return contracts_enr
 
+def extractHistoricPrices(ticker, minDate, maxDate, use_package='yf'):
+	print(f"Trying stock: {ticker}")
+	if use_package == 'yf':
+		stock_df = yf.download(ticker, start=minDate, end=maxDate)
+	if use_package == 'yq':
+		try:
+			stock_df = yq.Ticker(ticker).history(start=minDate, end=maxDate)
+		except ConnectionError as err:
+			print('Connection error, waiting 5 seconds')
+			time.sleep(5)
+	return stock_df
+
 def getTechnicalIndicators(stock_df, indicators=['rsi', 'obv', 'bbands'], fast=5, slow=20):
 	"""
 	For a set time period give the technical indicators on the final time period
@@ -287,8 +168,8 @@ def getMinMaxLastFirst(stock_df):
 	:return: Lowest, highest, last and first price in period together with corresponding dates
 	"""
 	# make sure df is ordered on time
-	minPrice = stock_df['Low'].min()
-	maxPrice = stock_df['High'].max()
+	minPrice = stock_df['Low'][1::].min()
+	maxPrice = stock_df['High'][1::].max()
 	finalPrice = stock_df['Close'].iloc[-1]
 	firstPrice = stock_df['Close'].iloc[0]
 
@@ -304,6 +185,9 @@ def limitDaysToExpiration(df, min=15, max=25):
 	df = df[(df['daysToExpiration'] > min) & (df['daysToExpiration'] < max)]
 	return (df)
 
+def getCurrentStockPrice(ticker):
+	data = yf.download(ticker, period='5m', interval='5m')
+	return data
 
 def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']):
 	"""

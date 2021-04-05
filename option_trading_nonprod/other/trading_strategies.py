@@ -30,15 +30,16 @@ def dfFilterOnGivenSet(df, filterset={}):
 	return(df_filtered)
 
 def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title=''):
-	if 'stocksBought' not in df.columns:
-		df['stocksBought'] = 100 / df['baseLastPrice']
-	if 'cost' not in df.columns:
-		df['cost'] = df['stocksBought'] * df['baseLastPrice']
-	if 'revenue' not in df.columns:
-		df['revenue'] = df['stocksBought'] * np.where(df[actualCol] == 1, df['strikePrice'], df['finalPrice'])
-	if 'profit' not in df.columns:
-		df['profit'] = df['revenue'] - df['cost']
-	df_filtered = dfFilterOnGivenSet(df, filterset)
+	df_ = df.copy()
+	if 'stocksBought' not in df_.columns:
+		df_['stocksBought'] = 100 / df_['baseLastPrice']
+	if 'cost' not in df_.columns:
+		df_['cost'] = df_['stocksBought'] * df_['baseLastPrice']
+	if 'revenue' not in df_.columns:
+		df_['revenue'] = df_['stocksBought'] * np.where(df_[actualCol] == 1, df_['strikePrice'], df_['finalPrice'])
+	if 'profit' not in df_.columns:
+		df_['profit'] = df_['revenue'] - df_['cost']
+	df_filtered = dfFilterOnGivenSet(df_, filterset)
 	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()
 	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()
