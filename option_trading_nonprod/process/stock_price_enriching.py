@@ -195,9 +195,13 @@ def limitDaysToExpiration(df, min=15, max=25):
 
 def getCurrentStockPrice(ticker, attribute='Close'):
 	print(ticker)
-	data = yf.download(ticker, period='5m', interval='5m')
-	returned_value = data[attribute].values
-	return returned_value[0]
+	data = yf.download(ticker, period='1d', interval='1d')
+	if len(data) == 0:
+		result = 9999
+	else:
+		returned_value = data[attribute].values
+		result = returned_value[-1]
+	return result
 
 def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']):
 	"""

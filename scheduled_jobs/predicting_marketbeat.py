@@ -58,6 +58,8 @@ else:
 
 df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
+print(f"Imported dataframe shape: {df.shape}")
+
 # custom added variables
 df['predDate'] = day
 df['indicatorPresent'] = np.where(df['indicators'].isnull(),0,1)
