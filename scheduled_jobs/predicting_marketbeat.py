@@ -73,11 +73,6 @@ df['callStockVolume'] = df['avgStockVolume'] / df['avgOptionVolume']
 if day == datetime.today().strftime("%Y-%m-%d"):
 	df['firstPrice'] = df['ticker'].map(getCurrentStockPrice)
 
-
-if mode == 'DEVELOPMENT':
-	from option_trading_nonprod.process.stock_price_enriching import *
-	df = batch_enrich_df(df)
-
 with open('other_files/config_file.json') as json_file:
 	config = json.load(json_file)
 
