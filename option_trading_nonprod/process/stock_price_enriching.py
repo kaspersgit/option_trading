@@ -78,8 +78,7 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		# Check for empty dataframe
 		if len(stock_df) == 0:
 			continue
-
-		if (len(stock_df) == 1):
+		elif len(stock_df) == 1:
 			if 'delisted' in list(stock_df.values())[0]:
 				continue
 
