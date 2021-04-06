@@ -76,8 +76,13 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		stock_df = extractHistoricPrices(baseSymbols[t], minDate=minDates[t], maxDate=maxDates[t], use_package=use_package)
 
 		# Check for empty dataframe
-		if len(stock_df) == 0 | (len(stock_df) == 1 and 'delisted' in list(stock_df.values())[0]):
+		if len(stock_df) == 0:
 			continue
+
+		if (len(stock_df) == 1):
+			if 'delisted' in list(stock_df.values())[0]:
+				continue
+
 		stock_df = stock_df[minDates[t]::]
 		contracts = df_[df_['baseSymbol'] == baseSymbols[t]][['baseSymbol', startDateCol, endDateCol]]
 		contracts.drop_duplicates(inplace=True)
