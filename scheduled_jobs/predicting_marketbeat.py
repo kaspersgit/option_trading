@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import json
 from option_trading_nonprod.aws import *
+from option_trading_nonprod.process.stock_price_enriching import *
 
 # Get supplied system arguments
 # mode (development or production)
