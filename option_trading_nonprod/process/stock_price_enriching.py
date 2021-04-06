@@ -1,10 +1,13 @@
 import yfinance as yf
-import yahooquery as yq
 import pandas as pd
 from datetime import datetime, timedelta
 import numpy as np
 import time
 from requests.exceptions import ConnectionError
+
+import platform
+if platform.system() == 'Darwin':
+	import yahooquery as yq
 
 
 def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationDate', type='minmax', use_package='yf'):

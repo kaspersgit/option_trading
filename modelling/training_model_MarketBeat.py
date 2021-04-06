@@ -17,7 +17,7 @@ from option_trading_nonprod.process.stock_price_enriching import *
 df_all = pd.read_csv('data/marketbeat_yf_enr_1.csv')
 
 # Set target
-df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= 1*1 df_all['firstPrice'],1,0)
+df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= 1.1 * df_all['firstPrice'],1,0)
 
 # filter set on applicable rows
 df = df_all.reset_index(drop=True)
