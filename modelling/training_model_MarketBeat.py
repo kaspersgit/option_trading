@@ -33,6 +33,8 @@ df['heaveNewsReporting'] = np.where(df['indicators'].str.contains('Heavy News Re
 df['gapDown'] = np.where(df['indicators'].str.contains('Gap Down', na=False),1,0)
 df['gapUp'] = np.where(df['indicators'].str.contains('Gap Up', na=False),1,0)
 
+df['callStockVolume'] = df['avgStockVolume'] / df['avgOptionVolume']
+
 virt_daysToExpiration = 21
 df['expirationDate'] = (pd.to_datetime(df['dataDate']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
 df.rename(columns={'exportedAt': 'exportedAtTimestamp',
