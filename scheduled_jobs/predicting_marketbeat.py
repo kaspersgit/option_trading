@@ -70,8 +70,7 @@ df['gapUp'] = np.where(df['indicators'].str.contains('Gap Up', na=False),1,0)
 df['callStockVolume'] = df['avgStockVolume'] / df['avgOptionVolume']
 
 # get last price on day of scraping
-if day == datetime.today().strftime("%Y-%m-%d"):
-	df['firstPrice'] = df['ticker'].map(getCurrentStockPrice)
+df['firstPrice'] = df['ticker'].map(getCurrentStockPrice)
 
 with open('other_files/config_file.json') as json_file:
 	config = json.load(json_file)
