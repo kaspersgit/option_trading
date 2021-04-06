@@ -25,7 +25,6 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 df = df_all.reset_index(drop=True)
 
 # custom added variables
-df['predDate'] = day
 df['indicatorPresent'] = np.where(df['indicators'].isnull(),0,1)
 df['upcomingEarning'] = np.where(df['indicators'].str.contains('Upcoming Earnings', na=False),1,0)
 df['earningAnnounced'] = np.where(df['indicators'].str.contains('Earnings Announcement', na=False),1,0)
