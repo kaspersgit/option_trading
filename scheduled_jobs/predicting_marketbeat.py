@@ -32,7 +32,8 @@ if len(sys.argv) >= 3:
 model = sys.argv[1]
 model = model.split('.')[0]
 
-# Set variagbles and load in data\
+# Set variagbles and load in data
+day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
 print('Model: {}'.format(model))
 print('Using data from {}'.format(day))
