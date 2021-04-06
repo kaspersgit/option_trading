@@ -59,9 +59,10 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	baseSymbols = config_df['baseSymbol']
 	minDates = config_df['minDate']
 	maxDates = config_df['maxDate']
-	for index, row in config_df.iterrows():
-		if index % 100 == 0:
-			print('Rows done: {}'.format(index))
+	# for index, row in config_df.iterrows():
+	for t in range(len(baseSymbols)):
+		if t % 100 == 0:
+			print('Rows done: {}'.format(t))
 		# if use_package == 'yf':
 		# 	print(f"Trying stock: {row['baseSymbol']}")
 		# 	stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
@@ -69,13 +70,13 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		# 	print(f"Trying stock: {row['baseSymbol']}")
 		# 	stock_df = yq.Ticker(row['baseSymbol']).history(start=row['minDate'], end=row['maxDate'])
 		# 	time.sleep(0.1)
-		stock_df = extractHistoricPrices(row['baseSymbol'], minDate=row['minDate'], maxDate=row['maxDate'], use_package='yf')
+		stock_df = extractHistoricPrices(baseSymbols[t], minDate=minDates[t], maxDate=maxDates[t], use_package=use_package)
 
 		# Check for empty dataframe
 		if len(stock_df) == 0 | (len(stock_df) == 1 and 'delisted' in list(stock_df.values())[0]):
 			continue
-		stock_df = stock_df[row['minDate']::]
-		contracts = df_[df_['baseSymbol'] == row['baseSymbol']][['baseSymbol', startDateCol, endDateCol]]
+		stock_df = stock_df[minDates[t]::]
+		contracts = df_[df_['baseSymbol'] == baseSymbols[t]][['baseSymbol', startDateCol, endDateCol]]
 		contracts.drop_duplicates(inplace=True)
 
 		if type == 'minmax':
@@ -185,9 +186,11 @@ def limitDaysToExpiration(df, min=15, max=25):
 	df = df[(df['daysToExpiration'] > min) & (df['daysToExpiration'] < max)]
 	return (df)
 
-def getCurrentStockPrice(ticker):
+def getCurrentStockPrice(ticker, attribute='Close'):
+	print(ticker)
 	data = yf.download(ticker, period='5m', interval='5m')
-	return data
+	returned_value = data[attribute].values
+	return returned_value[0]
 
 def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']):
 	"""

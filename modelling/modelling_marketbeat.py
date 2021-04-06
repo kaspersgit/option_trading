@@ -166,6 +166,7 @@ pred_df['pred'] = np.where(pred_df['prob'] >= 0.5, 1, 0)
 # Measure performance
 from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
 from option_trading_nonprod.other.trading_strategies import *
+from option_trading_nonprod.validation.feature_importances import *
 
 # AUC
 plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all data', type='roc')
@@ -178,6 +179,9 @@ plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all data', bins=
 
 # Brier score
 print(brier_score_loss(pred_df['actual'], pred_df['prob']))
+
+# feature importance
+featureImportance1(model, features=model.feature_names)
 
 # profitability
 df_test['prob'] = prob

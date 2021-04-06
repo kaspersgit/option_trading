@@ -42,7 +42,7 @@ print("After filtering on the cutoff date: {}".format(df.shape))
 # Get min max first and last price
 # the thrown chunkedencodingerror might be temp solved by https://github.com/SamPom100/UnusualVolumeDetector/issues/22
 df_ = df[~df.baseSymbol.isin(['NVCR','UA','ADMA'])]
-contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax', use_package='yq')
+contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax', use_package='yh')
 
 # Get technical indicators
 # Get stock prices from 35 days before export date to calculate them
