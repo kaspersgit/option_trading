@@ -21,6 +21,8 @@ if len(sys.argv) >= 3:
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
 			recipients = f.read().splitlines()
 		emaillist = [elem.strip().split(',') for elem in recipients]
+		# don't want to send emails to all yet
+		emaillist = recipients[0]
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		# Load in scraped data of last business day
@@ -41,8 +43,6 @@ print('Using data from {}'.format(day))
 # set working directory
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 current_path = os.getcwd()
-df = pd.read_csv(current_path + '/data/marketbeat/marketbeat_call_activity_'+day+'.csv')
-
 # Set source for bucket and keys
 source_bucket = 'project-option-trading'
 source_key = 'raw_data/marketbeat/marketbeat_call_activity_'+day+'.csv'
@@ -103,10 +103,6 @@ df['model'] = model_name
 # %%
 # Subsetting the predictions for highly probable stocks
 threshold = 0.7
-maxBasePrice = 200
-minDaysToExp = 3
-maxDaysToExp = 60
-minStrikeIncrease = 1.05
 
 virt_daysToExpiration = 21
 df['expirationDate'] = (pd.to_datetime(df['dataDate']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
@@ -115,17 +111,18 @@ df.rename(columns={'exportedAt': 'exportedAtTimestamp',
 				   'ticker': 'baseSymbol'},
 		  inplace=True)
 
+priceDiffPerc = 1.1
 df['daysToExpiration'] = virt_daysToExpiration
 df['baseLastPrice'] = df['firstPrice']
-df['strikePrice'] = 1.1 * df['baseLastPrice']
-df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
+df['strikePrice'] = priceDiffPerc * df['baseLastPrice']
+df['priceDiffPerc'] = priceDiffPerc
 
 
 high_prob = df[(df['prediction'] > threshold)]
 high_prob = high_prob[['baseSymbol', 'predDate', 'expirationDate', 'baseLastPrice', 'strikePrice', 'priceDiffPerc', 'prediction', 'model']]
 high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 
-print('High probability table size: {}'.format(len(high_prob)))
+print('Table size: {}'.format(len(high_prob)))
 
 # %%
 # Sending an email with the predictions
@@ -151,7 +148,7 @@ html = """\
     </p>
   </body>
 </html>
-""".format(high_prob.to_html(),threshold,df['daysToExpiration'],df['priceDiffPerc']
+""".format(high_prob.to_html(),threshold,virt_daysToExpiration,1.1
 		   )
 
 part1 = MIMEText(html, 'html')
