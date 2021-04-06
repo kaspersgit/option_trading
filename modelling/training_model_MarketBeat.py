@@ -24,6 +24,16 @@ df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePric
 # filter set on applicable rows
 df = df_all.reset_index(drop=True)
 
+# custom added variables
+df['predDate'] = day
+df['indicatorPresent'] = np.where(df['indicators'].isnull(),0,1)
+df['upcomingEarning'] = np.where(df['indicators'].str.contains('Upcoming Earnings', na=False),1,0)
+df['earningAnnounced'] = np.where(df['indicators'].str.contains('Earnings Announcement', na=False),1,0)
+df['analystReport'] = np.where(df['indicators'].str.contains('Analyst Report', na=False),1,0)
+df['heaveNewsReporting'] = np.where(df['indicators'].str.contains('Heavy News Reporting', na=False),1,0)
+df['gapDown'] = np.where(df['indicators'].str.contains('Gap Down', na=False),1,0)
+df['gapUp'] = np.where(df['indicators'].str.contains('Gap Up', na=False),1,0)
+
 virt_daysToExpiration = 21
 df['expirationDate'] = (pd.to_datetime(df['dataDate']) + timedelta(days=virt_daysToExpiration)).dt.strftime('%Y-%m-%d')
 df.rename(columns={'exportedAt': 'exportedAtTimestamp',
