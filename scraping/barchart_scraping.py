@@ -120,8 +120,9 @@ for p in range(1, nr_pages+1):
     if p > 1:
         try:
             html = get_loaded_page(url+str(p))
-        except Exception:
-            print('Skipping page')
+        except Exception as e:
+            print('Skipping page due to:')
+            print(e)
             continue
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
