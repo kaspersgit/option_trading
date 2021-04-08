@@ -3,12 +3,15 @@
 # packages
 import pandas as pd
 from statsmodels.discrete.discrete_model import LogitResults
-import os
-import sys
+import os, sys, platform
 from datetime import datetime
 import numpy as np
 import pickle
 import json
+
+# to load custom packages
+os.chdir("/home/pi/Documents/python_scripts/option_trading")
+from option_trading_nonprod.aws import *
 
 # Get supplied system arguments
 # mode (development or production)
@@ -41,7 +44,21 @@ print('Using data from {}'.format(day))
 # set working directory
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 current_path = os.getcwd()
-df = pd.read_csv(current_path + '/data/barchart/barchart_unusual_activity_'+day+'.csv')
+
+# Set source for bucket and keys
+source_bucket = 'project-option-trading'
+source_key = 'raw_data/barchart/barchart_unusual_activity_'+day+'.csv'
+# print status of variables
+print('Source bucket: {}'.format(source_bucket))
+print('Source key: {}'.format(source_key))
+
+# Get model which should be used
+if platform.system() == 'Darwin':
+	profile='mrOption'
+else:
+	profile='default'
+
+df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
 if mode == 'DEVELOPMENT':
 	from option_trading_nonprod.process.stock_price_enriching import *

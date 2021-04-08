@@ -154,16 +154,16 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 # Cleaning and adding columns
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df_total['exportedAt'] = now
-df_total['lastPrice'] = df_total["lastPrice"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['lastPrice'] = pd.to_numeric(df_total["lastPrice"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
 df_total['priceChange'] = pd.to_numeric(df_total["priceChange"].str.replace("+", "").str.replace('*', ''), errors = 'coerce') # has plus or minus sign
 df_total['percentChange'] = pd.to_numeric(df_total["percentChange"].str.replace("+", "").str.replace("%", "").str.replace('*', ''), errors = 'coerce') # has plus or minus sign
-df_total['optionsTotalVolume'] = df_total["optionsTotalVolume"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['optionsTotalOpenInterest'] = df_total["optionsTotalOpenInterest"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['optionsImpliedVolatilityRank1y'] = df_total["optionsImpliedVolatilityRank1y"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
-df_total['optionsTotalVolumePercentChange1m'] = df_total["optionsTotalVolumePercentChange1m"].str.replace("+", "").str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
-df_total['optionsCallVolume'] = df_total["optionsCallVolume"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['optionsPutVolume'] = df_total["optionsPutVolume"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['optionsPutCallVolumeRatio'] = df_total["optionsPutCallVolumeRatio"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['optionsTotalVolume'] = pd.to_numeric(df_total["optionsTotalVolume"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsTotalOpenInterest'] = pd.to_numeric(df_total["optionsTotalOpenInterest"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsImpliedVolatilityRank1y'] = pd.to_numeric(df_total["optionsImpliedVolatilityRank1y"].str.replace(",", "").str.replace("%", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsTotalVolumePercentChange1m'] = pd.to_numeric(df_total["optionsTotalVolumePercentChange1m"].str.replace("+", "").str.replace(",", "").str.replace("%", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsCallVolume'] = pd.to_numeric(df_total["optionsCallVolume"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsPutVolume'] = pd.to_numeric(df_total["optionsPutVolume"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
+df_total['optionsPutCallVolumeRatio'] = pd.to_numeric(df_total["optionsPutCallVolumeRatio"].str.replace(",", "").str.replace('*', ''), errors = 'coerce')
 
 print('Extracted a total of {} records'.format(len(df_total)))
 

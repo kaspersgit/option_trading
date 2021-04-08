@@ -7,6 +7,9 @@ from datetime import datetime
 import numpy as np
 import pickle
 import json
+
+# to load custom packages
+os.chdir("/home/pi/Documents/python_scripts/option_trading")
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
@@ -35,7 +38,10 @@ if len(sys.argv) >= 3:
 model = sys.argv[1]
 model = model.split('.')[0]
 
-# Set variagbles and load in data
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+# Set variables and load in data
 day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
 print('Model: {}'.format(model))
@@ -59,6 +65,9 @@ else:
 df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
 print(f"Imported dataframe shape: {df.shape}")
+
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 # custom added variables
 df['predDate'] = day
@@ -99,6 +108,10 @@ elif model != 'Logit':
 	prob = model.predict_proba(df[features])[:, 1]
 
 print('Stocks scored')
+
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 df['prediction'] = prob
 df['model'] = model_name
 
@@ -170,3 +183,6 @@ with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
     server.sendmail(msg['From'], emaillist , msg.as_string())
 
 print('Email with predictions send')
+
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
