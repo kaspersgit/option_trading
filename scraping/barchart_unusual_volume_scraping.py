@@ -114,10 +114,7 @@ if nr_pages:
 else:
     nr_pages = 1
 print("{} page(s) found".format(nr_pages))
-print("Expecting around {} records".format(nr_records))
-
-# adding timestamp for logging
-print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+print("Expecting around {} records".format(nr_records[0]))
 
 # Scrape the table from every page and put together
 # create empty dataframe to save all data for today in
@@ -145,9 +142,6 @@ for p in range(1, nr_pages+1):
             class_list.remove('symbol')
         df[class_] = class_list
 
-    # adding timestamp for logging
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
     print('Exctracted {} values for {} different columns'.format(len(df),len(classnames)))
     df_total = pd.concat([df_total, df])
 
@@ -161,8 +155,8 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df_total['exportedAt'] = now
 df_total['lastPrice'] = df_total["lastPrice"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['priceChange'] = df_total["priceChange"].str.replace("+", "").str.replace('*', '').astype(float) # has plus or minus sign
-df_total['percentChange'] = df_total["percentChange"].str.replace("+", "").str.replace("%", "").str.replace('*', '').astype(float) # has plus or minus sign
+df_total['priceChange'] = pd.to_numeric(df_total["priceChange"].str.replace("+", "").str.replace('*', ''), errors = 'coerce') # has plus or minus sign
+df_total['percentChange'] = pd.to_numeric(df_total["percentChange"].str.replace("+", "").str.replace("%", "").str.replace('*', ''), errors = 'coerce') # has plus or minus sign
 df_total['optionsTotalVolume'] = df_total["optionsTotalVolume"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['optionsTotalOpenInterest'] = df_total["optionsTotalOpenInterest"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['optionsImpliedVolatilityRank1y'] = df_total["optionsImpliedVolatilityRank1y"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)

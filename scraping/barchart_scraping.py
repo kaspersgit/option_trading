@@ -113,10 +113,7 @@ if nr_pages:
 else:
     nr_pages = 1
 print("{} page(s) found".format(nr_pages))
-print("Expecting around {} records".format(nr_records))
-
-# adding timestamp for logging
-print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+print("Expecting around {} records".format(nr_records[0]))
 
 # Scrape the table from every page and put together
 # create empty dataframe to save all data for today in
@@ -143,9 +140,6 @@ for p in range(1, nr_pages+1):
         if any(class_ in 'Symbol' for class_ in class_list):
             class_list.remove('Symbol')
         df[class_] = class_list
-
-    # adding timestamp for logging
-    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     print('Exctracted {} values for {} different columns'.format(len(df),len(classnames)))
     df_total = pd.concat([df_total, df])
