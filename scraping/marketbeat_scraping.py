@@ -77,6 +77,8 @@ url = 'https://www.marketbeat.com/market-data/unusual-call-options-volume/'
 
 df = scrapeMarketBeat(url)
 
+print('Scraped a total of {} records'.format(len(df)))
+
 # Cleaning and adding columns
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df['exportedAt'] = now

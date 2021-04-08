@@ -1,5 +1,6 @@
 #%%
 ## Checking out https://www.barchart.com/options/unusual-activity/stocks?page=1
+# and https://www.barchart.com/options/volume-change/stocks?page=1
 # and https://www.marketbeat.com/market-data/unusual-call-options-volume/
 # and https://marketchameleon.com/Reports/UnusualOptionVolumeReport
 #### Using Selenium
@@ -68,8 +69,8 @@ def get_column_classes(soup, part = 'thead'):
     columns = soup.find_all(part)
     for element in columns[0].find_all(class_=True):
         ab = element['class']
-        if 'baseSymbol' in ab[0]:
-            ab = ['baseSymbol']
+        if 'symbol' in ab[0]:
+            ab = ['symbol']
         classes.extend(ab)
         title = element.find_all("span", {"data-bs-tooltip": ""})
         if len(title) > 0:
@@ -92,12 +93,12 @@ def get_column_classes(soup, part = 'thead'):
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 today = datetime.today().strftime("%Y-%m-%d")
 print('Script started at {}'.format(now))
-url = 'https://www.barchart.com/options/unusual-activity/stocks?page='
+url = 'https://www.barchart.com/options/volume-change/stocks?page='
 try:
-    html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
+    html = get_loaded_page('https://www.barchart.com/options/volume-change/stocks')
 except Exception:
     print('Failed, trying again')
-    html = get_loaded_page('https://www.barchart.com/options/unusual-activity/stocks')
+    html = get_loaded_page('https://www.barchart.com/options/volume-change/stocks')
 soup = BeautifulSoup(html, 'html.parser')
 
 # adding timestamp for loggin
@@ -136,12 +137,12 @@ for p in range(1, nr_pages+1):
         soup = BeautifulSoup(html, 'html.parser')
     classnames, names = get_column_classes(soup)
     df = pd.DataFrame()
-    # the baseSymbol is treated specially in the get_column_values function
+    # the symbol is treated specially in the get_column_values function
     # and outputs an extra row which has to be deleted
     for class_ in classnames:
         class_list = get_column_values(columname=class_, soup=soup)
-        if any(class_ in 'Symbol' for class_ in class_list):
-            class_list.remove('Symbol')
+        if any(class_ in 'symbol' for class_ in class_list):
+            class_list.remove('symbol')
         df[class_] = class_list
 
     # adding timestamp for logging
@@ -159,19 +160,21 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 # Cleaning and adding columns
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df_total['exportedAt'] = now
-df_total['expirationDate'] = pd.to_datetime(df_total['expirationDate'])
-df_total['tradeTime'] = pd.to_datetime(df_total['tradeTime'])
-df_total['baseLastPrice'] = df_total["baseLastPrice"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['strikePrice'] = df_total["strikePrice"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['volume'] = df_total["volume"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").str.replace('*', '').astype(float)
-df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
-df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
+df_total['lastPrice'] = df_total["lastPrice"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['priceChange'] = df_total["priceChange"].str.replace("+", "").str.replace('*', '').astype(float) # has plus or minus sign
+df_total['percentChange'] = df_total["percentChange"].str.replace("+", "").str.replace("%", "").str.replace('*', '').astype(float) # has plus or minus sign
+df_total['optionsTotalVolume'] = df_total["optionsTotalVolume"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['optionsTotalOpenInterest'] = df_total["optionsTotalOpenInterest"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['optionsImpliedVolatilityRank1y'] = df_total["optionsImpliedVolatilityRank1y"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
+df_total['optionsTotalVolumePercentChange1m'] = df_total["optionsTotalVolumePercentChange1m"].str.replace("+", "").str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
+df_total['optionsCallVolume'] = df_total["optionsCallVolume"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['optionsPutVolume'] = df_total["optionsPutVolume"].str.replace(",", "").str.replace('*', '').astype(float)
+df_total['optionsPutCallVolumeRatio'] = df_total["optionsPutCallVolumeRatio"].str.replace(",", "").str.replace('*', '').astype(float)
 
 print('Extracted a total of {} records'.format(len(df_total)))
 
 # Saving file as CSV
-df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_activity_'+today+'.csv', index=False)
+df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_volume_'+today+'.csv', index=False)
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))
