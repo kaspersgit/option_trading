@@ -170,7 +170,7 @@ df_total['optionsPutCallVolumeRatio'] = pd.to_numeric(df_total["optionsPutCallVo
 print('Extracted a total of {} records'.format(len(df_total)))
 
 # Saving file as CSV
-df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/barchart_unusual_volume_'+today+'.csv', index=False)
+df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart_unusual_volume/barchart_unusual_volume_'+today+'.csv', index=False)
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))

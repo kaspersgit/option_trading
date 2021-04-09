@@ -36,6 +36,9 @@ if len(sys.argv) >= 3:
 model = sys.argv[1]
 model = model.split('.')[0]
 
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 # Set variagbles and load in data
 day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
@@ -60,6 +63,11 @@ else:
 
 df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
+print(f"Imported dataframe shape: {df.shape}")
+
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 if mode == 'DEVELOPMENT':
 	from option_trading_nonprod.process.stock_price_enriching import *
 	df = batch_enrich_df(df)
@@ -69,7 +77,6 @@ with open('other_files/config_file.json') as json_file:
 
 hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
-
 
 # Adding some additional columns
 df['predDate'] = day
@@ -104,8 +111,13 @@ elif model != 'Logit':
 	prob = model.predict_proba(df[features])[:, 1]
 
 print('Options contract scored')
+
+# print current timestamp for logging
+print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
 df['prediction'] = prob
 df['model'] = model_name
+
 
 # %%
 # Subsetting the predictions for highly probable stocks
