@@ -1,5 +1,6 @@
 barchart_unusual_activity_*
 marketbeat_call_activity_*
+data/
 .idea
 .vscode
 .option_venv
