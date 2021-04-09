@@ -27,7 +27,7 @@ if platform.system() == 'Linux':
     rand_wait=random.uniform(0,200)
     time.sleep(rand_wait)
 
-def get_loaded_page(url, wait = 20):
+def get_loaded_page(url, wait = 30):
     if platform.system() == 'Linux':
         browser = webdriver.Chrome()
     elif platform.system() == 'Windows':
