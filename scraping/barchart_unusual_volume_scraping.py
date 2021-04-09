@@ -23,8 +23,7 @@ import platform
 if platform.system() == 'Linux':
     display = Display(visible=0, size=(800,600))
     display.start()
-
-    # To have some human kind of behaviour with visitin the website
+    # To have some human kind of behaviour with visit in the website
     rand_wait=random.uniform(0,200)
     time.sleep(rand_wait)
 
@@ -34,7 +33,6 @@ def get_loaded_page(url, wait = 20):
     elif platform.system() == 'Windows':
         browser = webdriver.Firefox(
             executable_path='C:/Users/kaspe/Downloads/geckodriver-v0.26.0-win64/geckodriver.exe')
-
     browser.get(url)
     delay = wait # seconds
     try:
@@ -50,8 +48,8 @@ def get_loaded_page(url, wait = 20):
 # To get the volume
 def get_column_values(columname,soup):
     values = list()
-    if columname == 'baseSymbol':
-        for td in soup.select('td.baseSymbol.text-left'):
+    if columname == 'symbol':
+        for td in soup.select('td.symbol.text-left'):
             values.append(td.get_text(strip=True))
     input_tag = soup.find_all("td", {"class": columname})
     for i in range(len(input_tag)):
@@ -99,8 +97,8 @@ try:
 except Exception:
     print('Failed, trying again')
     html = get_loaded_page('https://www.barchart.com/options/volume-change/stocks')
-soup = BeautifulSoup(html, 'html.parser')
 
+soup = BeautifulSoup(html, 'html.parser')
 # adding timestamp for loggin
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
@@ -138,8 +136,12 @@ for p in range(1, nr_pages+1):
     # and outputs an extra row which has to be deleted
     for class_ in classnames:
         class_list = get_column_values(columname=class_, soup=soup)
-        if any(class_ in 'symbol' for class_ in class_list):
-            class_list.remove('symbol')
+        # To remove possible bottom row which just states the column name again
+        if any(class_v in names for class_v in class_list):
+            for i in class_list:
+                if i in names:
+                    # print(i)
+                    class_list.remove(i)
         df[class_] = class_list
 
     print('Exctracted {} values for {} different columns'.format(len(df),len(classnames)))
