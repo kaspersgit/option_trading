@@ -52,28 +52,36 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		minDates[s] = temp_df[startDateCol].min()
 		maxDates[s] = temp_df[endDateCol].max()
 	config_df['baseSymbol'] = tickers
-	config_df['minDate'] = minDates
-	config_df['maxDate'] = maxDates
+	config_df['minDate_org'] = minDates
+	config_df['maxDate_org'] = maxDates
+
+	# add slack day to both start and end date
+	maxDates_org = pd.to_datetime(maxDates)
+	maxDates_adj = maxDates_org + timedelta(days=1)
+	maxDates_adj = maxDates_adj.dt.strftime("%Y-%m-%d")
+	minDates_org = pd.to_datetime(minDates)
+	minDates_adj = minDates_org + timedelta(days=1)
+	minDates_adj = minDates_adj.dt.strftime("%Y-%m-%d")
+
+	config_df['maxDates_adj'] = maxDates_adj
+	config_df['minDates_adj'] = minDates_adj
 
 	# Print status
 	print('Unique tickers: {}'.format(len(tickers)))
 
 	# For each symbol extract the stock price series
 	baseSymbols = config_df['baseSymbol']
-	minDates = config_df['minDate']
-	maxDates = config_df['maxDate']
+	minDates_org = config_df['minDate_org']
+	maxDates_org = config_df['maxDate_org']
+
+
 	# for index, row in config_df.iterrows():
 	for t in range(len(baseSymbols)):
 		if t % 100 == 0:
 			print('Rows done: {}'.format(t))
-		# if use_package == 'yf':
-		# 	print(f"Trying stock: {row['baseSymbol']}")
-		# 	stock_df = yf.download(row['baseSymbol'], start=row['minDate'], end=row['maxDate'])
-		# if use_package == 'yq':
-		# 	print(f"Trying stock: {row['baseSymbol']}")
-		# 	stock_df = yq.Ticker(row['baseSymbol']).history(start=row['minDate'], end=row['maxDate'])
-		# 	time.sleep(0.1)
-		stock_df = extractHistoricPrices(baseSymbols[t], minDate=minDates[t], maxDate=maxDates[t], use_package=use_package)
+
+		# Get historic prices using yfinance or yahooquery
+		stock_df = extractHistoricPrices(baseSymbols[t], minDate=minDates_org[t], maxDate=maxDates_adj[t], use_package=use_package)
 
 		# Check for empty dataframe
 		if len(stock_df) == 0:
@@ -82,7 +90,10 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 			if 'delisted' in list(stock_df.values())[0]:
 				continue
 
-		stock_df = stock_df[minDates[t]::]
+		# Always include day of expiration
+		stock_df = stock_df[stock_df.index >= minDates_org[t]]
+		stock_df = stock_df[stock_df.index <= maxDates_org[t]]
+
 		contracts = df_[df_['baseSymbol'] == baseSymbols[t]][['baseSymbol', startDateCol, endDateCol]]
 		contracts.drop_duplicates(inplace=True)
 
@@ -210,6 +221,9 @@ def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType'
 	:param df: must include ['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'strikePrice', 'openInterest', 'volume']
 	:return:
 	"""
+	merge_cols = groupByColumns.copy()
+	merge_cols.remove('symbolType')
+
 	df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 	df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 	df['inTheMoney'] = np.where((df['symbolType'] == 'Call') & (df['baseLastPrice'] >= df['strikePrice']), 1, 0)
@@ -262,10 +276,10 @@ def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType'
 	df_put.drop(columns=['symbolType'], inplace=True)
 
 	# Add summarized data from Calls and Puts to df
-	df = pd.merge(df, df_call, how='left', on=['exportedAt', 'baseSymbol', 'expirationDate', 'inTheMoney'])
-	df = pd.merge(df, df_put, how='left', on=['exportedAt', 'baseSymbol', 'expirationDate', 'inTheMoney'])
+	df = pd.merge(df, df_call, how='left', on=merge_cols)
+	df = pd.merge(df, df_put, how='left', on=merge_cols)
 	df = pd.merge(df, df_option_inv_cum, how='left',
-				  on=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney', 'strikePrice'])
+				  on=groupByColumns + ['strikePrice'])
 
 	df['meanStrikeCallPerc'] = df['meanStrikeCall'] / df['baseLastPrice']
 	df['meanStrikePutPerc'] = df['meanStrikePut'] / df['baseLastPrice']
@@ -295,4 +309,5 @@ def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType'
 	return (df)
 
 if __name__ == '__main__':
-	df_prices = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
+	print('Empty test run')
+	# df_prices = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')

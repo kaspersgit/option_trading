@@ -11,23 +11,6 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-# Set path
-cwd = os.getcwd()
-directory = os.path.join(cwd,"data/barchart")
-
-#### from local
-# create empty df
-df = pd.DataFrame()
-# loop through all csv files and concatenate
-for root,dirs,files in os.walk(directory):
-    for file in files:
-       if file.endswith(".csv"):
-           f = pd.read_csv(os.path.join(root,file))
-           #  Concatenate files into one pandas df
-           df = pd.concat([df,f])
-df.reset_index(drop=True, inplace=True)
-#####
-
 ###### import data from S3
 # Set source and target for bucket and keys
 source_bucket = 'project-option-trading'
@@ -36,8 +19,13 @@ source_key = 'raw_data/barchart/'
 print('Source bucket: {}'.format(source_bucket))
 print('Source key: {}'.format(source_key))
 
+# import data
+if platform.system() == 'Darwin':
+    s3_profile = 'mrOption'
+else:
+    s3_profile = 'default'
 
-df = load_from_s3(profile="mrOption", bucket=source_bucket, key_prefix=source_key)
+df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
 print("Raw imported data shape: {}".format(df.shape))
 ######
 
@@ -103,16 +91,28 @@ contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='
 # df_last_few = df_last_few.iloc[2099::]
 # df_last_few = df_last_few.head(1)
 
-# Get technical indicators
+# Get technical indicators (can't be used on raspberry in current form)
 # Get stock prices from 35 days before export date to calculate them
-df['exportedAt'] = pd.to_datetime(df['exportedAt'])
-df['start_date'] = df['exportedAt'] - timedelta(days=45)
-indicators_df = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
+# df['exportedAt'] = pd.to_datetime(df['exportedAt'])
+# df['start_date'] = df['exportedAt'] - timedelta(days=45)
+# indicators_df = getContractPrices(df, startDateCol='start_date', endDateCol='exportedAt', type='indicators')
+
+# to make sure the join columns are of same type
+df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
+df['expirationDate'] = pd.to_datetime(df['expirationDate']).dt.strftime('%Y-%m-%d')
+contracts_prices['exportedAt'] = pd.to_datetime(contracts_prices['exportedAt']).dt.strftime('%Y-%m-%d')
+contracts_prices['expirationDate'] = pd.to_datetime(contracts_prices['expirationDate']).dt.strftime('%Y-%m-%d')
 
 # Put dfs together
 df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
-df_enr = df_enr.merge(indicators_df, on=['baseSymbol','exportedAt'])
+# df_enr = df_enr.merge(indicators_df, on=['baseSymbol','exportedAt'])
 
-# Save enriched df as csv
-# x2 as we add technical indicators here
-df_enr.to_csv('data/barchart_yf_enr_1x2.csv')
+today = datetime.today().strftime('%Y-%m-%d')
+output_bucket = 'project-option-trading-output'
+output_key = 'train_data/barchart/enriched_on_{}.csv'.format(today)
+
+print('Source bucket: {}'.format(output_bucket))
+print('Source key: {}'.format(output_key))
+
+# Upload enriched table to S3
+write_dataframe_to_csv_on_s3(profile=s3_profile, dataframe=df_enr, filename=output_key, bucket=output_bucket)

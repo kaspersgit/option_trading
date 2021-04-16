@@ -127,7 +127,7 @@ if __name__=='__main__':
     ###########
     # Load data and model
     # set configurations
-    model_name = 'DEV_c_GB64_v3x3'
+    model_name = 'DEV_c_GB64_v4x3'
 
     # Load test datasets
     df_test = pd.read_csv("data/validation/test_df.csv")

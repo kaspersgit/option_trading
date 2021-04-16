@@ -5,15 +5,30 @@ import os
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import auc, roc_curve
+from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
 
+###### import data from S3
+# Set source and target for bucket and keys
+today = '2021-04-15'
+source_bucket = 'project-option-trading-output'
+source_key = 'train_data/barchart/enriched_on_{}.csv'.format(today)
 
-#######################
-# Load and prepare data
-df_all = pd.read_csv('data/barchart_yf_enr_1x2.csv')
+# print status of variables
+print('Source bucket: {}'.format(source_bucket))
+print('Source key: {}'.format(source_key))
+
+# import data
+if platform.system() == 'Darwin':
+    s3_profile = 'mrOption'
+else:
+    s3_profile = 'default'
+
+df_all = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
+print("Raw imported data shape: {}".format(df_all.shape))
 
 # Set target
 df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
@@ -23,11 +38,12 @@ df_all = batch_enrich_df(df_all)
 
 # filter set on applicable rows
 # only select Call option out of the money
-df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > df_all['baseLastPrice'])]
+df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > 1.05 * df_all['baseLastPrice'])]
 df = df.reset_index(drop=True)
 
-print('Null values: \n'.format(df.isna().sum()))
-df.fillna(0, inplace=True)
+print('Null values: \n{}'.format(df.isna().sum()))
+df = df[~ df['maxPrice'].isna()].reset_index(drop=True)
+# df.fillna(0, inplace=True)
 
 print('Total train data shape: {}'.format(df.shape))
 print('Minimum strike price increase: {}'.format(round((df['strikePrice'] / df['baseLastPrice']).min(), 2)))
@@ -37,7 +53,11 @@ print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()
 
 target = 'reachedStrikePrice'
 
-features = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice', 'strikePriceCum', 'midpoint', 'lastPrice', 'weightedStrikeCall', 'strikePrice',
+features = ['baseLastPrice', 'strikePrice', 'daysToExpiration', 'bidPrice', 'midpoint',
+                 'askPrice', 'lastPrice', 'volume', 'openInterest',
+                 'volumeOpenInterestRatio', 'volatility']
+
+features_ext = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice', 'strikePriceCum', 'midpoint', 'lastPrice', 'weightedStrikeCall', 'strikePrice',
             'meanStrikeCall', 'sumVolumeTimesStrikeCall', 'askPrice', 'meanStrikePut', 'daysToExpiration', 'meanStrikeCallPerc',
             'sumVolumeTimesStrikePut', 'weightedStrikePut', 'volumeTimesStrike', 'OBV', 'BBU_5_2.0', 'BBB_5_2.0', 'volatility', 'BBM_5_2.0',
             'sumOpenInterestCall', 'BBL_5_2.0', 'MACD_2_20_9', 'sumOpenInterestPut', 'volumeCumSum', 'MACDs_2_20_9', 'higherStrikePriceCum']
@@ -79,7 +99,7 @@ y_test = df_test[target]
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v3x3'
+version = 'v1x3'
 algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train

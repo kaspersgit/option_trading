@@ -1,0 +1,21 @@
+{
+    "LambdaFunctionConfigurations": [
+        {
+            "Id": "S3OptionScoringTrigger",
+            "LambdaFunctionArn": "arn:aws:lambda:eu-west-1:892389414402:function:project-option-trading",
+            "Events": [
+                "s3:ObjectCreated:*"
+            ],
+            "Filter": {
+                "Key": {
+                    "FilterRules": [
+                        {
+                            "Name": "Prefix",
+                            "Value": "barchart/"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

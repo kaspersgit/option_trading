@@ -17,7 +17,7 @@ df_all = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 df_all = df_all.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 
 # Add internal (within same batch) information
-df_all = batch_enrich_df(df_all)
+df_all = batch_enrich_df(df_all, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'inTheMoney'])
 
 # Set target
 df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
@@ -78,9 +78,7 @@ features_all = ['strikePrice'
     , 'midpointPerc'
     , 'meanHigherStrike']
 
-features = ['exportedAt'
-    , 'reachedStrikePrice'
-    , 'baseLastPrice'
+features = ['baseLastPrice'
     , 'strikePrice'
     , 'daysToExpiration'
     , 'bidPrice'
@@ -90,7 +88,33 @@ features = ['exportedAt'
     , 'volume'
     , 'openInterest'
     , 'volumeOpenInterestRatio'
-    , 'volatility']
+    , 'volatility'
+    , 'priceDiff'
+    , 'priceDiffPerc'
+    , 'inTheMoney'
+    , 'nrOptions'
+    , 'strikePriceCum'
+    , 'volumeTimesStrike'
+    , 'nrCalls'
+    , 'meanStrikeCall'
+    , 'sumVolumeCall'
+    , 'sumOpenInterestCall'
+    , 'sumVolumeTimesStrikeCall'
+    , 'weightedStrikeCall'
+    , 'nrPuts'
+    , 'meanStrikePut'
+    , 'sumVolumePut'
+    , 'sumOpenInterestPut'
+    , 'sumVolumeTimesStrikePut'
+    , 'weightedStrikePut'
+    , 'volumeCumSum'
+    , 'openInterestCumSum'
+    , 'nrHigherOptions'
+    , 'higherStrikePriceCum'
+    , 'meanStrikeCallPerc'
+    , 'meanStrikePutPerc'
+    , 'midpointPerc'
+    , 'meanHigherStrike']
 
 
 ########################
@@ -143,7 +167,7 @@ print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape:
 # v1x1 trained on data with max expirationDate 2020-12-18
 
 train_type = 'DEV'
-version = 'v3x3'
+version = 'v4x3'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
@@ -164,7 +188,7 @@ Cal_AB_model = calibrate_model(AB_model, X_val, y_val, method='sigmoid', save_mo
 X_train.fillna(0, inplace=True)
 X_val.fillna(0, inplace=True)
 params = {'n_estimators':1000, 'learning_rate': 0.01, 'min_samples_split':8, 'max_depth':4, 'random_state':42, 'subsample':1}
-GBC_model = fit_GBclf(X_train[features_all], y_train, X_val[features_all], y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
+GBC_model = fit_GBclf(X_train[features], y_train, X_val[features], y_val, params, save_model = True, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
 # Calibrate pre trained model
 Cal_GB_model = calibrate_model(GBC_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name=train_type+'_c_GB64_'+version)
 
@@ -172,7 +196,7 @@ Cal_GB_model = calibrate_model(GBC_model, X_val, y_val, method='sigmoid', save_m
 # Choose model
 # Load model
 getwd = os.getcwd()
-with open(getwd+'/trained_models/DEV_c_GB64_v1x3.sav', 'rb') as file:
+with open(getwd+'/trained_models/DEV_c_GB64_v4x3.sav', 'rb') as file:
     gb_model = pickle.load(file)
 with open(getwd+'/trained_models/DEV_c_AB64_v1x3.sav', 'rb') as file:
     ab_model = pickle.load(file)
@@ -184,6 +208,7 @@ prob = model.predict_proba(X_test[model.feature_names])[:,1]
 
 pred_df = pd.DataFrame({'prob': prob, 'actual': y_test})
 pred_df['pred'] = np.where(pred_df['prob'] >= 0.5, 1, 0)
+df_test['prob'] = prob
 
 #####################
 # Measure performance
