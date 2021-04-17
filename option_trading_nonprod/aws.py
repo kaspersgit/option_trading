@@ -27,6 +27,16 @@ def connect_to_s3(profile, type="client"):
         )
     return s3
 
+def get_s3_key(s3_resource, bucket, key):
+    """ Check if certain key is in the S3 bucket."""
+    resp = s3_resource.list_objects_v2(Bucket=bucket)
+    exists = False
+    real_key = ""
+    for obj in resp["Contents"]:
+        if key in obj["Key"]:
+            exists = True
+            real_key = obj["Key"]
+    return (exists, real_key)
 
 def load_from_s3(
     profile="default",

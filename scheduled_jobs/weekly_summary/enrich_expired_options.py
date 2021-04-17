@@ -18,25 +18,10 @@ from option_trading_nonprod.process.stock_price_enriching import *
 # Get supplied system arguments
 if len(sys.argv) >= 2:
 	date = pd.to_datetime(sys.argv[1])
-	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+	last_friday = (date + relativedelta(weekday=FR(-1)))
 else:
 	print('Script can be run from command line as <script> <date (YYYY-MM-DD)>')
-	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
-
-
-
-# Set source and target for bucket and keys
-source_bucket = 'project-option-trading'
-source_key = 'on_expiry_date/expires_{}/'.format(last_friday)
-output_bucket = 'project-option-trading-output'
-output_key = 'enriched_data/barchart/expired_on_{}.csv'.format(last_friday)
-
-# print status of variables
-print('Last Friday: {}'.format(last_friday))
-print('Source bucket: {}'.format(source_bucket))
-print('Source key: {}'.format(source_key))
-print('Output bucket: {}'.format(output_bucket))
-print('Output key: {}'.format(output_key))
+	last_friday = (datetime.today() + relativedelta(weekday=FR(-1)))
 
 # import data
 if platform.system() == 'Darwin':
@@ -44,7 +29,34 @@ if platform.system() == 'Darwin':
 else:
 	s3_profile = 'default'
 
-df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
+# Set bucket
+bucket = 'project-option-trading-output'
+# Get all dates from last friday until saturday previous
+numdays = 7
+date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(numdays)]
+
+# check which what expiration date(s) are present
+s3_client = connect_to_s3(s3_profile, type="client")
+
+for d in date_list:
+	possible_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
+	exist, key = get_s3_key(s3_client, bucket, possible_key)
+	if exist:
+		break
+
+# Set source and target for bucket and keys
+source_bucket = 'project-option-trading'
+output_bucket = 'project-option-trading-output'
+output_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
+
+# print status of variables
+print('Last Friday: {}'.format(d))
+print('Source bucket: {}'.format(source_bucket))
+print('Source key: {}'.format(key))
+print('Output bucket: {}'.format(output_bucket))
+print('Output key: {}'.format(output_key))
+
+df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=key)
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')

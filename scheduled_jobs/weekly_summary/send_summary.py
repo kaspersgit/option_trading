@@ -29,9 +29,9 @@ from option_trading_nonprod.process.stock_price_enriching import *
 # mode (development or production)
 if len(sys.argv) >= 4:
 	date = pd.to_datetime(sys.argv[3])
-	last_friday = (date + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+	last_friday = (date + relativedelta(weekday=FR(-1)))
 else:
-	last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+	last_friday = (datetime.today() + relativedelta(weekday=FR(-1)))
 
 # Set mode prod or dev and base email recipients on that
 # decide if attachment should be send or not
@@ -66,22 +66,32 @@ else:
 	model = sys.argv[1]
 model = model.split('.')[0]
 
-
-# Set wd and other variables
-bucket = 'project-option-trading-output'
-key = 'enriched_data/barchart/expired_on_{}.csv'.format(last_friday)
-
-# print status of variables
-print('Model : {}'.format(model))
-print('Last Friday: {}'.format(last_friday))
-print('Source bucket: {}'.format(bucket))
-print('Source key: {}'.format(key))
-
 # import data
 if platform.system() == 'Darwin':
 	s3_profile = 'mrOption'
 else:
 	s3_profile = 'default'
+
+# Set bucket
+bucket = 'project-option-trading-output'
+# Get all dates from last friday until saturday previous
+numdays = 7
+date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(numdays)]
+
+# check which what expiration date(s) are present
+s3_client = connect_to_s3(s3_profile, type="client")
+
+for d in date_list:
+	possible_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
+	exist, key = get_s3_key(s3_client, bucket, possible_key)
+	if exist:
+		break
+
+# print status of variables
+print('Model : {}'.format(model))
+print('Last expiry date: {}'.format(d))
+print('Source bucket: {}'.format(bucket))
+print('Source key: {}'.format(key))
 
 df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
