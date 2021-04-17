@@ -1,5 +1,5 @@
 # Making CatBoost work in AWS lambda
-Altough this is specific to catboost, the same approach should work to make
+Although this is specific to catboost, the same approach should work to make
 any package work which requires only numpy/pandas/scipy and is not more than 150 MB
 on itself.
 
@@ -20,17 +20,17 @@ docker run --rm -it -v $(pwd):/outputs lambci/lambda:build-python3.6 /bin/bash /
 zip -9 lambda-package.zip lambda_function.py
 
 ### Upload zip package to designated S3 location (Make sure you have a valid AWS token)
-aws s3 cp lambda-package.zip s3://collection-pd-distress-handling/quality_phone_number/lambda-deployment/lambda-package.zip
+aws s3 cp lambda-package.zip s3://project-option-trading/lambda-deployment/lambda-package.zip
 
 ### (if necessary) create lambda
 sh lambda_create.sh
 
 ### Update Lambda function with package
-aws lambda update-function-code --region eu-west-1 --function-name collection-pd-phonenumberPredict --s3-bucket collection-pd-distress-handling --s3-key quality_phone_number/lambda-deployment/lambda-package.zip
+aws lambda update-function-code --region eu-west-1 --function-name barchart-option-predict --s3-bucket project-option-trading --s3-key lambda-deployment/lambda-package.zip
 
 ### Set lambda to be triggered from S3 put object
 aws s3api put-bucket-notification-configuration --region eu-west-1 \
---bucket collection-pd-distress-handling \
+--bucket project-option-trading \
 --notification-configuration file://lambdaS3Trigger.json
 
 ### Test run lambda in console (make sure the memory is set to 1024MB)

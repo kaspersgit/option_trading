@@ -103,7 +103,7 @@ s3_resource = boto3.resource("s3")
 
 # Load in the model
 # Download CatBoost model from S3
-s3_client.download_file('collection-pd-distress-handling', 'quality_phone_number/trained_models/cb.cbm', 'cb.cbm')
+s3_client.download_file('project-option-trading', 'trained_models/cb.cbm', 'cb.cbm')
 pn_model = cb.CatBoostClassifier()
 file_path = "cb.cbm"
 model_version = 'cb_v1'
@@ -119,12 +119,7 @@ def lambda_handler(event, context):
     print(source_bucket)
     key = event['Records'][0]['s3']['object']['key']
 
-    # Differentiate the different gzipped files to not overwrite
-    file_seq = key.split('/')[-1].split('.')[0][-12::]
-    output_key = "quality_phone_number/scored_phonenumber/scored_" \
-        + file_seq \
-        + ".csv"
-    print('Ouput key: {}'.format(output_key))
+    print('Key: {}'.format(key))
 
     message = 'Boto3 version: {} \nPD version: {} \nNP version: {} \ncatboost version: {}'.format(
         boto3.__version__,

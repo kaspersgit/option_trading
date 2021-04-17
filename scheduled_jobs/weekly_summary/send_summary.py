@@ -423,7 +423,7 @@ password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
 sendRichEmail(sender='k.sends.python@gmail.com'
 			  , receiver=emaillist
 			  , password=password
-			  , subject='Performance report expiry date {}'.format(last_friday)
+			  , subject='Performance report expiry date {}'.format(d)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/scatter_profitability.png',

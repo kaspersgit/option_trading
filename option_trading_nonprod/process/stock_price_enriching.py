@@ -87,7 +87,7 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		if len(stock_df) == 0:
 			continue
 		elif len(stock_df) == 1:
-			if 'delisted' in list(stock_df.values())[0]:
+			if 'delisted' in list(stock_df.values)[0]:
 				continue
 
 		# Always include day of expiration
