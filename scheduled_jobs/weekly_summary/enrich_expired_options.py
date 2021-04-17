@@ -30,7 +30,8 @@ else:
 	s3_profile = 'default'
 
 # Set bucket
-bucket = 'project-option-trading-output'
+bucket = 'project-option-trading'
+
 # Get all dates from last friday until saturday previous
 numdays = 7
 date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(numdays)]
@@ -39,19 +40,18 @@ date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in ran
 s3_client = connect_to_s3(s3_profile, type="client")
 
 for d in date_list:
-	possible_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
+	possible_key = 'on_expiry_date/expires_{}.csv'.format(d)
 	exist, key = get_s3_key(s3_client, bucket, possible_key)
 	if exist:
 		break
 
 # Set source and target for bucket and keys
-source_bucket = 'project-option-trading'
 output_bucket = 'project-option-trading-output'
 output_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
 
 # print status of variables
 print('Last Friday: {}'.format(d))
-print('Source bucket: {}'.format(source_bucket))
+print('Source bucket: {}'.format(bucket))
 print('Source key: {}'.format(key))
 print('Output bucket: {}'.format(output_bucket))
 print('Output key: {}'.format(output_key))
