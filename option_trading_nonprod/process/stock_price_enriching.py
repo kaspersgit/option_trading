@@ -58,10 +58,10 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 	# add slack day to both start and end date
 	maxDates_org = pd.to_datetime(maxDates)
 	maxDates_adj = maxDates_org + timedelta(days=1)
-	maxDates_adj = maxDates_adj.dt.strftime("%Y-%m-%d")
+	maxDates_adj = maxDates_adj.strftime("%Y-%m-%d")
 	minDates_org = pd.to_datetime(minDates)
 	minDates_adj = minDates_org + timedelta(days=1)
-	minDates_adj = minDates_adj.dt.strftime("%Y-%m-%d")
+	minDates_adj = minDates_adj.strftime("%Y-%m-%d")
 
 	config_df['maxDates_adj'] = maxDates_adj
 	config_df['minDates_adj'] = minDates_adj

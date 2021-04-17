@@ -61,7 +61,7 @@ print('Emaillist: {}'.format(emaillist))
 
 # Get model which should be used
 if platform.system() == 'Darwin':
-	model = 'DEV_c_GB64_v3x3'
+	model = 'DEV_c_GB64_v1x3'
 else:
 	model = sys.argv[1]
 model = model.split('.')[0]
@@ -85,10 +85,13 @@ else:
 
 df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 # df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
+
+print('Shape of imported data: {}'.format(df.shape))
+
 # enrich data within batches
 df = batch_enrich_df(df)
 
-print('Shape of imported data: {}'.format(df.shape))
+print('Shape of batch enriched data: {}'.format(df.shape))
 
 # enriching based on platform with tehcnical indicators
 if 'v3' in model:

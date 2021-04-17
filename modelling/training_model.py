@@ -10,6 +10,8 @@ from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
+import sys
+n_bits = 32 << bool(sys.maxsize >> 32)
 
 ###### import data from S3
 # Set source and target for bucket and keys
@@ -118,10 +120,10 @@ print('Training uncalibrated model...')
 getwd = os.getcwd()
 if algorithm == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-    uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
+    uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 elif algorithm == 'GB':
     params = {'n_estimators':3000, 'max_depth': 10, 'max_features': 8, 'min_samples_split': 225, 'subsample': 0.808392563444737, 'learning_rate': 0.00010030663168798627}
-    uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}32_{}'.format(train_type, algorithm, version))
+    uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 
 print('Training uncalibrated model... Done!')
 
@@ -131,7 +133,9 @@ print('Model has a ROC on validation set of: {}'.format(roc_auc))
 
 print('Calibrate and save model...')
 # calibrate and save classifier
-cal_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}32_{}'.format(train_type, algorithm, version))
+cal_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 
 
 print('Calibrate and save model... Done!')
+
+
