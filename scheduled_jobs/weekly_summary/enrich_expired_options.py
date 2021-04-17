@@ -56,7 +56,7 @@ print('Source key: {}'.format(key))
 print('Output bucket: {}'.format(output_bucket))
 print('Output key: {}'.format(output_key))
 
-df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=key)
+df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
