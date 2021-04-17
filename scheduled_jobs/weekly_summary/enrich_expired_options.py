@@ -40,7 +40,7 @@ date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in ran
 s3_client = connect_to_s3(s3_profile, type="client")
 
 for d in date_list:
-	possible_key = 'on_expiry_date/expires_{}.csv'.format(d)
+	possible_key = 'on_expiry_date/expires_{}/'.format(d)
 	exist, key = get_s3_key(s3_client, bucket, possible_key)
 	if exist:
 		break
@@ -52,11 +52,11 @@ output_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
 # print status of variables
 print('Last Friday: {}'.format(d))
 print('Source bucket: {}'.format(bucket))
-print('Source key: {}'.format(key))
+print('Source key: {}'.format(possible_key))
 print('Output bucket: {}'.format(output_bucket))
 print('Output key: {}'.format(output_key))
 
-df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
+df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=possible_key)
 
 # Delete duplicates
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
