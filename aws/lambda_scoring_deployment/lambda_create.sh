@@ -1,5 +1,5 @@
 aws lambda create-function  \
---function-name "mrOption-barchart-option-predict"  \
+--function-name "option-barchart-predict"  \
 --runtime "python3.6"    \
 --role "arn:aws:eu-west-1:343302203904:role/mrOptionLambda"  \
 --handler "lambda_function.lambda_handler"  \

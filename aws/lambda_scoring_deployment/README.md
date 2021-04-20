@@ -3,7 +3,6 @@ Although this is specific to catboost, the same approach should work to make
 any package work which requires only numpy/pandas/scipy and is not more than 150 MB
 on itself.
 
-# This is a method which is a combination of different examples (check examples/ folder)
 # Main idea
 1. Create an AWS lambda like docker container
 2. Install all the necessities

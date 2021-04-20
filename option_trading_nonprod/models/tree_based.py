@@ -72,7 +72,7 @@ def fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model, ab_path, name):
 
 	return model
 
-def fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model, gbc_path, name):
+def fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model, gbc_path, name, **kwargs):
 	# Example
 	# params = {'iterations':100,
 	#                               'max_depth':2,
@@ -81,7 +81,10 @@ def fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model, gbc_path, name):
 	#                               'objective':"Logloss"}
 	model = GradientBoostingClassifier()
 	model.set_params(**params)
-	model.fit(X_fit, y_fit)
+	if 'sample_weight' in kwargs.keys():
+		model.fit(X_fit, y_fit, sample_weight=kwargs['sample_weight'])
+	else:
+		model.fit(X_fit, y_fit)
 	model.feature_names = X_fit.columns
 
 	if save_model:

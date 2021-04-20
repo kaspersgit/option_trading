@@ -200,8 +200,8 @@ notReachedStrike = df[df['reachedStrikePrice'] == 0]
 
 fig = plt.figure()
 ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 7, color='g', alpha=0.7, label='Did reach strike')
-ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], s = 7, color='r', alpha=0.7,
+ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 4, color='g', alpha=0.7, label='Did reach strike')
+ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], s = 4, color='r', alpha=0.7,
 		   label='Not reached strike')
 ax.legend(loc="upper right")
 ax.set_xlabel('Strike price increase')

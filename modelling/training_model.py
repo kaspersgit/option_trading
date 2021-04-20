@@ -1,16 +1,17 @@
 # Load packages
 import pandas as pd
 import numpy as np
-import os
+import os, sys, json
 os.chdir('/home/pi/Documents/python_scripts/option_trading')
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from sklearn.metrics import auc, roc_curve
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
+from option_trading_nonprod.process.train_modifications import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
-import sys
+# 32 or 64 bit system
 n_bits = 32 << bool(sys.maxsize >> 32)
 
 ###### import data from S3
@@ -40,7 +41,19 @@ df_all = batch_enrich_df(df_all)
 
 # filter set on applicable rows
 # only select Call option out of the money
-df = df_all[(df_all['symbolType']=='Call') & (df_all['strikePrice'] > 1.05 * df_all['baseLastPrice'])]
+with open('other_files/config_file.json') as json_file:
+    config = json.load(json_file)
+
+hprob_config = config['high_probability']
+hprof_config = config['high_profitability']
+
+# Filter on basics (like days to expiration and contract type)
+df = df_all[(df_all['symbolType'] == hprob_config['optionType']) &
+        (df_all['daysToExpiration'] >= hprob_config['minDaysToExp']) &
+        (df_all['daysToExpiration'] < hprob_config['maxDaysToExp']) &
+        (df_all['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
+        (df_all['baseLastPrice'] < hprob_config['maxBasePrice'])]
+
 df = df.reset_index(drop=True)
 
 print('Null values: \n{}'.format(df.isna().sum()))
@@ -86,13 +99,13 @@ df_train = df2.loc[train_idx]
 df_val = df2.loc[val_idx]
 
 # clean unwanted columns for model training
-X_train = df_train[features]
+X_train = df_train.drop(columns=[target])
 y_train = df_train[target]
 
-X_val = df_val[features]
+X_val = df_val.drop(columns=[target])
 y_val = df_val[target]
 
-X_test = df_test[features]
+X_test = df_test.drop(columns=[target])
 y_test = df_test[target]
 
 #####################
@@ -101,7 +114,7 @@ y_test = df_test[target]
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v1x3'
+version = 'v1x4'
 algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train
@@ -120,20 +133,22 @@ print('Training uncalibrated model...')
 getwd = os.getcwd()
 if algorithm == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
-    uncal_model = fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
+    uncal_model = fit_AdaBoost(X_fit[features], y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 elif algorithm == 'GB':
     params = {'n_estimators':3000, 'max_depth': 10, 'max_features': 8, 'min_samples_split': 225, 'subsample': 0.808392563444737, 'learning_rate': 0.00010030663168798627}
-    uncal_model = fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
+    sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
+    kwargs = {'sample_weight': sample_weights.values}
+    uncal_model = fit_GBclf(X_fit[features], y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version), **kwargs)
 
 print('Training uncalibrated model... Done!')
 
-xVar, yVar, thresholds = roc_curve(y_val, uncal_model.predict_proba(X_val)[:, 1])
+xVar, yVar, thresholds = roc_curve(y_val, uncal_model.predict_proba(X_val[features])[:, 1])
 roc_auc = auc(xVar, yVar)
 print('Model has a ROC on validation set of: {}'.format(roc_auc))
 
 print('Calibrate and save model...')
 # calibrate and save classifier
-cal_model = calibrate_model(uncal_model, X_val, y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}{}_{}'.format(train_type, algorithm, n_bits, version))
+cal_model = calibrate_model(uncal_model, X_val[features], y_val, method='sigmoid', save_model=True, path=getwd+'/trained_models/', name='{}_c_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 
 
 print('Calibrate and save model... Done!')

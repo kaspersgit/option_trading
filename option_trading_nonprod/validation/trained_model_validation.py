@@ -13,7 +13,7 @@ from option_trading_nonprod.validation.calibration import *
 # Show performance on different subsets of data
 # Show feature importance
 
-def modelPerformanceReport(model, dataset, plots):
+def modelPerformanceReport(model, dataset, ext_plots=False):
     if hasattr(model, 'base_estimator'):
         model_name = model.base_estimator
     else:
@@ -70,7 +70,7 @@ def modelPerformanceReport(model, dataset, plots):
     # Brier score
     brier_score = brier_score_loss(pred_df['actual'],pred_df['prob'])
 
-    if plots:
+    if ext_plots:
         # Confucion matrix
         showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
@@ -138,6 +138,7 @@ if __name__=='__main__':
     with open(getwd+'/trained_models/'+model_name+'.sav', 'rb') as file:
         model = pickle.load(file)
 
+    model = pipe._final_estimator
     model.version = model_name
-
-    modelPerformanceReport(model, df_test, plots=False)
+    model.feature_names = features
+    modelPerformanceReport(model, df_oot, ext_plots=True)

@@ -11,6 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.models.tree_based import *
+from option_trading_nonprod.process.train_modifications import *
 
 ## functions
 class CustomTransformer(BaseEstimator, TransformerMixin):
@@ -40,6 +41,8 @@ df = pd.read_csv('data/barchart_yf_enr_1x2.csv')
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
 df['percStrikeReached'] = (df['maxPrice'] - df['baseLastPrice']) / (
 		df['strikePrice'] - df['baseLastPrice'])
+df['finalPriceHigher'] = np.where(df['finalPrice'] >= df['baseLastPrice'], 1, 0)
+df['target'] = np.where((df['reachedStrikePrice'] == 1) | (df['finalPriceHigher'] == 1), 1, 0)
 
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 
@@ -55,6 +58,7 @@ target = 'reachedStrikePrice'
 
 # Split in train, validation, test and out of time
 # Take most recent observations for out of time set (apprx last 5000 observations)
+
 exportDateLast3000 = df_calls.iloc[-3000]['exportedAt']
 df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast3000]
 df_rest = df_calls.drop(df_oot.index, axis=0).reset_index(drop=True)
@@ -77,6 +81,7 @@ df_train = df_rest2.loc[train_idx]
 df_val = df_rest2.loc[val_idx]
 
 # clean unwanted columns for model training
+# Add weights column
 X_train = df_train.drop(columns=[target])
 y_train = df_train[target]
 
@@ -97,6 +102,18 @@ print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape:
 # Use these features to perform hyper paramter optimization with
 
 # features to train on
+features_base = ['strikePrice'
+	, 'daysToExpiration'
+	, 'bidPrice'
+	, 'midpoint'
+	, 'askPrice'
+	, 'lastPrice'
+	, 'openInterest'
+	, 'volumeOpenInterestRatio'
+	, 'volatility'
+	, 'volume'
+	]
+
 features_all = ['strikePrice'
 	, 'daysToExpiration'
 	, 'bidPrice'
@@ -159,35 +176,30 @@ features_adj = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
 				'MACDs_2_20_9', 'higherStrikePriceCum']
 
 # topFeatures = feat_imp[feat_imp['importance'] > 0.009]['feature']
-features = features_all
+features = features_base
 # top30features = feat_imp['feature'].head(30)
 
 ###########
 # Test different classifiers
 ## creating pipeline
 classifiers = [
-	# KNeighborsClassifier(3),
-	# SVC(kernel="rbf", C=0.025, probability=True),
-	# NuSVC(probability=True),
-	# MLPClassifier(),
-	# RandomForestClassifier(n_estimators=1000, min_samples_leaf = 50, random_state=42),
 	AdaBoostClassifier(learning_rate=0.01, n_estimators=2000, random_state=42),
-	# GradientBoostingClassifier(learning_rate=0.005, n_estimators=2000, min_samples_split=8, max_depth=4 , random_state=42, subsample=0.8),
 	GradientBoostingClassifier(learning_rate=0.01, n_estimators=1000, min_samples_split=500, max_features='sqrt', max_depth=4, random_state=42, subsample=0.8)
 ]
 
 # best AUC ROC
-# model GradientBoostingClassifier(learning_rate=0.01, n_estimators=3000, min_samples_split=4, max_depth=4 , random_state=42, subsample=0.8)
-# all features
-# val set = 0.807
-# Test set: 0.816
-# Oot set: 0.852
+# undefined
 
 for classifier in classifiers:
 	print(classifier)
 	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
 					  ('classifier', classifier)])
-	pipe.fit(X_train, y_train)
+
+	# add sample weights
+	sample_weights = getSampleWeights(X_train, column='exportedAt', normalize=True, squared=False)
+	kwargs = {pipe.steps[-1][0] + '__sample_weight': sample_weights}
+	pipe.fit(X_train, y_train, **kwargs)
+
 	print('Validation dataset')
 	probs = pipe.predict_proba(X_val)[:,1]
 	print("model score: %.3f" % pipe.score(X_val, y_val))
@@ -207,21 +219,6 @@ for classifier in classifiers:
 ############
 # Test different parameters
 # parameter names are the <classifier name>__<parameter name> (classifier as named in the pipeline)
-rf_param_dist = {
-	'classifier__n_estimators': [500,1000],
-	'classifier__learning_rate': [0.01,0.05,0.1]
-}
-
-ab_param_dist = {
-	'classifier__n_estimators': [500,1000],
-	'classifier__learning_rate': [0.01,0.05,0.1]
-}
-
-gb_param_dist = {
-	'classifier__n_estimators': [500,1000],
-	'classifier__learning_rate': [0.01],
-	'classifier__min_samples_split': [4,10]
-}
 gb_param_dist = {
 	'classifier__n_estimators': [200],
 	'classifier__max_depth': [2,3,4,5],
@@ -258,9 +255,9 @@ print(grid.best_params_)
 # model GradientBoostingClassifier({'classifier__learning_rate': 0.01, 'classifier__max_depth': 2, 'classifier__min_samples_split': 16, 'classifier__n_estimators': 1000, 'classifier__random_state': 42, 'classifier__subsample': 0.6})
 # features top 20 after fitting all (with within batch enriched)
 # midpointPerc, meanStrikeCallPerc, volatility, nrCalls, meanHigherStrike, nrHigherOptions, daysToExpiration, baseLastPrice, bidPrice, volumeCall, higherStrikePriceCum, strikePriceCum, nrPuts, strikePrice, meanStrikeCall, meanStrikePutPerc, volumeCumSum, openInterestPut, openInterestCall, meanStrikePut
-# val set: 0.8094
-# Test set: 0.7622
-# Oot set: 0.7924
+# val set:
+# Test set:
+# Oot set:
 
 best_model = grid.best_estimator.steps[1][1]
 
