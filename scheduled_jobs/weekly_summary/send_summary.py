@@ -61,10 +61,10 @@ print('Emaillist: {}'.format(emaillist))
 
 # Get model which should be used
 if platform.system() == 'Darwin':
-	model = 'DEV_c_GB64_v1x3'
+	modelname = 'DEV_c_GB64_v1x3'
 else:
-	model = sys.argv[1]
-model = model.split('.')[0]
+	modelname = sys.argv[1]
+modelname = modelname.split('.')[0]
 
 # import data
 if platform.system() == 'Darwin':
@@ -88,23 +88,43 @@ for d in date_list:
 		break
 
 # print status of variables
-print('Model : {}'.format(model))
+print('Model : {}'.format(modelname))
 print('Last expiry date: {}'.format(d))
+print('Last expiry weekday: {}'.format(datetime.strptime(d,'%Y-%m-%d').strftime('%A')))
 print('Source bucket: {}'.format(bucket))
 print('Source key: {}'.format(key))
 
+# load in data from s3
 df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
-# df = pd.read_csv('/Users/kasper.de-harder/Downloads/expired_on_2021-02-05.csv')
 
-print('Shape of imported data: {}'.format(df.shape))
+
+print('Shape of raw imported data: {}'.format(df.shape))
 
 # enrich data within batches
 df = batch_enrich_df(df)
-
 print('Shape of batch enriched data: {}'.format(df.shape))
 
+# filter set on applicable rows
+# only select Call option out of the money
+with open('other_files/config_file.json') as json_file:
+	config = json.load(json_file)
+
+hprob_config = config['high_probability']
+hprof_config = config['high_profitability']
+
+# Filter on basics (like days to expiration and contract type)
+df = df[(df['symbolType'] == hprob_config['optionType']) &
+		(df['daysToExpiration'] >= hprob_config['minDaysToExp']) &
+		(df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
+		(df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
+		(df['priceDiffPerc'] < hprob_config['maxStrikeIncrease']) &
+		(df['baseLastPrice'] < hprob_config['maxBasePrice'])]
+
+#
+print('Shape of filtered data: {}'.format(df.shape))
+
 # enriching based on platform with tehcnical indicators
-if 'v3' in model:
+if 'v3' in modelname:
 	# Get technical indicators
 	# Get stock prices from 35 days before export date to calculate them
 	df['exportedAt'] = pd.to_datetime(df['exportedAt'])
@@ -116,17 +136,17 @@ if 'v3' in model:
 	df = df.merge(indicators_df, on=['baseSymbol','exportedAt'])
 	df.fillna(0,inplace=True)
 
-# import model and score
-file_path = os.getcwd() + '/trained_models/' + model + '.sav'
+########################
+# Import model and score
+file_path = os.getcwd() + '/trained_models/' + modelname + '.sav'
 with open(file_path, 'rb') as file:
 	model = pickle.load(file)
-model_name = file_path.split('/')[-1]
 features = model.feature_names
 prob = model.predict_proba(df[features])[:, 1]
 
 print('Loaded model and scored options')
 
-####### Adding columns ########################
+####### Adding columns #############
 # Make high level summary
 # Add target variable
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
@@ -152,28 +172,12 @@ df['profit'] = df['revenue'] - df['cost']
 df['profitPerc'] = df['profit'] / df['cost']
 ################################################
 
-# filter set on applicable rows
-# only select Call option out of the money
-with open('other_files/config_file.json') as json_file:
-	config = json.load(json_file)
-
-hprob_config = config['high_probability']
-hprof_config = config['high_profitability']
-
-# Filter on basics (like days to expiration and contract type)
-df = df[(df['symbolType'] == hprob_config['optionType']) &
-		(df['daysToExpiration'] >= hprob_config['minDaysToExp']) &
-		(df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
-		(df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
-		(df['baseLastPrice'] < hprob_config['maxBasePrice'])]
-
-
 # Basic summary
 # Get top performing stocks (included/not included in email)
-biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(10)
+biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability']].drop_duplicates(subset=['baseSymbol']).head(5)
 biggest_increase_df.reset_index(drop=True, inplace=True)
 
-biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability','prob']].drop_duplicates(subset=['baseSymbol']).head(5)
+biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability']].drop_duplicates(subset=['baseSymbol']).head(5)
 biggest_decrease_df.reset_index(drop=True, inplace=True)
 
 
@@ -327,11 +331,15 @@ html_content = """
 <html>
   <head></head>
   <body>
-	A summary of the call options expired last Friday and the models performs.
+	A summary of the call options expired last {} and the models performs.
 	<br>
 	Showing only options of type: {}
 	<br>
 	With minimal price increase between: {} and {}
+	<br>
+	Days to expiration between: {} and {}
+	<br>
+	Maximum stock price of {}$
 	<br>
 	Model used: {}
 	<br><br>
@@ -403,7 +411,10 @@ html_content = """
 	<br><img src="cid:image6"><br>
 	
   </body>
-""".format(hprob_config['optionType'], hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
+""".format(datetime.strptime(d,'%Y-%m-%d').strftime('%A'), hprob_config['optionType']
+		   , hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
+		   , hprob_config['minDaysToExp'], hprob_config['maxDaysToExp']
+		   , hprob_config['maxBasePrice']
 		   , model_name, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
