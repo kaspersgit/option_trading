@@ -415,7 +415,7 @@ html_content = """
 		   , hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
 		   , hprob_config['minDaysToExp'], hprob_config['maxDaysToExp']
 		   , hprob_config['maxBasePrice']
-		   , model_name, len(df), df['baseSymbol'].nunique()
+		   , modelname, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
 		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
