@@ -77,8 +77,8 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 # Adding most recent stock price
 unique_tickers = df['baseSymbol'].unique()
 live_price = getCurrentStockPrice(unique_tickers, attribute='Close')
-live_price.rename(columns={'ticker':'baseSymbol',
-						   'livePrice':'baseLivePrice'}, inplace=True)
+live_price.rename(columns={'ticker': 'baseSymbol',
+						   'livePrice': 'baseLivePrice'}, inplace=True)
 
 df = pd.merge(df, live_price, on='baseSymbol', how='left')
 df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',

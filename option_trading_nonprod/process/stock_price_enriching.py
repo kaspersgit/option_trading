@@ -217,18 +217,20 @@ def getCurrentStockPrice(ticker, attribute='Close'):
 			for i in range(0, len(ticker), n):
 				tickers_part = ticker[i:i+n]
 				data = yf.download(tickers_part, period='5m', interval='5m')
-				returned_value = data[attribute].values
+				close_df = data[attribute]
+				tickers_ordered = close_df.columns.values
+				returned_value = close_df.values
 				result = returned_value[0]
-				df = df.append(pd.DataFrame({'ticker': tickers_part, 'livePrice': result}), ignore_index=True)
+				df = df.append(pd.DataFrame({'ticker': tickers_ordered, 'livePrice': result}), ignore_index=True)
 		else:
-			data = yf.download(ticker, period='15m', interval='5m')
+			data = yf.download(ticker, period='5m', interval='5m')
 			returned_value = data[attribute].values
-			result = returned_value[-1]
+			result = returned_value[0]
 			df = df.append({'ticker': ticker, 'livePrice': result}, ignore_index=True)
 	else:
-		data = yf.download(ticker, period='15m', interval='5m')
+		data = yf.download(ticker, period='5m', interval='5m')
 		returned_value = data[attribute].values
-		result = returned_value[-1]
+		result = returned_value[0]
 		df = df.append({'ticker': ticker, 'livePrice': result}, ignore_index=True)
 
 	return df
