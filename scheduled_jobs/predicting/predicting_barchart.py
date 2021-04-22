@@ -84,7 +84,10 @@ df = pd.merge(df, live_price, on='baseSymbol', how='left')
 df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',
 				   'baseLivePrice': 'baseLastPrice'}, inplace=True)
 
+df = df[~df['baseLastPrice'].isnull()]
+
 print("Added latest stock prices")
+print("Shape of dataframe: {}".format(df.shape))
 
 if mode == 'DEVELOPMENT':
 	from option_trading_nonprod.process.stock_price_enriching import *

@@ -205,7 +205,6 @@ def limitDaysToExpiration(df, min=15, max=25):
 	return (df)
 
 def getCurrentStockPrice(ticker, attribute='Close'):
-	print(ticker)
 	df = pd.DataFrame(columns=['ticker','livePrice'])
 	if isinstance(ticker, np.ndarray):
 		ticker = ticker.tolist()
@@ -217,7 +216,6 @@ def getCurrentStockPrice(ticker, attribute='Close'):
 			print('More than 50 tickers, splitting in parts with size {}'.format(n))
 			for i in range(0, len(ticker), n):
 				tickers_part = ticker[i:i+n]
-				print(tickers_part)
 				data = yf.download(tickers_part, period='5m', interval='5m')
 				returned_value = data[attribute].values
 				result = returned_value[0]
