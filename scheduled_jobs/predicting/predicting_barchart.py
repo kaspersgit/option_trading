@@ -14,6 +14,8 @@ os.chdir("/home/pi/Documents/python_scripts/option_trading")
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
+print('Script can be run from command line as <script> <model> <mode>')
+
 # Get supplied system arguments
 # mode (development or production)
 if len(sys.argv) >= 3:
@@ -33,9 +35,20 @@ if len(sys.argv) >= 3:
 			recipients = f.read().splitlines()
 		emaillist = recipients[0]
 
+# Set variables based on system we are running it on
+if platform.system() == 'Darwin':
+	profile='mrOption'
+	os.chdir('/Users/kasper.de-harder/gits/option_trading')
+else:
+	profile='default'
+	os.chdir('/home/pi/Documents/python_scripts/option_trading')
+
+# set working directory
+current_path = os.getcwd()
+
 # model (disregard extension)
-model = sys.argv[1]
-model = model.split('.')[0]
+model_name = sys.argv[1]
+model_name = model_name.split('.')[0]
 
 # print current timestamp for logging
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -43,11 +56,8 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 # Set variagbles and load in data
 day = day.strftime("%Y-%m-%d")
 print('Mode: {}'.format(mode))
-print('Model: {}'.format(model))
+print('Model: {}'.format(model_name))
 print('Using data from {}'.format(day))
-# set working directory
-os.chdir('/home/pi/Documents/python_scripts/option_trading')
-current_path = os.getcwd()
 
 # Set source for bucket and keys
 source_bucket = 'project-option-trading'
@@ -56,12 +66,7 @@ source_key = 'raw_data/barchart/barchart_unusual_activity_'+day+'.csv'
 print('Source bucket: {}'.format(source_bucket))
 print('Source key: {}'.format(source_key))
 
-# Get model which should be used
-if platform.system() == 'Darwin':
-	profile='mrOption'
-else:
-	profile='default'
-
+# Get data
 df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
 print(f"Imported dataframe shape: {df.shape}")
@@ -72,11 +77,14 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 # Adding most recent stock price
 unique_tickers = df['baseSymbol'].unique()
 live_price = getCurrentStockPrice(unique_tickers, attribute='Close')
-live_price_df = pd.DataFrame({'baseSymbol': unique_tickers, 'baseLivePrice': live_price})
+live_price.rename(columns={'ticker':'baseSymbol',
+						   'livePrice':'baseLivePrice'}, inplace=True)
 
-df = pd.merge(df,live_price_df,on='baseSymbol',how='left')
+df = pd.merge(df, live_price, on='baseSymbol', how='left')
 df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',
 				   'baseLivePrice': 'baseLastPrice'}, inplace=True)
+
+print("Added latest stock prices")
 
 if mode == 'DEVELOPMENT':
 	from option_trading_nonprod.process.stock_price_enriching import *
@@ -104,19 +112,17 @@ df['const'] = 1.0
 
 #%%
 # Load model and predict
-if model == 'LogisticRegression':
+if model_name == 'LogisticRegression':
     # Logistic Regression
-    file_path = current_path + '/trained_models/'+model
+    file_path = current_path + '/trained_models/'+model_name
     model = LogitResults.load(file_path)
-    model_name = file_path.split('/')[-1]
     # Select columns which are model needs as input but leave out the constant
     features = model.params.index
     prob = model.predict(df[features])
-elif model != 'Logit':
-	file_path = current_path + '/trained_models/'+model+'.sav'
+elif model_name != 'Logit':
+	file_path = current_path + '/trained_models/'+model_name+'.sav'
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
-	model_name = file_path.split('/')[-1]
 	features = model.feature_names
 	prob = model.predict_proba(df[features])[:, 1]
 

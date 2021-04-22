@@ -206,18 +206,34 @@ def limitDaysToExpiration(df, min=15, max=25):
 
 def getCurrentStockPrice(ticker, attribute='Close'):
 	print(ticker)
-
+	df = pd.DataFrame(columns=['ticker','livePrice'])
 	if isinstance(ticker, np.ndarray):
 		ticker = ticker.tolist()
 		print("Converted numpy ndarray to list")
-
-	data = yf.download(ticker, period='15m', interval='5m')
-	if len(data) == 0:
-		result = 9999
+		print("Number of tickers in list: {}".format(len(ticker)))
+		if len(ticker) > 50:
+			# 50 maximum tickers extracted at same time (probably equal to threads used)
+			n = 50
+			print('More than 50 tickers, splitting in parts with size {}'.format(n))
+			for i in range(0, len(ticker), n):
+				tickers_part = ticker[i:i+n]
+				print(tickers_part)
+				data = yf.download(tickers_part, period='5m', interval='5m')
+				returned_value = data[attribute].values
+				result = returned_value[0]
+				df = df.append(pd.DataFrame({'ticker': tickers_part, 'livePrice': result}), ignore_index=True)
+		else:
+			data = yf.download(ticker, period='15m', interval='5m')
+			returned_value = data[attribute].values
+			result = returned_value[-1]
+			df = df.append({'ticker': ticker, 'livePrice': result}, ignore_index=True)
 	else:
+		data = yf.download(ticker, period='15m', interval='5m')
 		returned_value = data[attribute].values
 		result = returned_value[-1]
-	return result
+		df = df.append({'ticker': ticker, 'livePrice': result}, ignore_index=True)
+
+	return df
 
 def batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney']):
 	"""
