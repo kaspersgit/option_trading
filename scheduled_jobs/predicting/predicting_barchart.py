@@ -12,6 +12,7 @@ import json
 # to load custom packages
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
 from option_trading_nonprod.aws import *
+from option_trading_nonprod.process.stock_price_enriching import *
 
 # Get supplied system arguments
 # mode (development or production)
@@ -67,6 +68,15 @@ print(f"Imported dataframe shape: {df.shape}")
 
 # print current timestamp for logging
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+# Adding most recent stock price
+unique_tickers = df['baseSymbol'].unique()
+live_price = getCurrentStockPrice(unique_tickers, attribute='Close')
+live_price_df = pd.DataFrame({'baseSymbol': unique_tickers, 'baseLivePrice': live_price})
+
+df = pd.merge(df,live_price_df,on='baseSymbol',how='left')
+df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',
+				   'baseLivePrice': 'baseLastPrice'}, inplace=True)
 
 if mode == 'DEVELOPMENT':
 	from option_trading_nonprod.process.stock_price_enriching import *

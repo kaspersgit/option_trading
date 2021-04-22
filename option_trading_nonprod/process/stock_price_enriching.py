@@ -206,7 +206,12 @@ def limitDaysToExpiration(df, min=15, max=25):
 
 def getCurrentStockPrice(ticker, attribute='Close'):
 	print(ticker)
-	data = yf.download(ticker, period='1d', interval='1d')
+
+	if isinstance(ticker, np.ndarray):
+		ticker = ticker.tolist()
+		print("Converted numpy ndarray to list")
+
+	data = yf.download(ticker, period='15m', interval='5m')
 	if len(data) == 0:
 		result = 9999
 	else:
