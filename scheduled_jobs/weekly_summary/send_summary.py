@@ -245,21 +245,24 @@ hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
 fig, axs = plt.subplots(1, 3, figsize=(12, 3), sharey=True)
 # All contracts
 axs[0].bar(all_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-axs[0].bar(all_binPercentage['strikePricePercBin'].unique(), all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+if len(all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
+	axs[0].bar(all_binPercentage['strikePricePercBin'].unique(), all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
 axs[0].tick_params('x', labelrotation=45)
 axs[0].title.set_text('All Calls')
 axs[0].set_ylabel('Fraction reaching strike price')
 
 # high probability contracts
 axs[1].bar(hprob_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-axs[1].bar(hprob_binPercentage['strikePricePercBin'].unique(), hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+if len(hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
+	axs[1].bar(hprob_binPercentage['strikePricePercBin'].unique(), hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
 axs[1].tick_params('x', labelrotation=45)
 axs[1].title.set_text('High probability')
 axs[1].set_xlabel("Strike price increase with respect to stock price")
 
 # high probability contracts
 axs[2].bar(hprof_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-axs[2].bar(hprof_binPercentage['strikePricePercBin'].unique(), hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
+if len(hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
+	axs[2].bar(hprof_binPercentage['strikePricePercBin'].unique(), hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
 axs[2].tick_params('x', labelrotation=45)
 axs[2].title.set_text('High profitability')
 
