@@ -242,7 +242,7 @@ hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
 																 100 * x / float(x.sum())).reset_index(drop=False)
 
 
-fig, axs = plt.subplots(1, 3, figsize=(12, 3), sharey=True)
+fig, axs = plt.subplots(1, 3, figsize=(12, 5), sharey=True)
 # All contracts
 axs[0].bar(all_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
 if len(all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
@@ -317,6 +317,8 @@ print('Created and saved calibration plot')
 # precision threshold plot
 plotThresholdMetrics(df['prob'], df['reachedStrikePrice'], savefig=True,
 					 saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
+
+print('Created and saved precision vs threshold plot')
 
 # AUC and similar
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
@@ -435,7 +437,7 @@ html_content = """
 		   , hprob_config['maxBasePrice']
 		   , modelname, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
-		   , len(ReachedStrike)/len(df)
+		   , round(len(ReachedStrike)/len(df),3)
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
 		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
 

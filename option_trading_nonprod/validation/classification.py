@@ -50,6 +50,7 @@ def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='
 
 def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold.png'):
     precision, recall, th = metrics.precision_recall_curve(actual, pred)
+    plt.figure()
     plt.plot(th, precision[1:], label="Precision", linewidth=5)
     plt.plot(th, recall[1:], label="Recall", linewidth=5)
     plt.title('Precision and recall for different threshold values')
