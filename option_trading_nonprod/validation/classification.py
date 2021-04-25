@@ -48,7 +48,7 @@ def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='
         plt.savefig(saveFileName)
     return(auc)
 
-def plotThresholdMetrics(pred, actual):
+def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold.png'):
     precision, recall, th = metrics.precision_recall_curve(actual, pred)
     plt.plot(th, precision[1:], label="Precision", linewidth=5)
     plt.plot(th, recall[1:], label="Recall", linewidth=5)
@@ -57,6 +57,8 @@ def plotThresholdMetrics(pred, actual):
     plt.ylabel('Precision/Recall')
     plt.legend()
     plt.show()
+    if savefig:
+        plt.savefig(saveFileName)
 
 
 def showConfusionMatrix(pred, actual, normalize=None):
