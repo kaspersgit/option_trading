@@ -314,6 +314,10 @@ plotCalibrationCurve(df['reachedStrikePrice'], df['prob'], title='', bins=10, sa
 print('Created and saved calibration plot')
 
 # model performance
+# precision threshold plot
+plotThresholdMetrics(df['prob'], df['reachedStrikePrice'], savefig=True,
+					 saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
+
 # AUC and similar
 auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
 					   saveFileName='scheduled_jobs/summary_content/roc.png')
@@ -334,7 +338,7 @@ html_content = """
 <html>
   <head></head>
   <body>
-	A summary of the call options expired last {} and the models performs.
+	A summary of the call options expired last {} and the model's performance.
 	<br>
 	Showing only options of type: {}
 	<br>
@@ -349,6 +353,8 @@ html_content = """
 	Total number of options (unique tickers): {} ({})
 	<br>
 	Options reaching strike (unique tickers): {} ({})
+	<br>
+	Share of options reaching strike: {}
 	<br><br>
 	<hr>
 	<h3>Model performance metrics</h3>
@@ -361,19 +367,25 @@ html_content = """
 	<br><br>
 	<hr>
 
-
-
-	<h3> Some graphs for visual interpretation</h3>
+	<h3> Graphs for visual interpretation</h3>
 	Plotting all options based on their profitability and probability
 	<br><img src="cid:image1"><br>
 
-
-	Plotting the calibration curve to see if the probabilities made sense
+	Plot of the calibration curve to see if the probabilities made sense
 	<br><img src="cid:image2"><br>
 
-
-	Plotting the ROC, which gives an idea on how well the model performs
+	Plot of the share of options which reached their strike price
 	<br><img src="cid:image3"><br>
+	
+	Plot of the precision and recall versus the threshold.
+	<br>
+	<small>
+	Precision is the share of predicted options actually reaching the strike price
+	</small>
+	<br><img src="cid:image4"><br>
+	
+	Plotting the ROC, which gives an idea on how well the model performs
+	<br><img src="cid:image5"><br>
 
 	<br><br>
 	<hr>
@@ -382,9 +394,11 @@ html_content = """
 	{}
 	<br><br>
 	<hr>
-	<h3>Implementing a simple trading strategy</h3>
+	<h3>Profitability by trading stocks</h3>
 	<br>
-	Purely buying selling stocks which are mentioned in the email
+	<small>
+	Buying the stock based on email, selling the stock when strike price is reached or on expiration date
+	</small>
 	<br>
 	Return on investment (ROI):
 	<br>
@@ -394,24 +408,25 @@ html_content = """
 	<br><br>
 	<hr>
 	
-	Plotting expected profitability vs actual profitability
-	<small> 
-	Expected: (difference in stock and strike price * predicted probability) / stock price
+	<h3>Plotting profitability</h3>
 	<br>
-	Actual:	(difference in either strike price (if reached) or stock price on close before expiration and stock price) / stock price
+	Expected profitability vs actual profitability
+	<small> 
+	Expected: (strike price increase * predicted probability) / stock price
+	<br>
+	Actual:	(strike price (if reached) or stock price on expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image4"><br>
+	<br><img src="cid:image6"><br>
 	
 	Plotting expected profitability vs max profitability
 	<small> 
-	Expected: (difference in stock and strike price * predicted probability) / stock price
+	Expected: (strike price increase * predicted probability) / initial stock price
 	<br>
-	Max:	(difference in max reached price before expiration and stock price) / stock price
+	Max:	(max price before expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image5"><br>
+	<br><img src="cid:image7"><br>
 	
-	Plotting share of options which reached their strike price
-	<br><img src="cid:image6"><br>
+
 	
   </body>
 """.format(datetime.strptime(d,'%Y-%m-%d').strftime('%A'), hprob_config['optionType']
@@ -420,6 +435,7 @@ html_content = """
 		   , hprob_config['maxBasePrice']
 		   , modelname, len(df), df['baseSymbol'].nunique()
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
+		   , len(ReachedStrike)/len(df)
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
 		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
 
@@ -440,8 +456,9 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , subject='Performance report expiry date {}'.format(d)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
+							   'scheduled_jobs/summary_content/strikePerBins.png','scheduled_jobs/summary_content/pr-threshold.png' ,
 							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/scatter_profitability.png',
-							   'scheduled_jobs/summary_content/scatter_maxProfitability.png', 'scheduled_jobs/summary_content/strikePerBins.png']
+							   'scheduled_jobs/summary_content/scatter_maxProfitability.png']
 			  , attachment=attachment
 )
 
