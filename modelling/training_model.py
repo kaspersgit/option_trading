@@ -168,7 +168,7 @@ elif algorithm == 'GB':
     params = {'n_estimators':3000, 'max_depth': 5, 'max_features': 2, 'min_samples_split': 385, 'subsample': 0.7076596018033198, 'learning_rate': 0.00398655034334867}
     # sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
     # kwargs = {'sample_weight': sample_weights.values}
-    kwargs = None
+    kwargs = {'nothing': 'empty'}
     uncal_model = fit_GBclf(X_fit[features], y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version), **kwargs)
 
 print('Training uncalibrated model... Done!')
