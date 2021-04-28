@@ -7,7 +7,7 @@ import plotly.io as pio
 pio.renderers.default = "browser"
 
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-from sklearn.metrics import roc_auc_score, precision_score
+from sklearn.metrics import roc_auc_score, precision_score, precision_recall_curve, auc
 
 # Have to manually pre create the X_train, y_train, X_val and y_val before running
 # and make sure the correct features are selected
@@ -32,7 +32,7 @@ def objective(trial):
 		"criterion": "friedman_mse",
 		"n_estimators": 3000,
 		"max_depth": trial.suggest_int("max_depth", 2, 12),
-		"max_features": trial.suggest_int("max_features", 2, 14),
+		"max_features": trial.suggest_int("max_features", 2, 12),
 		"min_samples_split": trial.suggest_int("min_samples_split", 50, 500),
 		"subsample": trial.suggest_float("subsample", 0.7, 0.9),
 		"learning_rate": trial.suggest_float("learning_rate", 1e-4, 1e-2, log=True),
@@ -40,14 +40,20 @@ def objective(trial):
 	}
 
 	# Specify model, fit, predict and produce score
+	features = features_info
 	model = GradientBoostingClassifier()
 	model.set_params(**params)
-	model.fit(X_train[top30features], y_train)
-	prob = model.predict_proba(X_val[top30features])[:,1]
-	pred = model.predict(X_val[top30features])
+	model.fit(X_train[features], y_train)
+	prob = model.predict_proba(X_val[features])[:,1]
+	pred = model.predict(X_val[features])
 	roc_auc = roc_auc_score(y_val, prob)
+	# precision recall auc
+	yVar, xVar, thresholds = precision_recall_curve(y_val, prob)
+	pr_auc = auc(xVar, yVar)
 	precision = precision_score(y_val, pred)
-	return 1 - precision
+
+	# as the package seems to want to minimize the score function we do 1 - the metric we want to maximize
+	return 1 - pr_auc
 
 if __name__ == '__main__':
 

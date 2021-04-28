@@ -13,7 +13,8 @@ on itself.
 
 # Get to it
 ### Create a docker container which will run the build.sh file (takes a while)
-docker run --rm -it -v $(pwd):/outputs lambci/lambda:build-python3.6 /bin/bash /outputs/build.sh
+docker run --rm -v $(pwd):/outputs -it lambci/lambda:build-python3.6 /bin/bash /outputs/build.sh
+
 
 ### Add your lambda function to zip package
 zip -9 lambda-package.zip lambda_function.py

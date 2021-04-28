@@ -38,7 +38,7 @@ def extract_topics(ticker_object, lookup_date, topics):
 
 	return collect_dict
 
-def enrich_tickers_with_info(df, topics={'recommendation':'last recommendation', 'dividend':'last_dividend', 'general':['sector','industry','marketCap','beta','forwardPE','trailingPE']}):
+def enrich_tickers_with_info(df, topics={'recommendation':'last recommendation', 'dividend':'last_dividend', 'general':['sector','industry','sharesOutstanding','fullTimeEmployees','beta','forwardPE','trailingPE']}):
 	# Get column names from topic values
 	# difficulty here is caused by array in dict
 	colnames = []
@@ -54,14 +54,22 @@ def enrich_tickers_with_info(df, topics={'recommendation':'last recommendation',
 	unique_tickers = df['baseSymbol'].unique()
 	nr_tickers = len(unique_tickers)
 	print("Unique tickers: {}".format(nr_tickers))
-	for ticker in unique_tickers:
+	for t in range(nr_tickers):
+		if t % 50 == 0:
+			print('Tickers done: {}'.format(t))
+		ticker = unique_tickers[t]
 		print(ticker)
 		ticker_object = yf.Ticker(ticker)
 		unique_exportedAt = df[df['baseSymbol'] == ticker]['exportedAt'].unique()
 		print("Unique export dates: {}".format(len(unique_exportedAt)))
 		for exDate in unique_exportedAt:
 			print(exDate)
-			information = extract_topics(ticker_object, lookup_date=exDate, topics=topics)
+			try:
+				information = extract_topics(ticker_object, lookup_date=exDate, topics=topics)
+			except Exception as e:
+				print("Error occurred: {}".format(e))
+				information = pd.DataFrame(columns=['exportedAt','baseSymbol'])
+
 			information['exportedAt'] = exDate
 			information['baseSymbol'] = ticker
 

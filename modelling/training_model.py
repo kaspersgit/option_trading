@@ -68,9 +68,39 @@ print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()
 
 target = 'reachedStrikePrice'
 
-features = ['baseLastPrice', 'strikePrice', 'daysToExpiration', 'bidPrice', 'midpoint',
-                 'askPrice', 'lastPrice', 'volume', 'openInterest',
-                 'volumeOpenInterestRatio', 'volatility']
+features = ['strikePrice',
+            'daysToExpiration',
+            'bidPrice',
+            'midpoint',
+            'askPrice',
+            'lastPrice',
+            'openInterest',
+            'volumeOpenInterestRatio',
+            'volatility',
+            'volume',
+            'nrOptions',
+            'strikePriceCum',
+            'volumeTimesStrike',
+            'nrCalls',
+            'meanStrikeCall',
+            'sumVolumeCall',
+            'sumOpenInterestCall',
+            'sumVolumeTimesStrikeCall',
+            'weightedStrikeCall',
+            'nrPuts',
+            'meanStrikePut',
+            'sumVolumePut',
+            'sumOpenInterestPut',
+            'sumVolumeTimesStrikePut',
+            'weightedStrikePut',
+            'volumeCumSum',
+            'openInterestCumSum',
+            'nrHigherOptions',
+            'higherStrikePriceCum',
+            'meanStrikeCallPerc',
+            'meanStrikePutPerc',
+            'midpointPerc',
+            'meanHigherStrike']
 
 features_ext = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice', 'strikePriceCum', 'midpoint', 'lastPrice', 'weightedStrikeCall', 'strikePrice',
             'meanStrikeCall', 'sumVolumeTimesStrikeCall', 'askPrice', 'meanStrikePut', 'daysToExpiration', 'meanStrikeCallPerc',
@@ -114,7 +144,7 @@ y_test = df_test[target]
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v1x4'
+version = 'v2x3'
 algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train
@@ -135,9 +165,10 @@ if algorithm == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
     uncal_model = fit_AdaBoost(X_fit[features], y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 elif algorithm == 'GB':
-    params = {'n_estimators':3000, 'max_depth': 10, 'max_features': 8, 'min_samples_split': 225, 'subsample': 0.808392563444737, 'learning_rate': 0.00010030663168798627}
-    sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
-    kwargs = {'sample_weight': sample_weights.values}
+    params = {'n_estimators':3000, 'max_depth': 5, 'max_features': 2, 'min_samples_split': 385, 'subsample': 0.7076596018033198, 'learning_rate': 0.00398655034334867}
+    # sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
+    # kwargs = {'sample_weight': sample_weights.values}
+    kwars = None
     uncal_model = fit_GBclf(X_fit[features], y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version), **kwargs)
 
 print('Training uncalibrated model... Done!')

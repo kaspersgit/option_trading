@@ -2,14 +2,14 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 
 from sklearn.pipeline import FeatureUnion, Pipeline, make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.metrics import roc_auc_score, make_scorer
+from sklearn.metrics import roc_auc_score, make_scorer, precision_recall_curve, auc, precision_score
 from sklearn.metrics import accuracy_score, log_loss
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
 
 from sklearn.model_selection import GridSearchCV
 
 from option_trading_nonprod.process.stock_price_enriching import *
-from option_trading_nonprod.models.calibrate import *
+from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.process.train_modifications import *
 
@@ -35,7 +35,27 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
 
 #######################
 # Load and prepare data
-df = pd.read_csv('data/barchart_yf_enr_1x2.csv')
+# 32 or 64 bit system
+n_bits = 32 << bool(sys.maxsize >> 32)
+
+###### import data from S3
+# Set source and target for bucket and keys
+today = '2021-04-15'
+source_bucket = 'project-option-trading-output'
+source_key = 'train_data/barchart/enriched_on_{}.csv'.format(today)
+
+# print status of variables
+print('Source bucket: {}'.format(source_bucket))
+print('Source key: {}'.format(source_key))
+
+# import data
+if platform.system() == 'Darwin':
+	s3_profile = 'mrOption'
+else:
+	s3_profile = 'default'
+
+df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
+print("Raw imported data shape: {}".format(df.shape))
 
 # Set target
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
@@ -48,6 +68,9 @@ df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirat
 
 df = batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType', 'expirationDate', 'inTheMoney'])
 
+if 'sector' in df.columns:
+	df = df[~df['sector'].isnull()]
+	df = pd.get_dummies(df, prefix='sector', columns=['sector'])
 # filter set on applicable rows
 # only select Call option out of the money
 df_calls = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] * 1.05)].copy()
@@ -59,8 +82,8 @@ target = 'reachedStrikePrice'
 # Split in train, validation, test and out of time
 # Take most recent observations for out of time set (apprx last 5000 observations)
 
-exportDateLast3000 = df_calls.iloc[-3000]['exportedAt']
-df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast3000]
+exportDateLast10percent = df_calls.iloc[-int(0.1 * len(df_calls))]['exportedAt']
+df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast10percent]
 df_rest = df_calls.drop(df_oot.index, axis=0).reset_index(drop=True)
 
 # test to split keeping exportedAt column always in same group
@@ -113,6 +136,58 @@ features_base = ['strikePrice'
 	, 'volatility'
 	, 'volume'
 	]
+
+features_info = ['strikePrice'
+	, 'daysToExpiration'
+	, 'bidPrice'
+	, 'midpoint'
+	, 'askPrice'
+	, 'lastPrice'
+	, 'openInterest'
+	, 'volumeOpenInterestRatio'
+	, 'volatility'
+	, 'volume'
+	# , 'marketCap'
+	# , 'beta'
+	# , 'forwardPE'
+	# , 'sector_Healthcare'
+	# , 'sector_Technology'
+	# , 'sector_Basic Materials'
+	# , 'sector_Communication Services'
+	# , 'sector_Consumer Cyclical'
+	# , 'sector_Consumer Defensive'
+	# , 'sector_Energy'
+	# , 'sector_Financial Services'
+	# , 'sector_Industrials'
+	# , 'sector_Real Estate'
+	# , 'sector_Services'
+	# , 'sector_Utilities'
+				 # Features from in batch enriching
+	, 'nrOptions'
+	, 'strikePriceCum'
+	, 'volumeTimesStrike'
+	, 'nrCalls'
+	, 'meanStrikeCall'
+	, 'sumVolumeCall'
+	, 'sumOpenInterestCall'
+	, 'sumVolumeTimesStrikeCall'
+	, 'weightedStrikeCall'
+	, 'nrPuts'
+	, 'meanStrikePut'
+	, 'sumVolumePut'
+	, 'sumOpenInterestPut'
+	, 'sumVolumeTimesStrikePut'
+	, 'weightedStrikePut'
+	, 'volumeCumSum'
+	, 'openInterestCumSum'
+	, 'nrHigherOptions'
+	, 'higherStrikePriceCum'
+	, 'meanStrikeCallPerc'
+	, 'meanStrikePutPerc'
+	, 'midpointPerc'
+	, 'meanHigherStrike'
+]
+
 
 features_all = ['strikePrice'
 	, 'daysToExpiration'
@@ -192,28 +267,40 @@ classifiers = [
 
 for classifier in classifiers:
 	print(classifier)
-	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features)),
+	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features_info)),
 					  ('classifier', classifier)])
 
 	# add sample weights
-	sample_weights = getSampleWeights(X_train, column='exportedAt', normalize=True, squared=False)
-	kwargs = {pipe.steps[-1][0] + '__sample_weight': sample_weights}
-	pipe.fit(X_train, y_train, **kwargs)
+	# sample_weights = getSampleWeights(X_train, column='exportedAt', normalize=True, squared=False)
+	# kwargs = {pipe.steps[-1][0] + '__sample_weight': sample_weights}
+	# pipe.fit(X_train, y_train, **kwargs)
+
+	# not adding sample weights
+	pipe.fit(X_train, y_train)
 
 	print('Validation dataset')
 	probs = pipe.predict_proba(X_val)[:,1]
 	print("model score: %.3f" % pipe.score(X_val, y_val))
 	print("AUC ROC: {}".format(roc_auc_score(y_val, probs)))
+	# precision recall auc
+	yVar, xVar, thresholds = precision_recall_curve(y_val, probs)
+	print("Precision Recall: {}".format(auc(xVar, yVar)))
 
 	print('Test dataset')
 	probs = pipe.predict_proba(X_test)[:,1]
 	print("model score: %.3f" % pipe.score(X_test, y_test))
 	print("AUC ROC: {}".format(roc_auc_score(y_test, probs)))
+	# precision recall auc
+	yVar, xVar, thresholds = precision_recall_curve(y_test, probs)
+	print("Precision Recall: {}".format(auc(xVar, yVar)))
 
 	print('Out of time dataset')
 	probs = pipe.predict_proba(X_oot)[:,1]
 	print("model score: %.3f" % pipe.score(X_oot, y_oot))
 	print("AUC ROC: {}".format(roc_auc_score(y_oot, probs)))
+	# precision recall auc
+	yVar, xVar, thresholds = precision_recall_curve(y_oot, probs)
+	print("Precision Recall: {}".format(auc(xVar, yVar)))
 
 
 ############
@@ -232,23 +319,33 @@ gb_param_dist = {
 pipe_cv = Pipeline(steps=[('preprocessor', CustomTransformer(features_adj)),
 					   ('classifier', GradientBoostingClassifier())])
 
-grid = GridSearchCV(pipe_cv, param_grid=gb_param_dist, scoring=make_scorer(roc_auc_score), cv=2)
+grid = GridSearchCV(pipe_cv, param_grid=gb_param_dist, scoring=precision_score, cv=2)
 grid.fit(X_train, y_train)
 
 print('Validation dataset')
 probs = grid.predict_proba(X_val)[:,1]
 print("score = %3.2f" % (grid.score(X_val, y_val)))
 print("AUC ROC: {}".format(roc_auc_score(y_val, probs)))
+# precision recall auc
+yVar, xVar, thresholds = precision_recall_curve(y_val, probs)
+print("Precision Recall: {}".format(auc(xVar, yVar)))
 
 print('Test dataset')
 probs = grid.predict_proba(X_test)[:,1]
 print("score = %3.2f" % (grid.score(X_test, y_test)))
 print("AUC ROC: {}".format(roc_auc_score(y_test, probs)))
+# precision recall auc
+yVar, xVar, thresholds = precision_recall_curve(y_test, probs)
+print("Precision Recall: {}".format(auc(xVar, yVar)))
 
 print('Out of time dataset')
 probs = grid.predict_proba(X_oot)[:,1]
 print("score = %3.2f" % (grid.score(X_oot, y_oot)))
 print("AUC ROC: {}".format(roc_auc_score(y_oot, probs)))
+# precision recall auc
+yVar, xVar, thresholds = precision_recall_curve(y_oot, probs)
+print("Precision Recall: {}".format(auc(xVar, yVar)))
+
 print(grid.best_params_)
 
 # best AUC ROC
@@ -264,7 +361,7 @@ best_model = grid.best_estimator.steps[1][1]
 #plot feature importance
 from option_trading_nonprod.validation.feature_importances import *
 featureImportance1(model=best_model, features=features)
-feat_imp = featureImportance1(model=pipe.steps[1][1], features=features_all)
+feat_imp = featureImportance1(model=pipe.steps[1][1], features=features_info)
 
 # calculate trading profit
 simpleTradingStrategy(df_val)

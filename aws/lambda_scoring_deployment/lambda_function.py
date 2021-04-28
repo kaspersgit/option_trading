@@ -42,7 +42,7 @@ def load_from_s3(
     # Reading in multiple files with same prefix
     try:
         df = pd.DataFrame()
-        obj = s3_client.get_object(Bucket=bucket, Key=key_prefix)
+        obj = s3_con.get_object(Bucket=bucket, Key=key_prefix)
         body = obj["Body"].read()
         if gzipped:
             gzipfile = BytesIO(body)
@@ -56,19 +56,6 @@ def load_from_s3(
         df = pd.concat([df, df_temp], ignore_index=True)
         return df
     except ClientError as e:
-        if e.response["Error"]["Code"] == "ExpiredToken":
-            print(
-                "Token expired, login using the AWS login tool:\naws-login-tool login -r "
-                + profile.split("@")[0]
-                + " -a klarna-data-production"
-            )
-        if e.response["Error"]["Code"] == "InvalidToken":
-            print(
-                "Token invalid, login using the AWS login tool:\naws-login-tool login -r "
-                + profile.split("@")[0]
-                + " -a klarna-data-production"
-            )
-        else:
             print("Unexpected error: %s" % e.response["Error"])
 
 # Upload file to S3 bucket

@@ -37,7 +37,7 @@ CFLAGS="-g0 -Wl,--strip-all -I/usr/include:/usr/local/include -L/usr/lib:/usr/lo
         --no-cache-dir \
         --compile \
         --no-binary \
-        numpy==${NUMPY_VER} scipy=${SCIPY_VER} pandas==${PANDAS_VER}
+        numpy==${NUMPY_VER} scipy==${SCIPY_VER} pandas==${PANDAS_VER}
 
 pip install \
 --no-cache-dir \
