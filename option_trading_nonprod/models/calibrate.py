@@ -13,6 +13,7 @@ def calibrate_model(model, X_fit, y_fit, method, save_model, path, name):
 		cal_model.feature_importances_ = model.feature_importances_
 	if hasattr(model, 'train_data_shape'):
 		cal_model.train_data_shape = model.train_data_shape
+
 	cal_model.calibration_data_shape = X_fit.shape
 
 	if save_model:

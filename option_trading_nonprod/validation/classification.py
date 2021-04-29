@@ -27,7 +27,7 @@ def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='
         xlabel = 'True Positive Rate (Recall)'
         ylabel = 'Precision'
         diagCor1 = [1,0]
-        diagCor2 = [0,1]
+        diagCor2 = [1,0]
         
     # Calculate area under curve (AUC)
     auc = metrics.auc(xVar, yVar)
@@ -62,7 +62,7 @@ def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold
         plt.savefig(saveFileName)
 
 
-def showConfusionMatrix(pred, actual, normalize=None):
+def showConfusionMatrix(pred, actual, normalize=None, savefig=False, saveFileName='test.png'):
     """
     pred: the predicted classes
     actual: the actual class
@@ -105,3 +105,5 @@ def showConfusionMatrix(pred, actual, normalize=None):
     plt.ylabel('True label',size=14)
     plt.xlabel('Predicted label',size=14)
     plt.show()
+    if savefig:
+        plt.savefig(saveFileName)

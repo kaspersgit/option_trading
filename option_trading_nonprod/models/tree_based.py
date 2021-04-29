@@ -63,6 +63,7 @@ def fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model, ab_path, name):
 	model.fit(X_fit, y_fit)
 	model.feature_names = X_fit.columns
 	model.train_data_shape = X_fit.shape
+	model.train_data_describe = X_fit.describe()
 
 	if save_model:
 		# Save AdaBoost Model
@@ -86,6 +87,8 @@ def fit_GBclf(X_fit, y_fit, X_val, y_val, params, save_model, gbc_path, name, **
 	else:
 		model.fit(X_fit, y_fit)
 	model.feature_names = X_fit.columns
+	model.train_data_shape = X_fit.shape
+	model.train_data_describe = X_fit.describe()
 
 	if save_model:
 		# Save GradientBoostingClassifier Model
