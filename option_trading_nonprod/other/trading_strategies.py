@@ -29,7 +29,7 @@ def dfFilterOnGivenSet(df, filterset={}):
 		(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
 	return(df_filtered)
 
-def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title=''):
+def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title='', savefig=False, saveFileName='test.png'):
 	df_ = df.copy()
 	if 'stocksBought' not in df_.columns:
 		df_['stocksBought'] = 100 / df_['baseLastPrice']
@@ -51,11 +51,13 @@ def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=
 		fig = plt.figure()
 		ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 		ax.plot(df_profit['prob'], df_profit['cumProfitPerc'])
-		plot_title = 'Inverse cumulative profit per threshold ' + title
+		plot_title = 'Profit per threshold ' + title
 		plt.title(plot_title)
 		plt.xlabel('Predicted probability')
 		plt.ylabel('Profit percentage')
 		plt.show()
+		if savefig:
+			plt.savefig(saveFileName)
 
 	# Return the return on investment
 	cost = df_profit['cost'].sum()

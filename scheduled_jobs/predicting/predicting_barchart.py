@@ -74,17 +74,18 @@ print(f"Imported dataframe shape: {df.shape}")
 # print current timestamp for logging
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+# Commented out as price is input for model and other features should be adjusted as well accordingly
 # Adding most recent stock price
-unique_tickers = df['baseSymbol'].unique()
-live_price = getCurrentStockPrice(unique_tickers, attribute='Close')
-live_price.rename(columns={'ticker': 'baseSymbol',
-						   'livePrice': 'baseLivePrice'}, inplace=True)
-
-df = pd.merge(df, live_price, on='baseSymbol', how='left')
-df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',
-				   'baseLivePrice': 'baseLastPrice'}, inplace=True)
-
-df = df[~df['baseLastPrice'].isnull()]
+# unique_tickers = df['baseSymbol'].unique()
+# live_price = getCurrentStockPrice(unique_tickers, attribute='Close')
+# live_price.rename(columns={'ticker': 'baseSymbol',
+# 						   'livePrice': 'baseLivePrice'}, inplace=True)
+#
+# df = pd.merge(df, live_price, on='baseSymbol', how='left')
+# df.rename(columns={'baseLastPrice': 'baseLastPriceScrape',
+# 				   'baseLivePrice': 'baseLastPrice'}, inplace=True)
+#
+# df = df[~df['baseLastPrice'].isnull()]
 
 print("Added latest stock prices")
 print("Shape of dataframe: {}".format(df.shape))
@@ -100,7 +101,7 @@ hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
 
 # Adding some additional columns
-df['predDate'] = day
+df['predictionDate'] = day
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
@@ -137,15 +138,15 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 df['prediction'] = prob
 df['model'] = model_name
 
+# formatting
+df['baseLastPrice'] = round(df['baseLastPrice'],2)
+df['priceDiffPerc'] = round(df['priceDiffPerc'],2)
+df.rename(columns={'baseSymbol': 'ticker',
+				   'baseLastPrice': 'stockPrice',
+				   'priceDiffPerc': 'increase'}, inplace=True)
 
 # %%
 # Subsetting the predictions for highly probable stocks
-threshold = 0.7
-maxBasePrice = 200
-minDaysToExp = 3
-maxDaysToExp = 25
-minStrikeIncrease = 1.05
-
 high_prob = df[(df['prediction'] > hprob_config['minThreshold']) &
     (df['symbolType']=='Call') &
     (df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
@@ -158,12 +159,6 @@ high_prob = high_prob.sort_values('priceDiffPerc').reset_index(drop=True)
 print('High probability table size: {}'.format(len(high_prob)))
 
 # Subsetting the predictions for highly profitable stocks
-hprof_threshold = 0.25
-hprof_maxBasePrice = 1000
-hprof_minDaysToExp = 3
-hprof_maxDaysToExp = 25
-hprof_minStrikeIncrease = 1.20
-
 high_prof = df[(df['prediction'] > hprof_config['minThreshold']) &
     (df['symbolType']=='Call') &
     (df['daysToExpiration'] < hprof_config['maxDaysToExp']) &

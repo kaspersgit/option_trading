@@ -1,0 +1,118 @@
+
+    <html>
+        <body>
+            <h1>Performance report on model: PROD_c_GB64_v1x4</h1>
+            <hr><br>
+            <h2>Dataset used</h2>
+            <hr><br>
+            Columns: 27
+            <br>
+            Observations: 2037
+            <br>
+            Min exported at date: 2021-03-02
+            <br>
+            Max exported at date: 2021-04-23
+            <h2>Threshold invariant metrics</h2>
+            <hr><br>
+            <p>
+            <h4>Receiver Operator Curve:</h4>
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/roc_plot.png'>
+            <br>
+            AUC: 0.7623817995579276
+            <br><br>
+            <h4>Precision Recall Curve:</h4>
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/pr_plot.png'>
+            <br>
+            AUC: 0.600160716900714
+            <br><br>
+            Brier Score: 0.18584046643550503
+            </p>
+            <br>
+            <h2>Threshold dependant metrics</h2>
+            <hr><br>
+            Threshold set to: 0.6
+            <br>
+            Confusion Matrix
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/confusion_matrix.png'>
+            <br><br>
+            Precision and recall per week
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/prOverTime.png'>
+            <br><br>
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>precision</th>
+      <th>recall</th>
+      <th>f1-score</th>
+      <th>support</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.696047</td>
+      <td>0.965185</td>
+      <td>0.808814</td>
+      <td>1350.000000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.715152</td>
+      <td>0.171761</td>
+      <td>0.276995</td>
+      <td>687.000000</td>
+    </tr>
+    <tr>
+      <th>accuracy</th>
+      <td>0.697595</td>
+      <td>0.697595</td>
+      <td>0.697595</td>
+      <td>0.697595</td>
+    </tr>
+    <tr>
+      <th>macro avg</th>
+      <td>0.705599</td>
+      <td>0.568473</td>
+      <td>0.542905</td>
+      <td>2037.000000</td>
+    </tr>
+    <tr>
+      <th>weighted avg</th>
+      <td>0.702490</td>
+      <td>0.697595</td>
+      <td>0.629453</td>
+      <td>2037.000000</td>
+    </tr>
+  </tbody>
+</table>
+            <br>
+            <h2>Profitability stock trading</h2>
+            <hr><br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/highProbProfitability.png'>
+            <br>
+            Return on investment high probability: 0.03063644166927693
+            <h2>Training data</h2>
+            <hr><br>
+            # features: Na
+            <br>
+            Observations: Na
+            <br>
+            Description of main variables:
+            <br>
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+        </body>
+    </html>
+    

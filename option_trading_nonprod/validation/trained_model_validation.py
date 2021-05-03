@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
-import os
+import os, json, platform
 import pickle
 
-from option_trading_nonprod.other.trading_strategies import simpleTradingStrategy
 from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
 from option_trading_nonprod.validation.calibration import *
+from option_trading_nonprod.other.trading_strategies import *
+from option_trading_nonprod.aws import *
 
 from sklearn.metrics import classification_report
 
@@ -33,6 +34,11 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
 
     pred_df = dataset.copy()
     pred_df.fillna(0, inplace=True)
+
+    dataset_describe = pred_df.describe()
+    dataset_shape = pred_df.shape
+    dataset_dates = {'maxDate': pred_df['exportedAt'].max(), 'minDate': pred_df['exportedAt'].min()}
+
     prob = model.predict_proba(pred_df[model.feature_names])[:,1]
     pred_df['prob'] = prob
     threshold = 0.6
@@ -57,12 +63,17 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
 
 
     # Threshold dependant
+    # confusion matrix
     showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'], savefig=True, saveFileName=f'{save_path}/confusion_matrix.png')
+
+    # precision and recall over time
+    pred_df['date'] = pred_df['exportedAt']
+    plotMetricOverTime(pred_df, savefig=True, saveFileName=f'{save_path}/prOverTime.png')
 
     class_report = classification_report(pred_df['actual'], pred_df['pred'], output_dict=True)
     class_report = pd.DataFrame(class_report).transpose()
 
-    simpleTradingStrategy(select_df, actualCol='actual', filterset={'minThreshold': 0.1, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.05}, title = title)
+    simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.1, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.05}, title = '{}'.format(model.version))
 
 
     print('AUC ROC: {}'.format(auc_roc))
@@ -72,22 +83,29 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
     # profitablity
     # calculate trading profit
     print("High probability trading")
-    highprob_roi, _, _, _ = simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.6, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.05}, title = 'High prob ' + model.version)
+    highprob_roi, _, _, _ = simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.6, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.05}, title = 'High prob ' + model.version, savefig=True, saveFileName=f'{save_path}/highProbProfitability.png')
     print("Roi: {}\n".format(highprob_roi))
 
     print("High profitability trading")
-    highprof_roi, _, _, _ = simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.3, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.2}, title = 'High prof ' + model.version)
+    highprof_roi, _, _, _ = simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.3, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.2}, title = 'High prof ' + model.version, savefig=True, saveFileName=f'{save_path}/highProfProfitability.png')
     print("Roi: {}\n".format(highprof_roi))
 
     # train and calibration data details
-    train_data_shape = model.train_data_shape
-    train_data_describe = model.train_data_describe[['baseLastPrice', 'strikePrice', 'daysToExpiration','lastPrice','reachedStrikePrice']]
+    if hasattr(model, 'train_data_shape'):
+        train_data_shape = model.train_data_shape
+    else:
+        train_data_shape = ['Na', 'Na']
+
+    if hasattr(model, 'train_data_describe'):
+        train_data_describe = model.train_data_describe[['baseLastPrice', 'strikePrice', 'daysToExpiration','lastPrice','reachedStrikePrice']]
+    else:
+        train_data_describe = pd.DataFrame()
 
     # check if data set and train/calibration data overlap
     # first_entry_dataset = pred_df['exportedAt'].min()
 
     # return a dict with all values
-    metrics = {'model_name': model.version, 'auc_roc': auc_roc, 'auc_pr': auc_pr, 'brier_score': brier_score, 'threshold': threshold, 'class_report': class_report, 'highprob_roi': highprob_roi, 'train_data_shape': train_data_shape, 'train_data_describe': train_data_describe}
+    metrics = {'model_name': model.version, 'auc_roc': auc_roc, 'auc_pr': auc_pr, 'brier_score': brier_score, 'threshold': threshold, 'class_report': class_report, 'highprob_roi': highprob_roi, 'train_data_shape': train_data_shape, 'train_data_describe': train_data_describe, 'dataset_describe': dataset_describe, 'dataset_shape':dataset_shape, 'dataset_dates': dataset_dates}
     return metrics
 
 def makeReportContent(metrics, files_path):
@@ -95,44 +113,55 @@ def makeReportContent(metrics, files_path):
     <html>
         <body>
             <h1>Performance report on model: {metrics['model_name']}</h1>
-            <hr>
+            <hr><br>
+            <h2>Dataset used</h2>
+            <hr><br>
+            Columns: {metrics['dataset_shape'][1]}
             <br>
+            Observations: {metrics['dataset_shape'][0]}
+            <br>
+            Min exported at date: {metrics['dataset_dates']['minDate']}
+            <br>
+            Max exported at date: {metrics['dataset_dates']['maxDate']}
             <h2>Threshold invariant metrics</h2>
-            <hr>
-            <br>
-            Receiver Operator Curve:
+            <hr><br>
+            <p>
+            <h4>Receiver Operator Curve:</h4>
             <br>
             <img src='{files_path}/roc_plot.png'>
             <br>
             AUC: {metrics['auc_roc']}
-            <br>
-            Precision Recall Curve:
+            <br><br>
+            <h4>Precision Recall Curve:</h4>
             <br>
             <img src='{files_path}/pr_plot.png'>
             <br>
             AUC: {metrics['auc_pr']}
-            <br>
+            <br><br>
             Brier Score: {metrics['brier_score']}
+            </p>
             <br>
             <h2>Threshold dependant metrics</h2>
-            <hr>
-            <br>
+            <hr><br>
             Threshold set to: {metrics['threshold']}
             <br>
             Confusion Matrix
             <br>
             <img src='{files_path}/confusion_matrix.png'>
+            <br><br>
+            Precision and recall per week
             <br>
-            <br>
+            <img src='{files_path}/prOverTime.png'>
+            <br><br>
             {metrics['class_report'].to_html()}
             <br>
             <h2>Profitability stock trading</h2>
-            <hr>
+            <hr><br>
+            <img src='{files_path}/highProbProfitability.png'>
             <br>
             Return on investment high probability: {metrics['highprob_roi']}
             <h2>Training data</h2>
-            <hr>
-            <br>
+            <hr><br>
             # features: {metrics['train_data_shape'][1]}
             <br>
             Observations: {metrics['train_data_shape'][0]}
@@ -264,11 +293,43 @@ if __name__=='__main__':
     ###########
     # Load data and model
     # set configurations
-    model_name = 'DEV_c_GB64_v1x3'
+    model_name = 'PROD_c_GB64_v1x4'
+    scraped_since = '2021-02-01'
 
-    # Load test datasets
-    df_test = pd.read_csv("data/validation/test_df.csv")
-    df_oot = pd.read_csv("data/validation/oot_df.csv")
+    ###### import data from S3
+    # Set source and target for bucket and keys
+    source_bucket = 'project-option-trading-output'
+    source_key = 'enriched_data/barchart/'
+
+    # print status of variables
+    print('Source bucket: {}'.format(source_bucket))
+    print('Source key: {}'.format(source_key))
+
+    # import data
+    if platform.system() == 'Darwin':
+        s3_profile = 'mrOption'
+    else:
+        s3_profile = 'default'
+
+    df_all = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
+    df_all = df_all[df_all['exportedAt'] > scraped_since]
+    df_all['reachedStrikePrice'] = np.where(df_all['maxPrice'] >= df_all['strikePrice'],1,0)
+    df_all['priceDiffPerc'] = df_all['strikePrice'] / df_all['baseLastPrice']
+    print("Raw imported data shape: {}".format(df_all.shape))
+
+    # load filter rules for data
+    # filter set on applicable rows
+    with open('other_files/config_file.json') as json_file:
+        config = json.load(json_file)
+
+    hprob_config = config['high_probability']
+
+    # Filter on basics (like days to expiration and contract type)
+    df = df_all[(df_all['symbolType'] == hprob_config['optionType']) &
+                (df_all['daysToExpiration'] >= hprob_config['minDaysToExp']) &
+                (df_all['daysToExpiration'] < hprob_config['maxDaysToExp']) &
+                (df_all['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
+                (df_all['baseLastPrice'] < hprob_config['maxBasePrice'])]
 
     # Load model
     getwd = os.getcwd()
@@ -276,8 +337,8 @@ if __name__=='__main__':
         model = pickle.load(file)
 
     model.version = model_name
-    save_path = 'modelling/development/documentation/'
+    save_path = getwd + '/modelling/development/documentation'
     # modelPerformanceReport(model, df_oot, ext_plots=True)
-    metrics = modelPerformanceReportMetrics(model, df_oot, save_path)
-    content = makeReportContent(metrics, files_path=save_path)
-    saveHTMLReport(content, filename = f'{save_path}performance_{model_name}.html')
+    reportMetrics = modelPerformanceReportMetrics(model, df, f'{save_path}/visualizations')
+    content = makeReportContent(reportMetrics, files_path=f'{save_path}/visualizations')
+    saveHTMLReport(content, filename = f'{save_path}/performance_{model_name}.html')
