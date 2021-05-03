@@ -152,7 +152,7 @@ high_prob = df[(df['prediction'] > hprob_config['minThreshold']) &
     (df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
     (df['increase'] > hprob_config['minStrikeIncrease']) &
     (df['daysToExpiration'] > hprob_config['minDaysToExp']) &
-    (df['baseLastPrice'] < hprob_config['maxBasePrice'])].copy()
+    (df['stockPrice'] < hprob_config['maxBasePrice'])].copy()
 high_prob = high_prob[['ticker', 'predictionDate', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prediction', 'model']]
 high_prob = high_prob.sort_values('increase').reset_index(drop=True)
 
@@ -164,7 +164,7 @@ high_prof = df[(df['prediction'] > hprof_config['minThreshold']) &
     (df['daysToExpiration'] < hprof_config['maxDaysToExp']) &
     (df['increase'] > hprof_config['minStrikeIncrease']) &
     (df['daysToExpiration'] > hprof_config['minDaysToExp']) &
-    (df['baseLastPrice'] < hprof_config['maxBasePrice'])].copy()
+    (df['stockPrice'] < hprof_config['maxBasePrice'])].copy()
 high_prof = high_prof[['ticker', 'predictionDate', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prediction', 'model']]
 high_prof = high_prof.sort_values('increase').reset_index(drop=True)
 
