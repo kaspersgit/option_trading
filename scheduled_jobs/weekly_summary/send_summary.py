@@ -41,7 +41,8 @@ if len(sys.argv) >= 3:
 		mode = 'PRODUCTION'
 		add_attachment = True
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
-			emaillist = f.read().splitlines()
+			recipients = f.read().splitlines()
+		emaillist = [elem.strip().split(',') for elem in recipients]
 	elif mode.upper().startswith('DEV'):
 		mode = 'DEVELOPMENT'
 		add_attachment = False
