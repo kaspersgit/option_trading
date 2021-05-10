@@ -26,12 +26,12 @@ def sendRichEmail(sender = None, receiver = None, password = None, subject = 'De
 	# Check types and makes correct one
 	# recipients
 	if isinstance(receiver, list):
-		receiver = ', '.join(map(str, receiver))
+		receiverstr = ', '.join(map(str, receiver))
 	# Create the root message and fill in the from, to, and subject headers
 	msgRoot = MIMEMultipart('related')
 	msgRoot['Subject'] = subject
 	msgRoot['From'] = sender
-	msgRoot['To'] = receiver
+	msgRoot['To'] = receiverstr
 	msgRoot.preamble = 'This is a multi-part message in MIME format.'
 
 	# Encapsulate the plain and HTML versions of the message body in an
@@ -52,7 +52,7 @@ def sendRichEmail(sender = None, receiver = None, password = None, subject = 'De
 	msgText = MIMEText(content, 'html')
 	msgAlternative.attach(msgText)
 
-	if len(inline_images) > 0:
+	if not inline_images is None:
 		nr_images = len(inline_images)
 		for i, img in enumerate(inline_images):
 			fp = open(img, 'rb')
@@ -69,4 +69,4 @@ def sendRichEmail(sender = None, receiver = None, password = None, subject = 'De
 		smtp.ehlo()
 		smtp.login(sender, password)
 		smtp.sendmail(sender, receiver, msgRoot.as_string())
-	print('Email with subject {} \nHas been sent to {} recipients'.format(subject, receiver.count('@')))
+	print('Email with subject {} \nHas been sent to {} recipients'.format(subject, receiverstr.count('@')))
