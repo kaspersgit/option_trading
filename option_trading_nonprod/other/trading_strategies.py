@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def dfFilterOnGivenSet(df, filterset={}):
+def dfFilterOnGivenSet(df, filterset={}, type='stock'):
 	# Fill up filterset with default in case of non existing
 	if "minThreshold" not in filterset:
 		filterset['minThreshold'] = 0.0
@@ -20,13 +20,22 @@ def dfFilterOnGivenSet(df, filterset={}):
 	# in case column did not exist yet
 	df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
 
-	df_filtered = df[(df['prob'] > filterset['minThreshold']) &
-		(df['prob'] <= filterset['maxThreshold']) &
-		(df['symbolType'] == 'Call') &
-		(df['daysToExpiration'] < filterset['maxDaysToExp']) &
-		(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
-		(df['daysToExpiration'] > filterset['minDaysToExp']) &
-		(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
+	if type == 'stock':
+		df_filtered = df[(df['prob'] > filterset['minThreshold']) &
+			(df['prob'] <= filterset['maxThreshold']) &
+			(df['symbolType'] == 'Call') &
+			(df['daysToExpiration'] < filterset['maxDaysToExp']) &
+			(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
+			(df['daysToExpiration'] > filterset['minDaysToExp']) &
+			(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
+	elif type == 'option':
+		df_filtered = df[(df['prob'] > filterset['minThreshold']) &
+						 (df['prob'] <= filterset['maxThreshold']) &
+						 (df['symbolType'] == 'Call') &
+						 (df['daysToExpiration'] < filterset['maxDaysToExp']) &
+						 (df['strikePricePerc'] > filterset['minStrikeIncrease']) &
+						 (df['daysToExpiration'] > filterset['minDaysToExp']) &
+						 (df['lastPrice'] < filterset['maxBasePrice'])].copy()
 	return(df_filtered)
 
 def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title='', savefig=False, saveFileName='test.png'):
@@ -40,6 +49,43 @@ def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=
 	if 'profit' not in df_.columns:
 		df_['profit'] = df_['revenue'] - df_['cost']
 	df_filtered = dfFilterOnGivenSet(df_, filterset)
+	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
+	df_profit['cumCost'] = df_profit['cost'].cumsum()
+	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()
+	df_profit['cumProfit'] = df_profit['profit'].cumsum()
+	df_profit['cumProfitPerc'] = df_profit['cumProfit'] / df_profit['cumCost']
+
+	# If plot is True then plot the prob on x axis and cumulative return on investment on y axis
+	if plot:
+		fig = plt.figure()
+		ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+		ax.plot(df_profit['prob'], df_profit['cumProfitPerc'])
+		plot_title = 'Profit per threshold ' + title
+		plt.title(plot_title)
+		plt.xlabel('Predicted probability')
+		plt.ylabel('Profit percentage')
+		plt.show()
+		if savefig:
+			plt.savefig(saveFileName)
+
+	# Return the return on investment
+	cost = df_profit['cost'].sum()
+	revenue = df_profit['revenue'].sum()
+	profit = df_profit['profit'].sum()
+	roi = (revenue - cost) / cost
+	return roi, cost, revenue, profit
+
+def simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice',filterset={'maxBasePrice': 3}, plot=True, title='', savefig=False, saveFileName='profitabilityOptions.png'):
+	df_ = df.copy()
+	if 'optionsBought' not in df_.columns:
+		df_['optionsBought'] = 100 / df_['lastPrice']
+	if 'cost' not in df_.columns:
+		df_['cost'] = df_['optionsBought'] * df_['lastPrice']
+	if 'revenue' not in df_.columns:
+		df_['revenue'] = df_['optionsBought'] * np.where(df_[actualCol] == 1, df_['expOptionPrice'], 0) # TODO putting zero here is harsh
+	if 'profit' not in df_.columns:
+		df_['profit'] = df_['revenue'] - df_['cost']
+	df_filtered = dfFilterOnGivenSet(df_, filterset, type = 'option')
 	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()
 	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()

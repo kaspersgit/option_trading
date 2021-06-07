@@ -6,6 +6,7 @@ Enrich options with stock price data
 
 # import packages
 from dateutil.relativedelta import relativedelta, FR
+from datetime import datetime
 import os
 import sys
 import pandas as pd
@@ -66,12 +67,14 @@ print('Shape of imported data: {}'.format(df.shape))
 # enrich df
 print('Enriching stocks...')
 contracts_prices = getContractPrices(df)
+# Deduplicate
+contracts_prices = contracts_prices.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
 
 # Changed to fit format of contract prices to be able to merge
 df['exportedAt'] = pd.to_datetime(df['exportedAt']).dt.strftime('%Y-%m-%d')
 
 # Put dfs together to have all enriched data
-df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
+df_enr = df.merge(contracts_prices, on=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 print('Enriching stocks...Done')
 
 # Upload enriched table to S3

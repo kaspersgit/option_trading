@@ -135,6 +135,8 @@ features_base = ['strikePrice'
 	, 'volumeOpenInterestRatio'
 	, 'volatility'
 	, 'volume'
+	# to capture end of day price (closer to the price we can buy the stock for)
+	, 'firstPrice'
 	]
 
 features_info = ['strikePrice'

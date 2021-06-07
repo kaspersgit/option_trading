@@ -19,6 +19,7 @@ os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.other.trading_strategies import *
+from option_trading_nonprod.other.options_pricing import *
 from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
@@ -86,6 +87,8 @@ for d in date_list:
 	exist, key = get_s3_key(s3_client, bucket, possible_key)
 	if exist:
 		break
+	if (d==date_list[-1]) & not exist:
+		print("No expiration date found")
 
 # print status of variables
 print('Model : {}'.format(modelname))
@@ -304,6 +307,19 @@ plt.show()
 fig.savefig("scheduled_jobs/summary_content/scatter_maxProfitability.png")
 
 print('Created and saved scatter plot (expected vs max profitability')
+############################## option pricing  (try out)
+df['expOptionPrice'] = getBSCallPriceWrapper(df, Scol = 'strikePrice', Kcol = 'strikePrice'
+											 , eventDateCol = 'strikePriceDate', expirationDateCol = 'expirationDate'
+											 , sigmaCol = 'volatility', riskFree = 0.01)
+hprob_config_option = {'optionType': 'Call',
+					   'maxBasePrice': 3,
+					   'maxDaysToExp': 20,
+					   'minDaysToExp': 5,
+					   'minStrikeIncrease': 1.05,
+					   'maxStrikeIncrease': 10,
+					   'minThreshold': 0.6,
+					   'maxThreshold': 1.0}
+roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachStrikePrice', filterset=hprob_config_option, plot=True)
 ##############################
 
 # confusion matrix

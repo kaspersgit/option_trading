@@ -79,12 +79,15 @@ for col in int_cols:
 # Filter df
 # on only short time to expiration
 minDaysToExp = 3
-maxDaysToExp = 60
+maxDaysToExp = 20
 df = limitDaysToExpiration(df, min=minDaysToExp, max=maxDaysToExp)
 print("After filtering on having days to expiration between {} and {} \nThe left over data shape: {}".format(minDaysToExp, maxDaysToExp, df.shape))
 
 # Get min max first and last price
-contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', type='minmax')
+contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', strikePrice='strikePrice', type='minmax')
+
+# deduplicate
+contracts_prices=contracts_prices.drop_duplicates(subset=['baseSymbol','strikePrice','expirationDate','exportedAt'], keep='first')
 
 # incase it goes wrong somewhere, start from close to that row
 # df_last_few = df.drop_duplicates(subset=['baseSymbol'], keep='first')
@@ -104,7 +107,7 @@ contracts_prices['exportedAt'] = pd.to_datetime(contracts_prices['exportedAt']).
 contracts_prices['expirationDate'] = pd.to_datetime(contracts_prices['expirationDate']).dt.strftime('%Y-%m-%d')
 
 # Put dfs together
-df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt'])
+df_enr = df.merge(contracts_prices, on=['baseSymbol','expirationDate','exportedAt','strikePrice'])
 # df_enr = df_enr.merge(indicators_df, on=['baseSymbol','exportedAt'])
 
 today = datetime.today().strftime('%Y-%m-%d')

@@ -10,7 +10,7 @@ if platform.system() == 'Darwin':
 	import yahooquery as yq
 
 
-def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationDate', type='minmax', use_package='yf'):
+def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationDate', strikePrice='strikePrice', type='minmax', use_package='yf'):
 	"""
 	For each unique ticker (column name 'baseSymbol') it will extract the
 	daily stock prices between export date and expiration date. Of this time series
@@ -94,13 +94,13 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		stock_df = stock_df[stock_df.index >= minDates_org[t]]
 		stock_df = stock_df[stock_df.index <= maxDates_org[t]]
 
-		contracts = df_[df_['baseSymbol'] == baseSymbols[t]][['baseSymbol', startDateCol, endDateCol]]
+		contracts = df_[df_['baseSymbol'] == baseSymbols[t]][['baseSymbol','symbolType', strikePrice, startDateCol, endDateCol]]
 		contracts.drop_duplicates(inplace=True)
 
 		if type == 'minmax':
 			df_minmax = pd.DataFrame(columns=['baseSymbol', 'exportedAt', 'expirationDate', 'minPrice', 'maxPrice',
 											  'finalPrice', 'firstPrice', 'minPriceDate', 'maxPriceDate',
-											  'finalPriceDate', 'firstPriceDate'])
+											  'finalPriceDate', 'firstPriceDate', 'strikePriceDate'])
 			# For every different option contract get the prices
 			for _index, contract_row in contracts.iterrows():
 				wanted_timeserie = stock_df[contract_row[startDateCol]:contract_row[endDateCol]]
@@ -110,16 +110,24 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 					continue
 
 				minPrice, maxPrice, finalPrice, firstPrice, minPriceDate, maxPriceDate, finalPriceDate, firstPriceDate = getMinMaxLastFirst(
-					wanted_timeserie)
-				info_dict = {'baseSymbol': contract_row['baseSymbol'], startDateCol: contract_row[startDateCol], endDateCol:contract_row[endDateCol],
+					wanted_timeserie
+				)
+				strikePriceDate = getStrikeReachedDate(
+					wanted_timeserie,
+					strikePrice=contract_row['strikePrice'],
+					symbolType=contract_row['symbolType']
+				)
+				info_dict = {'baseSymbol': contract_row['baseSymbol'], 'symbolType': contract_row['symbolType'],
+							 startDateCol: contract_row[startDateCol], endDateCol:contract_row[endDateCol],
 							 'minPrice': minPrice, 'maxPrice': maxPrice, 'finalPrice': finalPrice, 'firstPrice': firstPrice,
-							 'minPriceDate': minPriceDate, 'maxPriceDate': maxPriceDate, 'finalPriceDate': finalPriceDate, 'firstPriceDate': firstPriceDate}
+							 'minPriceDate': minPriceDate, 'maxPriceDate': maxPriceDate, 'finalPriceDate': finalPriceDate,
+							 'firstPriceDate': firstPriceDate, 'strikePriceDate': strikePriceDate}
 
 				df_minmax = df_minmax.append(info_dict, ignore_index=True)
 
 			# Merge extracted prices with contracts table
 			contracts = contracts.merge(df_minmax, how='left',
-									left_on=['baseSymbol', startDateCol, endDateCol], right_on=['baseSymbol', startDateCol, endDateCol])
+									left_on=['baseSymbol', 'symbolType', startDateCol, endDateCol], right_on=['baseSymbol', 'symbolType', startDateCol, endDateCol])
 
 		if type == 'indicators':
 			# Add technical indicators
@@ -184,7 +192,8 @@ def getMinMaxLastFirst(stock_df):
 	 get the minimum, maximum, last and first price of the stock
 
 	:param stock_df: pandas dataframe with only Date as index
-	:return: Lowest, highest, last and first price in period together with corresponding dates
+	:return: Lowest, highest, last and first price in period together with corresponding dates and the date
+		on which the strike price is reached first
 	"""
 	# make sure df is ordered on time
 	minPrice = stock_df['Low'][1::].min()
@@ -199,6 +208,20 @@ def getMinMaxLastFirst(stock_df):
 
 	return (minPrice, maxPrice, finalPrice, firstPrice, minPriceDate, maxPriceDate, finalPriceDate, firstPriceDate)
 
+def getStrikeReachedDate(stock_df, strikePrice, symbolType='Call'):
+	if symbolType == 'Call':
+		# get first date on which call strike price has been reached
+		reachedStrike_df = stock_df[1::][stock_df['High'][1::] >= strikePrice]
+	elif symbolType == 'Put':
+		# get first date on which call strike price has been reached
+		reachedStrike_df = stock_df[1::][stock_df['Low'][1::] <= strikePrice]
+
+	if len(reachedStrike_df) > 0:
+		strikePriceDate = reachedStrike_df.index[0]
+	else:
+		strikePriceDate = None
+
+	return strikePriceDate
 
 def limitDaysToExpiration(df, min=15, max=25):
 	df = df[(df['daysToExpiration'] > min) & (df['daysToExpiration'] < max)]
