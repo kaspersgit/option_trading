@@ -82,12 +82,13 @@ date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in ran
 # check which what expiration date(s) are present
 s3_client = connect_to_s3(s3_profile, type="client")
 
+# For all dates try search for filename containing it
 for d in date_list:
 	possible_key = 'enriched_data/barchart/expired_on_{}.csv'.format(d)
 	exist, key = get_s3_key(s3_client, bucket, possible_key)
 	if exist:
 		break
-	if (d==date_list[-1]) & not exist:
+	if (d==date_list[-1]) & (not exist):
 		print("No expiration date found")
 
 # print status of variables
