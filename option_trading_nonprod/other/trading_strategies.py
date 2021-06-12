@@ -77,6 +77,8 @@ def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=
 
 def simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice',filterset={'maxBasePrice': 3}, plot=True, title='- option strategy', savefig=False, saveFileName='profitabilityOptions.png'):
 	df_ = df.copy()
+	# TODO make sure all have an estimated option price
+	df_ = df_[~df_['expOptionPrice'].isnull()]
 	if 'optionsBought' not in df_.columns:
 		df_['optionsBought'] = 100 / df_['lastPrice']
 	if 'optionCost' not in df_.columns:

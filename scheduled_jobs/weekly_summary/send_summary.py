@@ -312,6 +312,7 @@ print('Created and saved scatter plot (expected vs max profitability')
 df['expOptionPrice'] = getBSCallPriceWrapper(df, Scol = 'strikePrice', Kcol = 'strikePrice'
 											 , eventDateCol = 'strikePriceDate', expirationDateCol = 'expirationDate'
 											 , sigmaCol = 'volatility', riskFree = 0.01)
+df['expOptionPrice'].fillna(0, inplace=True)
 hprob_config_option = {'optionType': 'Call',
 					   'maxBasePrice': 3,
 					   'maxDaysToExp': 20,
@@ -426,9 +427,7 @@ html_content = """
 	High profitability: {}
 	<br><br>
 	<hr>
-
-	<br><br>
-	<hr>
+	
 	<h3>Profitability by trading options</h3>
 	<br>
 	<small>
