@@ -75,21 +75,21 @@ def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=
 	roi = (revenue - cost) / cost
 	return roi, cost, revenue, profit
 
-def simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice',filterset={'maxBasePrice': 3}, plot=True, title='', savefig=False, saveFileName='profitabilityOptions.png'):
+def simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice',filterset={'maxBasePrice': 3}, plot=True, title='- option strategy', savefig=False, saveFileName='profitabilityOptions.png'):
 	df_ = df.copy()
 	if 'optionsBought' not in df_.columns:
 		df_['optionsBought'] = 100 / df_['lastPrice']
-	if 'cost' not in df_.columns:
-		df_['cost'] = df_['optionsBought'] * df_['lastPrice']
-	if 'revenue' not in df_.columns:
-		df_['revenue'] = df_['optionsBought'] * np.where(df_[actualCol] == 1, df_['expOptionPrice'], 0) # TODO putting zero here is harsh
-	if 'profit' not in df_.columns:
-		df_['profit'] = df_['revenue'] - df_['cost']
+	if 'optionCost' not in df_.columns:
+		df_['optionCost'] = df_['optionsBought'] * df_['lastPrice']
+	if 'optionRevenue' not in df_.columns:
+		df_['optionRevenue'] = df_['optionsBought'] * np.where(df_[actualCol] == 1, df_['expOptionPrice'], 0) # TODO putting zero here is harsh
+	if 'optionProfit' not in df_.columns:
+		df_['optionProfit'] = df_['optionRevenue'] - df_['optionCost']
 	df_filtered = dfFilterOnGivenSet(df_, filterset, type = 'option')
-	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
-	df_profit['cumCost'] = df_profit['cost'].cumsum()
-	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()
-	df_profit['cumProfit'] = df_profit['profit'].cumsum()
+	df_profit = df_filtered[['prob','optionCost','optionRevenue','optionProfit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
+	df_profit['cumCost'] = df_profit['optionCost'].cumsum()
+	df_profit['cumRevenue'] = df_profit['optionRevenue'].cumsum()
+	df_profit['cumProfit'] = df_profit['optionProfit'].cumsum()
 	df_profit['cumProfitPerc'] = df_profit['cumProfit'] / df_profit['cumCost']
 
 	# If plot is True then plot the prob on x axis and cumulative return on investment on y axis
@@ -106,8 +106,8 @@ def simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice',filterset=
 			plt.savefig(saveFileName)
 
 	# Return the return on investment
-	cost = df_profit['cost'].sum()
-	revenue = df_profit['revenue'].sum()
-	profit = df_profit['profit'].sum()
+	cost = df_profit['optionCost'].sum()
+	revenue = df_profit['optionRevenue'].sum()
+	profit = df_profit['optionProfit'].sum()
 	roi = (revenue - cost) / cost
 	return roi, cost, revenue, profit

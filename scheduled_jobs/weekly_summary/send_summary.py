@@ -320,7 +320,7 @@ hprob_config_option = {'optionType': 'Call',
 					   'maxStrikeIncrease': 10,
 					   'minThreshold': 0.6,
 					   'maxThreshold': 1.0}
-roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachStrikePrice', filterset=hprob_config_option, plot=True)
+roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice', filterset=hprob_config_option, title='- option strategy', plot=True, savefig=True, saveFileName='profitabilityOptions.png')
 ##############################
 
 # confusion matrix
@@ -426,6 +426,24 @@ html_content = """
 	High profitability: {}
 	<br><br>
 	<hr>
+
+	<br><br>
+	<hr>
+	<h3>Profitability by trading options</h3>
+	<br>
+	<small>
+	Buying the option based on email, selling the option when strike price is reached
+	</small>
+	<br>
+	Return on investment (ROI):
+	<br>
+	High probability: {}
+	<br>
+	Threshold dependent profit
+	<br>
+	<br><img src="cid:image6"><br>
+	<br><br>
+	<hr>
 	
 	<h3>Plotting profitability</h3>
 	<br>
@@ -435,7 +453,7 @@ html_content = """
 	<br>
 	Actual:	(strike price (if reached) or stock price on expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image6"><br>
+	<br><img src="cid:image7"><br>
 	
 	Plotting expected profitability vs max profitability
 	<small> 
@@ -443,7 +461,7 @@ html_content = """
 	<br>
 	Max:	(max price before expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image7"><br>
+	<br><img src="cid:image8"><br>
 	
 
 	
@@ -456,7 +474,8 @@ html_content = """
 		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
 		   , round(len(ReachedStrike)/len(df),3)
 		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
-		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3))
+		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3)
+		   , round(roi_option,3))
 
 if add_attachment:
 	attachment = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
@@ -476,8 +495,8 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/strikePerBins.png','scheduled_jobs/summary_content/pr-threshold.png' ,
-							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/scatter_profitability.png',
-							   'scheduled_jobs/summary_content/scatter_maxProfitability.png']
+							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/profitabilityOptions.png',
+							   'scheduled_jobs/summary_content/scatter_profitability.png', 'scheduled_jobs/summary_content/scatter_maxProfitability.png']
 			  , attachment=attachment
 )
 
