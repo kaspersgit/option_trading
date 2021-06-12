@@ -320,7 +320,7 @@ hprob_config_option = {'optionType': 'Call',
 					   'maxStrikeIncrease': 10,
 					   'minThreshold': 0.6,
 					   'maxThreshold': 1.0}
-roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice', filterset=hprob_config_option, title='- option strategy', plot=True, savefig=True, saveFileName='profitabilityOptions.png')
+roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice', filterset=hprob_config_option, title='- option strategy', plot=True, savefig=True, saveFileName='scheduled_jobs/summary_content/profitabilityOptions.png')
 ##############################
 
 # confusion matrix
