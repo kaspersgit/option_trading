@@ -7,8 +7,7 @@ Enrich options with stock price data
 # import packages
 from dateutil.relativedelta import relativedelta, FR
 from datetime import datetime
-import os
-import sys
+import os, sys, platform
 import pandas as pd
 
 os.chdir("/home/pi/Documents/python_scripts/option_trading")
@@ -34,7 +33,7 @@ else:
 bucket = 'project-option-trading'
 
 # Get all dates from last friday until saturday previous
-numdays = 7
+numdays = 5
 date_list = [(last_friday - timedelta(days=x)).strftime('%Y-%m-%d') for x in range(numdays)]
 
 # check which what expiration date(s) are present
@@ -42,8 +41,10 @@ s3_client = connect_to_s3(s3_profile, type="client")
 
 for d in date_list:
 	possible_key = 'on_expiry_date/expires_{}/'.format(d)
-	exist, key = get_s3_key(s3_client, bucket, possible_key)
-	if exist:
+
+	key = None
+	key = get_matching_s3_objects(s3_client, bucket, prefix=possible_key)
+	if key is not None:
 		break
 
 # Set source and target for bucket and keys
