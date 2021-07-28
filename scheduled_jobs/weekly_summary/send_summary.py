@@ -20,6 +20,7 @@ os.chdir("/home/pi/Documents/python_scripts/option_trading")
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.other.trading_strategies import *
 from option_trading_nonprod.other.options_pricing import *
+from option_trading_nonprod.other.specific_plots import *
 from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
@@ -233,81 +234,13 @@ high_prof_df = dfFilterOnGivenSet(df, hprof_config)
 
 ####################################
 # Create bar plots showing share of successes per strike price increase bucket
-all_strikeIncreaseBin = df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
-all_binPercentage = all_strikeIncreaseBin.groupby(level=0).apply(lambda x:
-												 100 * x / float(x.sum())).reset_index(drop=False)
+GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=True, saveFileName="scheduled_jobs/summary_content/strikePerBins.png")
 
-hprob_strikeIncreaseBin = high_prob_df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
-hprob_binPercentage = hprob_strikeIncreaseBin.groupby(level=0).apply(lambda x:
-																 100 * x / float(x.sum())).reset_index(drop=False)
-
-hprof_strikeIncreaseBin = high_prof_df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
-hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
-																 100 * x / float(x.sum())).reset_index(drop=False)
-
-
-fig, axs = plt.subplots(1, 3, figsize=(12, 5), sharey=True)
-# All contracts
-axs[0].bar(all_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-if len(all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
-	axs[0].bar(all_binPercentage['strikePricePercBin'].unique(), all_binPercentage[all_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
-axs[0].tick_params('x', labelrotation=45)
-axs[0].title.set_text('All Calls')
-axs[0].set_ylabel('Fraction reaching strike price')
-
-# high probability contracts
-axs[1].bar(hprob_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-if len(hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
-	axs[1].bar(hprob_binPercentage['strikePricePercBin'].unique(), hprob_binPercentage[hprob_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
-axs[1].tick_params('x', labelrotation=45)
-axs[1].title.set_text('High probability')
-axs[1].set_xlabel("Strike price increase with respect to stock price")
-
-# high probability contracts
-axs[2].bar(hprof_binPercentage.dropna()['strikePricePercBin'].unique(), 100, color='red')
-if len(hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol']) > 0:
-	axs[2].bar(hprof_binPercentage['strikePricePercBin'].unique(), hprof_binPercentage[hprof_binPercentage['reachedStrikePrice']==1]['baseSymbol'], color='green')
-axs[2].tick_params('x', labelrotation=45)
-axs[2].title.set_text('High profitability')
-
-fig.tight_layout(rect=[0,0,0.9,0.9])
-fig.savefig("scheduled_jobs/summary_content/strikePerBins.png")
 
 #################################### Unsure
-# Create scatter plot (strike price progress vs predicted probability)
-# rows not appearing in any of the email tables
-not_email_df = df[(~df.index.isin(high_prob_df.index)) & (~df.index.isin(high_prof_df.index))]
+ExpvsActualProfitabilityScatter(df,high_prob_df, high_prof_df, actualCol='profitPerc',  savefig=True, saveFileName="scheduled_jobs/summary_content/scatter_profitability.png")
+ExpvsActualProfitabilityScatter(df,high_prob_df, high_prof_df, actualCol='maxProfitability',  savefig=True, saveFileName="scheduled_jobs/summary_content/scatter_maxProfitability.png")
 
-fig = plt.figure()
-# cm = plt.cm.get_cmap('Blues')
-ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(not_email_df['profitPerc'], not_email_df['expPercIncrease'], s=7, color='r', alpha=0.7, label='Not in email')
-ax.scatter(high_prob_df['profitPerc'], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
-ax.scatter(high_prof_df['profitPerc'], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
-ax.legend(loc="upper left")
-ax.set_xlabel('Actual profit')
-ax.set_ylabel('Expected profit')
-ax.set_title('Expected vs actual profitability')
-plt.show()
-fig.savefig("scheduled_jobs/summary_content/scatter_profitability.png")
-
-print('Created and saved scatter plot (expected vs actual profitability')
-
-fig = plt.figure()
-# cm = plt.cm.get_cmap('Blues')
-ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(not_email_df['maxProfitability'], not_email_df['expPercIncrease'], s=7, color='r', alpha=0.7, label='Not in email')
-ax.scatter(high_prof_df['maxProfitability'], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
-ax.scatter(high_prob_df['maxProfitability'], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
-ax.legend(loc="upper right")
-ax.set_xlim(xmax=3)
-ax.set_xlabel('Max profit')
-ax.set_ylabel('Expected profit')
-ax.set_title('Expected vs max profitability')
-plt.show()
-fig.savefig("scheduled_jobs/summary_content/scatter_maxProfitability.png")
-
-print('Created and saved scatter plot (expected vs max profitability')
 ############################## option pricing  (try out)
 df['expOptionPrice'] = getBSCallPriceWrapper(df, Scol = 'strikePrice', Kcol = 'strikePrice'
 											 , eventDateCol = 'strikePriceDate', expirationDateCol = 'expirationDate'

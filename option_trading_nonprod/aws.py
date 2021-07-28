@@ -47,6 +47,9 @@ def get_matching_s3_objects(s3_con, bucket, prefix="", suffix=""):
         this prefix (optional).
     :param suffix: Only fetch objects whose keys end with
         this suffix (optional).
+
+    # thanks to
+    # https://alexwlchan.net/2019/07/listing-s3-keys/
     """
     paginator = s3_con.get_paginator("list_objects_v2")
 
