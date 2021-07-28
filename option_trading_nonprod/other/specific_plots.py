@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False, saveFileName='test.png'):
 
 	df_=df.copy()
