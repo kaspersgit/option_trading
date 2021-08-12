@@ -315,26 +315,26 @@ html_content = f"""
 
 	<h3> Graphs for visual interpretation</h3>
 	Plotting all options based on their profitability and probability
-	<br><img src="cid:image1"><br>
+	<br><img src="cid:image1"><br><br>
 
 	Plot of the calibration curve to see if the probabilities made sense
-	<br><img src="cid:image2"><br>
+	<br><img src="cid:image2"><br><br>
 
 	Plot of the share of options which reached their strike price
-	<br><img src="cid:image3"><br>
+	<br><img src="cid:image3"><br><br>
 	
 	Histogram on the nr of days until strike price is reached
-	<br><img src="cid:image4"><br>
+	<br><img src="cid:image4"><br><br>
 	
 	Plot of the precision and recall versus the threshold.
 	<br>
 	<small>
 	Precision is the share of predicted options actually reaching the strike price
 	</small>
-	<br><img src="cid:image5"><br>
+	<br><img src="cid:image5"><br><br>
 	
 	Plotting the ROC, which gives an idea on how well the model performs
-	<br><img src="cid:image6"><br>
+	<br><img src="cid:image6"><br><br>
 
 	<br><br>
 	<hr>

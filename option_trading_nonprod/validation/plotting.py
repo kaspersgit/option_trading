@@ -37,7 +37,7 @@ def plotHistogramPlotly(df, col, titles = {'title':'Histogram', 'xlabel':'Value'
                        )
     if savefig:
         fig.write_image(saveFileName)
-    fig.show()
+        print(f'Created and saved histogram of days until strike')
 
 def plotMultipleLines(df, xcol = 'week_start', ycol = 'reachedStrikePrice', groupcol = 'strikePriceIncreaseBin'):
     df_grouped = df[[xcol,groupcol,ycol]].groupby([xcol,groupcol]).agg({ycol:['sum', 'count']})
