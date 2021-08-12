@@ -201,6 +201,11 @@ roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingSt
 # High profitability
 roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, actualCol = 'reachStrikePrice', filterset=hprof_config, plot=False)
 
+
+####################
+# PLOTS GENERATION #
+####################
+
 print('Start creating plots')
 
 # scatter plot (strike percentage increase against predicted probability)
@@ -236,35 +241,19 @@ high_prof_df = dfFilterOnGivenSet(df, hprof_config)
 # Create bar plots showing share of successes per strike price increase bucket
 GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=True, saveFileName="scheduled_jobs/summary_content/strikePerBins.png")
 
-
-#################################### Unsure
+##### Profitability
+# Plot on expected profit when selling on strike (if reached)
 ExpvsActualProfitabilityScatter(df,high_prob_df, high_prof_df, actualCol='profitPerc',  savefig=True, saveFileName="scheduled_jobs/summary_content/scatter_profitability.png")
+# Plot on maximum profit if sold at max reached price
 ExpvsActualProfitabilityScatter(df,high_prob_df, high_prof_df, actualCol='maxProfitability',  savefig=True, saveFileName="scheduled_jobs/summary_content/scatter_maxProfitability.png")
 
-############################## option pricing  (try out)
-df['expOptionPrice'] = getBSCallPriceWrapper(df, Scol = 'strikePrice', Kcol = 'strikePrice'
-											 , eventDateCol = 'strikePriceDate', expirationDateCol = 'expirationDate'
-											 , sigmaCol = 'volatility', riskFree = 0.01)
-df['expOptionPrice'].fillna(0, inplace=True)
-hprob_config_option = {'optionType': 'Call',
-					   'maxBasePrice': 3,
-					   'maxDaysToExp': 20,
-					   'minDaysToExp': 5,
-					   'minStrikeIncrease': 1.05,
-					   'maxStrikeIncrease': 10,
-					   'minThreshold': 0.6,
-					   'maxThreshold': 1.0}
-roi_option, cost_option, revenue_option, profit_option = simpleTradingStrategyOptions(df, actualCol = 'reachedStrikePrice', filterset=hprob_config_option, title='- option strategy', plot=True, savefig=True, saveFileName='scheduled_jobs/summary_content/profitabilityOptions.png')
-##############################
-
-# confusion matrix
+##### Model performance
 # calibration curve
 plotCalibrationCurve(df['reachedStrikePrice'], df['prob'], title='', bins=10, savefig=True,
 					 saveFileName='scheduled_jobs/summary_content/CalibCurve.png')
 
 print('Created and saved calibration plot')
 
-# model performance
 # precision threshold plot
 plotThresholdMetrics(df['prob'], df['reachedStrikePrice'], savefig=True,
 					 saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
@@ -361,22 +350,6 @@ html_content = """
 	<br><br>
 	<hr>
 	
-	<h3>Profitability by trading options</h3>
-	<br>
-	<small>
-	Buying the option based on email, selling the option when strike price is reached
-	</small>
-	<br>
-	Return on investment (ROI):
-	<br>
-	High probability: {}
-	<br>
-	Threshold dependent profit
-	<br>
-	<br><img src="cid:image6"><br>
-	<br><br>
-	<hr>
-	
 	<h3>Plotting profitability</h3>
 	<br>
 	Expected profitability vs actual profitability
@@ -385,7 +358,7 @@ html_content = """
 	<br>
 	Actual:	(strike price (if reached) or stock price on expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image7"><br>
+	<br><img src="cid:image6"><br>
 	
 	Plotting expected profitability vs max profitability
 	<small> 
@@ -393,7 +366,7 @@ html_content = """
 	<br>
 	Max:	(max price before expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image8"><br>
+	<br><img src="cid:image7"><br>
 	
 
 	
@@ -427,7 +400,7 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
 							   'scheduled_jobs/summary_content/strikePerBins.png','scheduled_jobs/summary_content/pr-threshold.png' ,
-							   'scheduled_jobs/summary_content/roc.png', 'scheduled_jobs/summary_content/profitabilityOptions.png',
+							   'scheduled_jobs/summary_content/roc.png',
 							   'scheduled_jobs/summary_content/scatter_profitability.png', 'scheduled_jobs/summary_content/scatter_maxProfitability.png']
 			  , attachment=attachment
 )

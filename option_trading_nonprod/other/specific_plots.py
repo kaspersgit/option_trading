@@ -67,4 +67,4 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, sa
 	if savefig:
 		fig.savefig(saveFileName)
 
-	print(f'Created and saved scatter plot ({typeOfActual} vs actual profitability)')
+	print(f'Created and saved scatter plot (expected vs {typeOfActual} profitability)')
