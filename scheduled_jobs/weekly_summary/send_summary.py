@@ -15,16 +15,21 @@ import os, sys, platform
 import pickle
 import json
 
-os.chdir("/home/pi/Documents/python_scripts/option_trading")
-
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.other.trading_strategies import *
 from option_trading_nonprod.other.specific_plots import *
 from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
 from option_trading_nonprod.validation.classification import *
+from option_trading_nonprod.validation.plotting import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
+# Check if run locally (macbook) or not
+if platform.system() == 'Darwin':
+	modelname = 'DEV_c_GB64_v1x3'
+else:
+	os.chdir("/home/pi/Documents/python_scripts/option_trading")
+	modelname = sys.argv[1]
 
 # Get supplied system arguments
 # mode (development or production)
@@ -61,10 +66,6 @@ print('Mode: {}'.format(mode))
 print('Emaillist: {}'.format(emaillist))
 
 # Get model which should be used
-if platform.system() == 'Darwin':
-	modelname = 'DEV_c_GB64_v1x3'
-else:
-	modelname = sys.argv[1]
 modelname = modelname.split('.')[0]
 
 # import data
@@ -150,7 +151,7 @@ prob = model.predict_proba(df[features])[:, 1]
 
 print('Loaded model and scored options')
 
-####### Adding columns #############
+####### Adding columns and variables #############
 # Make high level summary
 # Add target variable
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
@@ -174,8 +175,9 @@ df['cost'] = df['stocksBought'] * df['baseLastPrice']
 df['revenue'] = df['stocksBought'] * np.where(df['reachedStrikePrice'] == 1, df['strikePrice'], df['finalPrice'])
 df['profit'] = df['revenue'] - df['cost']
 df['profitPerc'] = df['profit'] / df['cost']
-################################################
 
+
+################################################
 # Basic summary
 # Get top performing stocks (included/not included in email)
 biggest_increase_df = df.sort_values('maxProfitability', ascending=False)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability']].drop_duplicates(subset=['baseSymbol']).head(5)
@@ -183,7 +185,6 @@ biggest_increase_df.reset_index(drop=True, inplace=True)
 
 biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[['baseSymbol','exportedAt','baseLastPrice','maxPrice','maxPriceDate','maxProfitability']].drop_duplicates(subset=['baseSymbol']).head(5)
 biggest_decrease_df.reset_index(drop=True, inplace=True)
-
 
 # basic performance
 # accuracy (split per days to expiration)
@@ -201,31 +202,16 @@ roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingSt
 roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingStrategy(df, actualCol = 'reachStrikePrice', filterset=hprof_config, plot=False)
 
 
+
 ####################
 # PLOTS GENERATION #
 ####################
 
-print('Start creating plots')
-
-# scatter plot (strike percentage increase against predicted probability)
+## pre plot variable and dftransformations
+# Subset total df into ones reaching strike and those not
 ReachedStrike = df[df['reachedStrikePrice'] == 1]
 notReachedStrike = df[df['reachedStrikePrice'] == 0]
 
-fig = plt.figure()
-ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
-ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 4, color='g', alpha=0.7, label='Did reach strike')
-ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], s = 4, color='r', alpha=0.7,
-		   label='Not reached strike')
-ax.legend(loc="upper right")
-ax.set_xlabel('Strike price increase')
-ax.set_ylabel('Predicted probability')
-ax.set_title('All Call options plotted')
-plt.show()
-fig.savefig("scheduled_jobs/summary_content/scatter.png")
-
-print('Created and saved scatter plot (percentage increase vs predicted probability')
-
-## Extra df transformations for plots below
 # Bucket strike price increase
 bins = [-np.inf, 1.1, 1.15, 1.20, 1.25, 1.3, 1.4, 1.5, np.inf]
 labels = ['5%-10%', '10%-15%', '15%-20%', '20%-25%', '25%-30%', '30%-40%', '40%-50%', '>50%']
@@ -236,9 +222,24 @@ df['strikePricePercBin'] = pd.cut(df['strikePricePerc'], bins=bins, labels=label
 high_prob_df = dfFilterOnGivenSet(df, hprob_config)
 high_prof_df = dfFilterOnGivenSet(df, hprof_config)
 
-####################################
+# Get time duration from extraction to reaching strike price
+df = AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate')
+
+
+
+print('Start creating plots')
+
+##### General outcome
+# scatter plot (strike percentage increase against predicted probability)
+PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, savefig=True, saveFileName="scheduled_jobs/summary_content/scatter.png")
+
+print('Created and saved scatter plot (percentage increase vs predicted probability')
+
 # Create bar plots showing share of successes per strike price increase bucket
 GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=True, saveFileName="scheduled_jobs/summary_content/strikePerBins.png")
+
+# Nr of days until options reach their strike price
+plotHistogramPlotly(df, col='duration', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction'}, savefig=True, saveFileName="scheduled_jobs/summary_content/daysToReachStrike.png")
 
 ##### Profitability
 # Plot on expected profit when selling on strike (if reached)
@@ -269,6 +270,10 @@ auc_pr = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='pr',
 					   saveFileName='scheduled_jobs/summary_content/pr.png')
 
 print('Created and saved Precision Recall plot')
+
+###########################
+# Composing email #
+###########################
 
 print('Composing email...')
 # Send email
@@ -318,15 +323,18 @@ html_content = f"""
 	Plot of the share of options which reached their strike price
 	<br><img src="cid:image3"><br>
 	
+	Histogram on the nr of days until strike price is reached
+	<br><img src="cid:image4"><br>
+	
 	Plot of the precision and recall versus the threshold.
 	<br>
 	<small>
 	Precision is the share of predicted options actually reaching the strike price
 	</small>
-	<br><img src="cid:image4"><br>
+	<br><img src="cid:image5"><br>
 	
 	Plotting the ROC, which gives an idea on how well the model performs
-	<br><img src="cid:image5"><br>
+	<br><img src="cid:image6"><br>
 
 	<br><br>
 	<hr>
@@ -357,7 +365,7 @@ html_content = f"""
 	<br>
 	Actual:	(strike price (if reached) or stock price on expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image6"><br>
+	<br><img src="cid:image7"><br>
 	
 	Plotting expected profitability vs max profitability
 	<small> 
@@ -365,7 +373,7 @@ html_content = f"""
 	<br>
 	Max:	(max price before expiration minus stock price) / stock price
 	</small>
-	<br><img src="cid:image7"><br>
+	<br><img src="cid:image8"><br>
 	
 
 	
@@ -389,7 +397,8 @@ sendRichEmail(sender='k.sends.python@gmail.com'
 			  , subject='Performance report expiry date {}'.format(d)
 			  , content=html_content
 			  , inline_images=['scheduled_jobs/summary_content/scatter.png', 'scheduled_jobs/summary_content/CalibCurve.png',
-							   'scheduled_jobs/summary_content/strikePerBins.png','scheduled_jobs/summary_content/pr-threshold.png' ,
+							   'scheduled_jobs/summary_content/strikePerBins.png', "scheduled_jobs/summary_content/daysToReachStrike.png",
+							   'scheduled_jobs/summary_content/pr-threshold.png' ,
 							   'scheduled_jobs/summary_content/roc.png',
 							   'scheduled_jobs/summary_content/scatter_profitability.png', 'scheduled_jobs/summary_content/scatter_maxProfitability.png']
 			  , attachment=attachment

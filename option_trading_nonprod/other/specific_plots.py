@@ -1,5 +1,20 @@
 import matplotlib.pyplot as plt
 
+def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, savefig=False, saveFileName='test.png'):
+	fig = plt.figure()
+	ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+	ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 4, color='g', alpha=0.7, label='Did reach strike')
+	ax.scatter(notReachedStrike['strikePricePerc'], notReachedStrike['prob'], s = 4, color='r', alpha=0.7,
+			   label='Not reached strike')
+	ax.legend(loc="upper right")
+	ax.set_xlabel('Strike price increase')
+	ax.set_ylabel('Predicted probability')
+	ax.set_title('All Call options plotted')
+	plt.show()
+	if savefig:
+		fig.savefig(saveFileName)
+		print(f'Created and saved scatter plot of strike price increase vs predicted probability')
+
 def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False, saveFileName='test.png'):
 
 	df_=df.copy()
@@ -45,6 +60,7 @@ def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False
 	fig.tight_layout(rect=[0,0,0.9,0.9])
 	if savefig:
 		fig.savefig(saveFileName)
+		print(f'Created and saved bar plot of success ratio all options vs selected options')
 
 def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, savefig=False, saveFileName='test.png'):
 	typeOfActual = 'Max' if actualCol.startswith('max') else 'Expected'
@@ -66,5 +82,4 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, sa
 	plt.show()
 	if savefig:
 		fig.savefig(saveFileName)
-
-	print(f'Created and saved scatter plot (expected vs {typeOfActual} profitability)')
+		print(f'Created and saved scatter plot (expected vs {typeOfActual} profitability)')
