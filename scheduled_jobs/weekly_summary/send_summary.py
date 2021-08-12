@@ -19,7 +19,6 @@ os.chdir("/home/pi/Documents/python_scripts/option_trading")
 
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.other.trading_strategies import *
-from option_trading_nonprod.other.options_pricing import *
 from option_trading_nonprod.other.specific_plots import *
 from option_trading_nonprod.utilities.email import *
 from option_trading_nonprod.validation.calibration import *
@@ -276,36 +275,36 @@ print('Composing email...')
 # recipient
 # lay out and content
 # attachment (the csv file)
-html_content = """
+html_content = f"""
 <html>
   <head></head>
   <body>
-	A summary of the call options expired last {} and the model's performance.
+	A summary of the call options expired last {datetime.strptime(d,'%Y-%m-%d').strftime('%A')} and the model's performance.
 	<br>
-	Showing only options of type: {}
+	Showing only options of type: {hprob_config['optionType']}
 	<br>
-	With minimal price increase between: {} and {}
+	With minimal price increase between: {hprob_config['minStrikeIncrease']} and {hprob_config['maxStrikeIncrease']}
 	<br>
-	Days to expiration between: {} and {}
+	Days to expiration between: {hprob_config['minDaysToExp']} and {hprob_config['maxDaysToExp']}
 	<br>
-	Maximum stock price of {}$
+	Maximum stock price of {hprob_config['maxBasePrice']}$
 	<br>
-	Model used: {}
+	Model used: {modelname}
 	<br><br>
-	Total number of options (unique tickers): {} ({})
+	Total number of options (unique tickers): {len(df)} ({df['baseSymbol'].nunique()})
 	<br>
-	Options reaching strike (unique tickers): {} ({})
+	Options reaching strike (unique tickers): {len(ReachedStrike)} ({ReachedStrike['baseSymbol'].nunique()})
 	<br>
-	Share of options reaching strike: {}
+	Share of options reaching strike: {round(len(ReachedStrike)/len(df),3)}
 	<br><br>
 	<hr>
 	<h3>Model performance metrics</h3>
 	
-	Area Under Curve of ROC: 	{}
+	Area Under Curve of ROC: 	{round(auc_roc,3)}
 	<br>
-	AUC of Precision Recall: 	{}
+	AUC of Precision Recall: 	{round(auc_pr,3)}
 	<br>
-	Brier loss score: 			{}
+	Brier loss score: 			{round(brier_score,3)}
 	<br><br>
 	<hr>
 
@@ -333,7 +332,7 @@ html_content = """
 	<hr>
 	<h3>Most profitable stocks</h3>
 	<br>
-	{}
+	{biggest_increase_df.to_html()}
 	<br><br>
 	<hr>
 	<h3>Profitability by trading stocks</h3>
@@ -344,9 +343,9 @@ html_content = """
 	<br>
 	Return on investment (ROI):
 	<br>
-	High probability: {}
+	High probability: {round(roi_highprob,3)}
 	<br>
-	High profitability: {}
+	High profitability: {round(roi_highprof,3)}
 	<br><br>
 	<hr>
 	
@@ -371,16 +370,7 @@ html_content = """
 
 	
   </body>
-""".format(datetime.strptime(d,'%Y-%m-%d').strftime('%A'), hprob_config['optionType']
-		   , hprob_config['minStrikeIncrease'], hprob_config['maxStrikeIncrease']
-		   , hprob_config['minDaysToExp'], hprob_config['maxDaysToExp']
-		   , hprob_config['maxBasePrice']
-		   , modelname, len(df), df['baseSymbol'].nunique()
-		   , len(ReachedStrike), ReachedStrike['baseSymbol'].nunique()
-		   , round(len(ReachedStrike)/len(df),3)
-		   , round(auc_roc,3), round(auc_pr,3) , round(brier_score,3)
-		   , biggest_increase_df.to_html(), round(roi_highprob,3), round(roi_highprof,3)
-		   , round(roi_option,3))
+"""
 
 if add_attachment:
 	attachment = df[['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice',
