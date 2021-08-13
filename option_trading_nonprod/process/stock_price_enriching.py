@@ -98,7 +98,8 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 		contracts.drop_duplicates(inplace=True)
 
 		if type == 'minmax':
-			df_minmax = pd.DataFrame(columns=['baseSymbol', 'exportedAt', 'expirationDate', 'minPrice', 'maxPrice',
+			df_minmax = pd.DataFrame(columns=['baseSymbol', 'symbolType', strikePrice, startDateCol,
+											  endDateCol, 'minPrice', 'maxPrice',
 											  'finalPrice', 'firstPrice', 'minPriceDate', 'maxPriceDate',
 											  'finalPriceDate', 'firstPriceDate', 'strikePriceDate'])
 			# For every different option contract get the prices
@@ -118,6 +119,7 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 					symbolType=contract_row['symbolType']
 				)
 				info_dict = {'baseSymbol': contract_row['baseSymbol'], 'symbolType': contract_row['symbolType'],
+							 strikePrice: contract_row[strikePrice],
 							 startDateCol: contract_row[startDateCol], endDateCol:contract_row[endDateCol],
 							 'minPrice': minPrice, 'maxPrice': maxPrice, 'finalPrice': finalPrice, 'firstPrice': firstPrice,
 							 'minPriceDate': minPriceDate, 'maxPriceDate': maxPriceDate, 'finalPriceDate': finalPriceDate,
@@ -127,7 +129,7 @@ def getContractPrices(df, startDateCol = 'exportedAt', endDateCol = 'expirationD
 
 			# Merge extracted prices with contracts table
 			contracts = contracts.merge(df_minmax, how='left',
-									left_on=['baseSymbol', 'symbolType', startDateCol, endDateCol], right_on=['baseSymbol', 'symbolType', startDateCol, endDateCol])
+									left_on=['baseSymbol', 'symbolType', startDateCol, endDateCol, strikePrice], right_on=['baseSymbol', 'symbolType', startDateCol, endDateCol, strikePrice])
 
 		if type == 'indicators':
 			# Add technical indicators
@@ -213,7 +215,7 @@ def getStrikeReachedDate(stock_df, strikePrice, symbolType='Call'):
 		# get first date on which call strike price has been reached
 		reachedStrike_df = stock_df[1::][stock_df['High'][1::] >= strikePrice]
 	elif symbolType == 'Put':
-		# get first date on which call strike price has been reached
+		# get first date on which PUT strike price has been reached
 		reachedStrike_df = stock_df[1::][stock_df['Low'][1::] <= strikePrice]
 
 	if len(reachedStrike_df) > 0:
