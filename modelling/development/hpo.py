@@ -14,7 +14,7 @@ from sklearn.metrics import roc_auc_score, precision_score, precision_recall_cur
 X_val.fillna(X_val.mean(), inplace=True)
 X_train.fillna(X_train.mean(), inplace=True)
 
-def objective(trial):
+def objective(trial, features, X_train, y_train, X_val, y_val):
 
 	# specify range of parameters
 	# params_init = {
@@ -40,7 +40,7 @@ def objective(trial):
 	}
 
 	# Specify model, fit, predict and produce score
-	features = features_info
+	# features = features_info
 	model = GradientBoostingClassifier()
 	model.set_params(**params)
 	model.fit(X_train[features], y_train)
@@ -53,12 +53,12 @@ def objective(trial):
 	precision = precision_score(y_val, pred)
 
 	# as the package seems to want to minimize the score function we do 1 - the metric we want to maximize
-	return 1 - pr_auc
+	return 1 - precision
 
 if __name__ == '__main__':
 
 	study = optuna.create_study()
-	study.optimize(objective, n_trials=20)
+	study.optimize(lambda trial: objective(trial, features, X_train, y_train, X_val, y_val), n_trials=1)
 	fig = optuna.visualization.plot_optimization_history(study)
 	fig.show()
 	fig = optuna.visualization.plot_param_importances(study)

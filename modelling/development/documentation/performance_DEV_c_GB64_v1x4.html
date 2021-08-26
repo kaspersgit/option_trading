@@ -1,0 +1,178 @@
+
+    <html>
+        <body>
+            <h1>Performance report on model: DEV_c_GB64_v1x4</h1>
+            <hr><br>
+            <h2>Dataset used</h2>
+            <hr><br>
+            Columns: 55
+            <br>
+            Observations: 3007
+            <br>
+            Min exported at date: 2021-06-02
+            <br>
+            Max exported at date: 2021-08-13
+            <h2>Threshold invariant metrics</h2>
+            <hr><br>
+            <p>
+            <h4>Receiver Operator Curve:</h4>
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/roc_plot.png'>
+            <br>
+            AUC: 0.7310404105255323
+            <br><br>
+            <h4>Precision Recall Curve:</h4>
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/pr_plot.png'>
+            <br>
+            AUC: 0.4761271293928746
+            <br><br>
+            Brier Score: 0.18151222744518078
+            </p>
+            <br>
+            <h2>Threshold dependant metrics</h2>
+            <hr><br>
+            Threshold set to: 0.6
+            <br>
+            Confusion Matrix
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/confusion_matrix.png'>
+            <br><br>
+            Precision and recall per week
+            <br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/prOverTime.png'>
+            <br><br>
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>precision</th>
+      <th>recall</th>
+      <th>f1-score</th>
+      <th>support</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.793908</td>
+      <td>0.896382</td>
+      <td>0.842039</td>
+      <td>2239.000000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.515658</td>
+      <td>0.321615</td>
+      <td>0.396151</td>
+      <td>768.000000</td>
+    </tr>
+    <tr>
+      <th>accuracy</th>
+      <td>0.749584</td>
+      <td>0.749584</td>
+      <td>0.749584</td>
+      <td>0.749584</td>
+    </tr>
+    <tr>
+      <th>macro avg</th>
+      <td>0.654783</td>
+      <td>0.608998</td>
+      <td>0.619095</td>
+      <td>3007.000000</td>
+    </tr>
+    <tr>
+      <th>weighted avg</th>
+      <td>0.722842</td>
+      <td>0.749584</td>
+      <td>0.728157</td>
+      <td>3007.000000</td>
+    </tr>
+  </tbody>
+</table>
+            <br>
+            <h2>Profitability stock trading</h2>
+            <hr><br>
+            <img src='/Users/kasper.de-harder/gits/option_trading/modelling/development/documentation/visualizations/highProbProfitability.png'>
+            <br>
+            Return on investment high probability: -0.017174588655983376
+            <h2>Training data</h2>
+            <hr><br>
+            # features: 34
+            <br>
+            Observations: 10561
+            <br>
+            Description of main variables:
+            <br>
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>strikePrice</th>
+      <th>baseLastPrice</th>
+      <th>daysToExpiration</th>
+      <th>lastPrice</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>10561.000000</td>
+      <td>10561.000000</td>
+      <td>10561.000000</td>
+      <td>10561.000000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>55.557471</td>
+      <td>48.787550</td>
+      <td>10.736199</td>
+      <td>1.063761</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>53.258588</td>
+      <td>46.821325</td>
+      <td>3.572186</td>
+      <td>1.504415</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>1.000000</td>
+      <td>0.290000</td>
+      <td>6.000000</td>
+      <td>0.100000</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>18.500000</td>
+      <td>15.640000</td>
+      <td>8.000000</td>
+      <td>0.300000</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>35.000000</td>
+      <td>30.270000</td>
+      <td>10.000000</td>
+      <td>0.600000</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>72.000000</td>
+      <td>62.930000</td>
+      <td>14.000000</td>
+      <td>1.250000</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>800.000000</td>
+      <td>199.960000</td>
+      <td>19.000000</td>
+      <td>40.250000</td>
+    </tr>
+  </tbody>
+</table>
+        </body>
+    </html>
+    

@@ -11,7 +11,8 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-###### import data from S3
+###### import un enriched data from S3
+print('Load in all (un enriched) data')
 # Set source and target for bucket and keys
 source_bucket = 'project-option-trading'
 source_key = 'raw_data/barchart/'
@@ -27,7 +28,6 @@ else:
 
 df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
 print("Raw imported data shape: {}".format(df.shape))
-######
 
 # Data mature until 10 days ago
 cutoff_date = (datetime.today() - timedelta(days=10)).strftime('%Y-%m-%d')
@@ -86,8 +86,8 @@ print("After filtering on having days to expiration between {} and {} \nThe left
 # Get min max first and last price
 contracts_prices = getContractPrices(df, startDateCol='exportedAt', endDateCol='expirationDate', strikePrice='strikePrice', type='minmax')
 
-# deduplicate
-contracts_prices=contracts_prices.drop_duplicates(subset=['baseSymbol','strikePrice','expirationDate','exportedAt'], keep='first')
+# Deduplicate
+contracts_prices = contracts_prices.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'], keep='first')
 
 # incase it goes wrong somewhere, start from close to that row
 # df_last_few = df.drop_duplicates(subset=['baseSymbol'], keep='first')

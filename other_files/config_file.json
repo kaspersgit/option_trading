@@ -1,4 +1,12 @@
 {
+    "included_options": {
+        "optionType": "Call",
+        "maxBasePrice": 200,
+        "maxDaysToExp": 20,
+        "minDaysToExp": 5,
+        "minStrikeIncrease": 1.05,
+        "maxStrikeIncrease": 10
+    },
     "high_probability": {
         "optionType": "Call",
         "maxBasePrice": 200,

@@ -116,16 +116,11 @@ with open('other_files/config_file.json') as json_file:
 
 hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
+included_options = config['included_options']
 
 # Filter on basics (like days to expiration and contract type)
-df = df[(df['symbolType'] == hprob_config['optionType']) &
-		(df['daysToExpiration'] >= hprob_config['minDaysToExp']) &
-		(df['daysToExpiration'] < hprob_config['maxDaysToExp']) &
-		(df['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
-		(df['priceDiffPerc'] < hprob_config['maxStrikeIncrease']) &
-		(df['baseLastPrice'] < hprob_config['maxBasePrice'])]
+df = dfFilterOnGivenSetOptions(df, included_options)
 
-#
 print('Shape of filtered data: {}'.format(df.shape))
 
 # enriching based on platform with tehcnical indicators
@@ -219,12 +214,11 @@ labels = ['5%-10%', '10%-15%', '15%-20%', '20%-25%', '25%-30%', '30%-40%', '40%-
 df['strikePricePercBin'] = pd.cut(df['strikePricePerc'], bins=bins, labels=labels)
 
 # Filter on options appearing in high probability, profitability or in neither of the two
-high_prob_df = dfFilterOnGivenSet(df, hprob_config)
-high_prof_df = dfFilterOnGivenSet(df, hprof_config)
+high_prob_df = dfFilterOnGivenSetOptions(df, hprob_config)
+high_prof_df = dfFilterOnGivenSetOptions(df, hprof_config)
 
 # Get time duration from extraction to reaching strike price
 df = AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate')
-
 
 
 print('Start creating plots')

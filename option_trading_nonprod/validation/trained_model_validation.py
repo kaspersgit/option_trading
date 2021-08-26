@@ -3,10 +3,12 @@ import numpy as np
 import os, json, platform
 import pickle
 
-from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC
+from option_trading_nonprod.validation.classification import showConfusionMatrix, plotCurveAUC, plotMetricOverTime
 from option_trading_nonprod.validation.calibration import *
+from option_trading_nonprod.validation.feature_importances import *
 from option_trading_nonprod.other.trading_strategies import *
 from option_trading_nonprod.aws import *
+from option_trading_nonprod.process.stock_price_enriching import *
 
 from sklearn.metrics import classification_report
 
@@ -53,22 +55,22 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
     # Measure performance
     # threshold invariant
     # AUC
-    auc_roc = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='{}'.format(model.version),type='roc', savefig=True, saveFileName=f'{save_path}/roc_plot.png')
-    auc_pr = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='{}'.format(model.version),type='pr', savefig=True, saveFileName=f'{save_path}/pr_plot.png')
+    auc_roc = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='{}'.format(model.version),type='roc', savefig=True, saveFileName=f'{save_path}/roc_plot.png', show_plot=False)
+    auc_pr = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='{}'.format(model.version),type='pr', savefig=True, saveFileName=f'{save_path}/pr_plot.png', show_plot=False)
     # Brier score
     brier_score = brier_score_loss(pred_df['actual'],pred_df['prob'])
 
     # Calibration plot
-    plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='{}'.format(model.version), bins=10, savefig=True, saveFileName=f'{save_path}/calibration.png')
+    plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='{}'.format(model.version), bins=10, savefig=True, saveFileName=f'{save_path}/calibration.png', show_plot=False)
 
 
     # Threshold dependant
     # confusion matrix
-    showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'], savefig=True, saveFileName=f'{save_path}/confusion_matrix.png')
+    showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'], savefig=True, saveFileName=f'{save_path}/confusion_matrix.png', show_plot=False)
 
     # precision and recall over time
     pred_df['date'] = pred_df['exportedAt']
-    plotMetricOverTime(pred_df, savefig=True, saveFileName=f'{save_path}/prOverTime.png')
+    plotMetricOverTime(pred_df, savefig=True, saveFileName=f'{save_path}/prOverTime.png', show_plot=False)
 
     class_report = classification_report(pred_df['actual'], pred_df['pred'], output_dict=True)
     class_report = pd.DataFrame(class_report).transpose()
@@ -90,6 +92,9 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
     highprof_roi, _, _, _ = simpleTradingStrategy(pred_df, actualCol='actual', filterset={'minThreshold': 0.3, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 20, 'minStrikeIncrease': 1.2}, title = 'High prof ' + model.version, savefig=True, saveFileName=f'{save_path}/highProfProfitability.png')
     print("Roi: {}\n".format(highprof_roi))
 
+    # feature importance
+    featureImportance1(model, model.feature_names, plot_top=20, savefig=True, saveFileName='feature_importance1.png', show_plot=True)
+
     # train and calibration data details
     if hasattr(model, 'train_data_shape'):
         train_data_shape = model.train_data_shape
@@ -97,7 +102,7 @@ def modelPerformanceReportMetrics(model, dataset, save_path):
         train_data_shape = ['Na', 'Na']
 
     if hasattr(model, 'train_data_describe'):
-        train_data_describe = model.train_data_describe[['baseLastPrice', 'strikePrice', 'daysToExpiration','lastPrice','reachedStrikePrice']]
+        train_data_describe = model.train_data_describe[model.train_data_describe.columns.intersection(['baseLastPrice', 'strikePrice', 'daysToExpiration','lastPrice','reachedStrikePrice'])]
     else:
         train_data_describe = pd.DataFrame()
 
@@ -231,8 +236,8 @@ def modelPerformanceReport(model, dataset, ext_plots=False):
     #####################
     # Measure performance
     # AUC
-    auc_roc = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='roc')
-    auc_pr = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='pr')
+    auc_roc = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='roc', show_plot=False)
+    auc_pr = plotCurveAUC(pred_df['prob'],pred_df['actual'], title='all test observations - {}'.format(model.version),type='pr', show_plot=False)
     # Brier score
     brier_score = brier_score_loss(pred_df['actual'],pred_df['prob'])
 
@@ -241,7 +246,7 @@ def modelPerformanceReport(model, dataset, ext_plots=False):
         showConfusionMatrix(pred_df['pred'], actual=pred_df['actual'])
 
         # Calibration plot
-        plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all test observations - {}'.format(model.version), bins=10)
+        plotCalibrationCurve(pred_df['actual'], pred_df['prob'], title='all test observations - {}'.format(model.version), bins=10, show_plot=False)
 
         # Show performance for different segments
         brackets = [{'lower':1.05, 'higher':1.1}
@@ -256,11 +261,11 @@ def modelPerformanceReport(model, dataset, ext_plots=False):
             select_df = pred_df[(pred_df['priceDiffPerc'] >= bracket['lower']) & (pred_df['priceDiffPerc'] < bracket['higher'])].copy()
             print('Nr observations {} out of {} ({})'.format(len(select_df),len(pred_df),round(len(select_df)/len(pred_df),2)))
 
-            auc_roc = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='roc')
-            auc_pr = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='pr')
+            auc_roc = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='roc', show_plot=False)
+            auc_pr = plotCurveAUC(select_df['prob'],select_df['actual'], title = title,type='pr', show_plot=False)
             print('AUC ROC: {}'.format(round(auc_roc,3)))
             # print('AUC PR: {}'.format(round(auc_pr,3)))
-            plotCalibrationCurve(select_df['actual'], select_df['prob'], title = title, bins=10)
+            plotCalibrationCurve(select_df['actual'], select_df['prob'], title = title, bins=10, show_plot=False)
 
             simpleTradingStrategy(select_df, actualCol='actual', filterset={'minThreshold': 0.1, 'maxThreshold': 0.99, 'minDaysToExp': 3, 'maxDaysToExp': 60, 'minStrikeIncrease': 1.05}, title = title)
 
@@ -289,12 +294,9 @@ def modelPerformanceReport(model, dataset, ext_plots=False):
     # print("Feature permutation importance: \n{}\n\n".format(feat_permutation_imp.head(10)))
     # print("Feature impurity importance: \n{}".format(feat_impurity_imp))
 
-if __name__=='__main__':
+def createModelPerformanceReport(model_name, scraped_since):
     ###########
     # Load data and model
-    # set configurations
-    model_name = 'PROD_c_GB64_v1x4'
-    scraped_since = '2021-02-01'
 
     ###### import data from S3
     # Set source and target for bucket and keys
@@ -317,19 +319,24 @@ if __name__=='__main__':
     df_all['priceDiffPerc'] = df_all['strikePrice'] / df_all['baseLastPrice']
     print("Raw imported data shape: {}".format(df_all.shape))
 
+    # batch enrich dataset
+    df_all = batch_enrich_df(df_all)
+
+    print("Enriched data shape: {}".format(df_all.shape))
+
+
     # load filter rules for data
     # filter set on applicable rows
     with open('other_files/config_file.json') as json_file:
         config = json.load(json_file)
 
     hprob_config = config['high_probability']
+    included_options = config['included_options']
 
     # Filter on basics (like days to expiration and contract type)
-    df = df_all[(df_all['symbolType'] == hprob_config['optionType']) &
-                (df_all['daysToExpiration'] >= hprob_config['minDaysToExp']) &
-                (df_all['daysToExpiration'] < hprob_config['maxDaysToExp']) &
-                (df_all['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
-                (df_all['baseLastPrice'] < hprob_config['maxBasePrice'])]
+    df = dfFilterOnGivenSetOptions(df_all, included_options)
+
+    print("Filtered data shape: {}".format(df.shape))
 
     # Load model
     getwd = os.getcwd()
@@ -337,8 +344,13 @@ if __name__=='__main__':
         model = pickle.load(file)
 
     model.version = model_name
-    save_path = getwd + '/modelling/development/documentation'
+    doc_path = getwd + '/modelling/development/documentation'
     # modelPerformanceReport(model, df_oot, ext_plots=True)
-    reportMetrics = modelPerformanceReportMetrics(model, df, f'{save_path}/visualizations')
-    content = makeReportContent(reportMetrics, files_path=f'{save_path}/visualizations')
-    saveHTMLReport(content, filename = f'{save_path}/performance_{model_name}.html')
+    reportMetrics = modelPerformanceReportMetrics(model, df, f'{doc_path}/visualizations')
+    content = makeReportContent(reportMetrics, files_path=f'{doc_path}/visualizations')
+    saveHTMLReport(content, filename = f'{doc_path}/performance_{model_name}.html')
+
+if __name__=='__main__':
+    model_name = 'DEV_c_GB64_v1x3'
+    scraped_since = '2021-06-01'
+    createModelPerformanceReport(model_name, scraped_since)

@@ -63,7 +63,7 @@ def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False
 		print(f'Created and saved bar plot of success ratio all options vs selected options')
 
 def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, savefig=False, saveFileName='test.png'):
-	typeOfActual = 'Max' if actualCol.startswith('max') else 'Expected'
+	typeOfActual = 'Max' if actualCol.startswith('max') else 'Actual'
 
 	# Create scatter plot (strike price progress vs predicted probability)
 	# rows not appearing in any of the email tables

@@ -10,6 +10,7 @@ from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.process.train_modifications import *
 from option_trading_nonprod.process.stock_price_enriching import *
+from option_trading_nonprod.other.trading_strategies import *
 
 # 32 or 64 bit system
 n_bits = 32 << bool(sys.maxsize >> 32)
@@ -46,13 +47,10 @@ with open('other_files/config_file.json') as json_file:
 
 hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
+included_options = config['included_options']
 
 # Filter on basics (like days to expiration and contract type)
-df = df_all[(df_all['symbolType'] == hprob_config['optionType']) &
-        (df_all['daysToExpiration'] >= hprob_config['minDaysToExp']) &
-        (df_all['daysToExpiration'] < hprob_config['maxDaysToExp']) &
-        (df_all['priceDiffPerc'] > hprob_config['minStrikeIncrease']) &
-        (df_all['baseLastPrice'] < hprob_config['maxBasePrice'])]
+df = dfFilterOnGivenSetOptions(df_all, included_options)
 
 df = df.reset_index(drop=True)
 
@@ -68,7 +66,8 @@ print('Maximum nr days until expiration: {}'.format(df['daysToExpiration'].max()
 
 target = 'reachedStrikePrice'
 
-features = ['strikePrice',
+features = ['baseLastPrice',
+            'strikePrice',
             'daysToExpiration',
             'bidPrice',
             'midpoint',
@@ -112,31 +111,7 @@ print('Nr of features included: {}'.format(len(features)))
 ########################
 # Split in train and test
 # test to split keeping exportedAt column always in same group
-gss = GroupShuffleSplit(n_splits=1, train_size=.75, random_state=42)
-gss.get_n_splits()
-
-# split off test set
-test_groupsplit = gss.split(df, groups = df['exportedAt'])
-train_idx, test_idx = next(test_groupsplit)
-df2 = df.loc[train_idx]
-df_test = df.loc[test_idx]
-
-# split off validation set
-df2 = df2.reset_index(drop=True)
-val_groupsplit = gss.split(df2, groups = df2['exportedAt'])
-train_idx, val_idx = next(val_groupsplit)
-df_train = df2.loc[train_idx]
-df_val = df2.loc[val_idx]
-
-# clean unwanted columns for model training
-X_train = df_train.drop(columns=[target])
-y_train = df_train[target]
-
-X_val = df_val.drop(columns=[target])
-y_val = df_val[target]
-
-X_test = df_test.drop(columns=[target])
-y_test = df_test[target]
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(dataset, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.0, test_share=0.75, val_share=0.75)
 
 #####################
 # Train
@@ -144,7 +119,7 @@ y_test = df_test[target]
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v2x3'
+version = 'v1x4'
 algorithm = 'GB'
 if train_type == 'DEV':
     X_fit = X_train
@@ -165,7 +140,7 @@ if algorithm == 'AB':
     params = {'n_estimators':1000, 'learning_rate':0.5, 'random_state':42}
     uncal_model = fit_AdaBoost(X_fit[features], y_fit, X_val, y_val, params, save_model = False, ab_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 elif algorithm == 'GB':
-    params = {'n_estimators':3000, 'max_depth': 5, 'max_features': 2, 'min_samples_split': 385, 'subsample': 0.7076596018033198, 'learning_rate': 0.00398655034334867}
+    params = {'n_estimators': 3000, 'max_depth': 8, 'max_features': 3, 'min_samples_split': 415, 'subsample': 0.7016649229706161, 'learning_rate': 0.0001877112009793005}
     # sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
     # kwargs = {'sample_weight': sample_weights.values}
     kwargs = {'nothing': 'empty'}

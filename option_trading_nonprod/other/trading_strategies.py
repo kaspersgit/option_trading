@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def dfFilterOnGivenSet(df, filterset={}, type='stock'):
+def dfFilterOnGivenSetOptions(df, filterset={}, type='stock'):
+	df_ = df.copy()
 	# Fill up filterset with default in case of non existing
 	if "minThreshold" not in filterset:
 		filterset['minThreshold'] = 0.0
@@ -16,26 +17,31 @@ def dfFilterOnGivenSet(df, filterset={}, type='stock'):
 		filterset['maxDaysToExp'] = 100
 	if "minStrikeIncrease" not in filterset:
 		filterset['minStrikeIncrease'] = 1.0
+	# In case we have not scored yet
+	if "minThreshold" not in filterset:
+		filterset['minThreshold'] = 0.0
+	if "prob" not in df_:
+		df_['prob'] = 1.0
 	print('Filtering data set on following rules: \n{}'.format(filterset))
 	# in case column did not exist yet
-	df['strikePricePerc'] = df['strikePrice'] / df['baseLastPrice']
+	df_['strikePricePerc'] = df_['strikePrice'] / df_['baseLastPrice']
 
 	if type == 'stock':
-		df_filtered = df[(df['prob'] > filterset['minThreshold']) &
-			(df['prob'] <= filterset['maxThreshold']) &
-			(df['symbolType'] == 'Call') &
-			(df['daysToExpiration'] < filterset['maxDaysToExp']) &
-			(df['strikePricePerc'] > filterset['minStrikeIncrease']) &
-			(df['daysToExpiration'] > filterset['minDaysToExp']) &
-			(df['baseLastPrice'] < filterset['maxBasePrice'])].copy()
+		df_filtered = df_[(df_['prob'] > filterset['minThreshold']) &
+			(df_['prob'] <= filterset['maxThreshold']) &
+			(df_['symbolType'] == 'Call') &
+			(df_['daysToExpiration'] < filterset['maxDaysToExp']) &
+			(df_['strikePricePerc'] > filterset['minStrikeIncrease']) &
+			(df_['daysToExpiration'] > filterset['minDaysToExp']) &
+			(df_['baseLastPrice'] < filterset['maxBasePrice'])].copy()
 	elif type == 'option':
-		df_filtered = df[(df['prob'] > filterset['minThreshold']) &
-						 (df['prob'] <= filterset['maxThreshold']) &
-						 (df['symbolType'] == 'Call') &
-						 (df['daysToExpiration'] < filterset['maxDaysToExp']) &
-						 (df['strikePricePerc'] > filterset['minStrikeIncrease']) &
-						 (df['daysToExpiration'] > filterset['minDaysToExp']) &
-						 (df['lastPrice'] < filterset['maxBasePrice'])].copy()
+		df_filtered = df_[(df_['prob'] > filterset['minThreshold']) &
+						 (df_['prob'] <= filterset['maxThreshold']) &
+						 (df_['symbolType'] == 'Call') &
+						 (df_['daysToExpiration'] < filterset['maxDaysToExp']) &
+						 (df_['strikePricePerc'] > filterset['minStrikeIncrease']) &
+						 (df_['daysToExpiration'] > filterset['minDaysToExp']) &
+						 (df_['lastPrice'] < filterset['maxBasePrice'])].copy()
 	return(df_filtered)
 
 def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=True, title='', savefig=False, saveFileName='test.png'):
@@ -48,7 +54,7 @@ def simpleTradingStrategy(df, actualCol = 'reachStrikePrice',filterset={}, plot=
 		df_['revenue'] = df_['stocksBought'] * np.where(df_[actualCol] == 1, df_['strikePrice'], df_['finalPrice'])
 	if 'profit' not in df_.columns:
 		df_['profit'] = df_['revenue'] - df_['cost']
-	df_filtered = dfFilterOnGivenSet(df_, filterset)
+	df_filtered = dfFilterOnGivenSetOptions(df_, filterset)
 	df_profit = df_filtered[['prob','cost','revenue','profit']].groupby('prob').sum().reset_index().sort_values('prob', ascending=False).copy()
 	df_profit['cumCost'] = df_profit['cost'].cumsum()
 	df_profit['cumRevenue'] = df_profit['revenue'].cumsum()

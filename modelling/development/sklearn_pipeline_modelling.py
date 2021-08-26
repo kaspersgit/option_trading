@@ -1,17 +1,18 @@
-from sklearn.model_selection import train_test_split, GroupShuffleSplit
+import json
 
 from sklearn.pipeline import FeatureUnion, Pipeline, make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.metrics import roc_auc_score, make_scorer, precision_recall_curve, auc, precision_score
 from sklearn.metrics import accuracy_score, log_loss
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
-
 from sklearn.model_selection import GridSearchCV
-
-from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
+from option_trading_nonprod.other.trading_strategies import *
+from option_trading_nonprod.process.pre_train import *
+from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.process.train_modifications import *
+from option_trading_nonprod.validation.trained_model_validation import *
 
 ## functions
 class CustomTransformer(BaseEstimator, TransformerMixin):
@@ -34,26 +35,27 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
 		return X_
 
 #######################
-# Load and prepare data
+# Pre set variables and checks
 # 32 or 64 bit system
 n_bits = 32 << bool(sys.maxsize >> 32)
+
+if platform.system() == 'Darwin':
+	s3_profile = 'mrOption'
+else:
+	s3_profile = 'default'
 
 ###### import data from S3
 # Set source and target for bucket and keys
 today = '2021-04-15'
 source_bucket = 'project-option-trading-output'
-source_key = 'train_data/barchart/enriched_on_{}.csv'.format(today)
+source_key = 'enriched_data/barchart'.format(today)
+# source_key = 'train_data/barchart/enriched_on_{}.csv'.format(today)
 
 # print status of variables
 print('Source bucket: {}'.format(source_bucket))
 print('Source key: {}'.format(source_key))
 
 # import data
-if platform.system() == 'Darwin':
-	s3_profile = 'mrOption'
-else:
-	s3_profile = 'default'
-
 df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
 print("Raw imported data shape: {}".format(df.shape))
 
@@ -62,7 +64,7 @@ df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
 df['percStrikeReached'] = (df['maxPrice'] - df['baseLastPrice']) / (
 		df['strikePrice'] - df['baseLastPrice'])
 df['finalPriceHigher'] = np.where(df['finalPrice'] >= df['baseLastPrice'], 1, 0)
-df['target'] = np.where((df['reachedStrikePrice'] == 1) | (df['finalPriceHigher'] == 1), 1, 0)
+df['targetV2'] = np.where((df['reachedStrikePrice'] == 1) | (df['finalPriceHigher'] == 1), 1, 0)
 
 df = df.drop_duplicates(subset=['baseSymbol','symbolType','strikePrice','expirationDate','exportedAt'])
 
@@ -71,53 +73,20 @@ df = batch_enrich_df(df, groupByColumns=['exportedAt', 'baseSymbol', 'symbolType
 if 'sector' in df.columns:
 	df = df[~df['sector'].isnull()]
 	df = pd.get_dummies(df, prefix='sector', columns=['sector'])
+
 # filter set on applicable rows
 # only select Call option out of the money
-df_calls = df[(df['symbolType'] == 'Call') & (df['strikePrice'] > df['baseLastPrice'] * 1.05)].copy()
+with open('other_files/config_file.json') as json_file:
+	config = json.load(json_file)
+
+included_options = config['included_options']
+
+# Filter on basics (like days to expiration and contract type)
+df_calls = dfFilterOnGivenSetOptions(df, included_options)
 df_calls = df_calls.sort_values('exportedAt', ascending=True)
 
-# target  used
-target = 'reachedStrikePrice'
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df_calls, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.8, val_share=0.8)
 
-# Split in train, validation, test and out of time
-# Take most recent observations for out of time set (apprx last 5000 observations)
-
-exportDateLast10percent = df_calls.iloc[-int(0.1 * len(df_calls))]['exportedAt']
-df_oot = df_calls[df_calls['exportedAt'] >= exportDateLast10percent]
-df_rest = df_calls.drop(df_oot.index, axis=0).reset_index(drop=True)
-
-# test to split keeping exportedAt column always in same group
-gss = GroupShuffleSplit(n_splits=1, train_size=.8, random_state=42)
-gss.get_n_splits()
-
-# split off test set
-test_groupsplit = gss.split(df_rest, groups = df_rest['exportedAt'])
-train_idx, test_idx = next(test_groupsplit)
-df_rest2 = df_rest.loc[train_idx]
-df_test = df_rest.loc[test_idx]
-
-# split off validation set
-df_rest2 = df_rest2.reset_index(drop=True)
-val_groupsplit = gss.split(df_rest2, groups = df_rest2['exportedAt'])
-train_idx, val_idx = next(val_groupsplit)
-df_train = df_rest2.loc[train_idx]
-df_val = df_rest2.loc[val_idx]
-
-# clean unwanted columns for model training
-# Add weights column
-X_train = df_train.drop(columns=[target])
-y_train = df_train[target]
-
-X_val = df_val.drop(columns=[target])
-y_val = df_val[target]
-
-X_test = df_test.drop(columns=[target])
-y_test = df_test[target]
-
-X_oot = df_oot.drop(columns=[target])
-y_oot = df_oot[target]
-
-print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape: {}".format(X_train.shape,X_val.shape,X_test.shape,X_oot.shape))
 # Start of tuning
 # general approach
 # Use all features and create descent model (tiny bit of hyper parameter optimization
@@ -140,6 +109,7 @@ features_base = ['strikePrice'
 	]
 
 features_info = ['strikePrice'
+	, 'baseLastPrice'
 	, 'daysToExpiration'
 	, 'bidPrice'
 	, 'midpoint'
@@ -377,7 +347,7 @@ getwd = os.getcwd()
 model = pipe.steps[1][1]
 model.feature_names = features
 train_type = 'DEV'
-version = 'v3x3'
+version = 'v1x4'
 
 if train_type == 'DEV':
 	X_fit = X_train
@@ -390,7 +360,12 @@ elif train_type == 'PROD':
 
 X_val.fillna(0, inplace=True)
 
-opunta_params = {'n_estimators': 3000, 'max_depth': 10, 'max_features': 8, 'min_samples_split': 225, 'subsample': 0.808392563444737, 'learning_rate': 0.00010030663168798627}
-params = {'n_estimators': 3000, 'max_depth': 4, 'max_features': 12, 'min_samples_split': 300, 'subsample': 0.853500248686749, 'learning_rate': 0.005}
-model = fit_GBclf(X_train[features_adj], y_train, X_val[features_adj], y_val, opunta_params, save_model = False, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
+opunta_params = {'n_estimators': 3000, 'max_depth': 8, 'max_features': 3, 'min_samples_split': 415, 'subsample': 0.7016649229706161, 'learning_rate': 0.0001877112009793005}
+params = {'n_estimators': 3000, 'max_depth': 8, 'max_features': 3, 'min_samples_split': 415, 'subsample': 0.7016649229706161, 'learning_rate': 0.0001877112009793005}
+model = fit_GBclf(X_train[features_info], y_train, X_val[features_info], y_val, opunta_params, save_model = False, gbc_path=getwd+'/trained_models/', name='GB64_'+version)
 Cal_model = calibrate_model(model, X_val, y_val, method='sigmoid', save_model=True, path=getwd + '/trained_models/', name=train_type+'_c_GB64_'+version)
+
+# Create performance HTML
+model_name = 'DEV_c_GB64_v1x4'
+scraped_since = '2021-06-01'
+createModelPerformanceReport(model_name, scraped_since)

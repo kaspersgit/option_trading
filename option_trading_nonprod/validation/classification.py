@@ -3,8 +3,9 @@ import numpy as np
 from sklearn import metrics 
 import itertools
 from datetime import datetime, timedelta
+import pandas as pd
 
-def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='test.png'):
+def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='test.png', show_plot=True):
     """
     :param probs: float models predicted probability
     :param actual: int 1 or 0 for the actual outcome
@@ -44,12 +45,13 @@ def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='
     plt.ylabel(ylabel)
     plt.title(title)
     plt.legend(loc="lower right")
-    plt.show()
+    if show_plot:
+        plt.show()
     if savefig:
         plt.savefig(saveFileName)
     return(auc)
 
-def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold.png'):
+def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold.png', show_plot=True):
     precision, recall, th = metrics.precision_recall_curve(actual, pred)
     plt.figure()
     plt.plot(th, precision[:-1], label="Precision", linewidth=3)
@@ -58,11 +60,12 @@ def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold
     plt.xlabel('Threshold')
     plt.ylabel('Precision/Recall')
     plt.legend()
-    plt.show()
+    if show_plot:
+        plt.show()
     if savefig:
         plt.savefig(saveFileName)
 
-def plotMetricOverTime(df, savefig=False, saveFileName='prOverTime.png'):
+def plotMetricOverTime(df, savefig=False, saveFileName='prOverTime.png', show_plot=True):
 
     metric_df = df[['date','actual','pred']].copy()
 
@@ -89,12 +92,13 @@ def plotMetricOverTime(df, savefig=False, saveFileName='prOverTime.png'):
     plt.xlabel('Week start')
     plt.ylabel('Precision/Recall')
     plt.legend()
-    plt.show()
+    if show_plot:
+        plt.show()
     if savefig:
         plt.savefig(saveFileName)
 
 
-def showConfusionMatrix(pred, actual, normalize=None, savefig=False, saveFileName='test.png'):
+def showConfusionMatrix(pred, actual, normalize=None, savefig=False, saveFileName='test.png', show_plot=True):
     """
     pred: the predicted classes
     actual: the actual class
@@ -138,6 +142,8 @@ def showConfusionMatrix(pred, actual, normalize=None, savefig=False, saveFileNam
     plt.ylabel('True label',size=14)
     plt.xlabel('Predicted label',size=14)
     plt.subplots_adjust(left=0.15, right=1.0, bottom=0.1, top=0.8)
-    plt.show()
+
+    if show_plot:
+        plt.show()
     if savefig:
         plt.savefig(saveFileName)
