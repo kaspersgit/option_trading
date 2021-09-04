@@ -111,7 +111,7 @@ print('Nr of features included: {}'.format(len(features)))
 ########################
 # Split in train and test
 # test to split keeping exportedAt column always in same group
-X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(dataset, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.0, test_share=0.75, val_share=0.75)
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.0, test_share=0.75, val_share=0.75)
 
 #####################
 # Train
@@ -127,8 +127,8 @@ if train_type == 'DEV':
     df_test = df_all.loc[X_test.index,:]
     df_test.to_csv("validation/test_df.csv")
 elif train_type == 'PROD':
-    X_fit = pd.concat([X_train, X_test])
-    y_fit = pd.concat([y_train, y_test])
+    X_fit = pd.concat([X_train, X_test], sort=False)
+    y_fit = pd.concat([y_train, y_test], sort=False)
 
 print('Train data shape: {}'.format(X_fit.shape))
 print('Calibration data shape: {}'.format(X_val.shape))
