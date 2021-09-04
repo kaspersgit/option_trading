@@ -9,6 +9,7 @@ from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.models.calibrate import *
 from option_trading_nonprod.process.train_modifications import *
+from option_trading_nonprod.process.pre_train import *
 from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.other.trading_strategies import *
 
