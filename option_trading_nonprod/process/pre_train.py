@@ -4,9 +4,12 @@ def splitDataTrainTestValOot(dataset, target = 'reachedStrikePrice', date_col='e
 	# Split in train, validation, test and out of time
 	# Take most recent observations for out of time set (apprx last 5000 observations)
 
-	exportDateOot = dataset.iloc[-int(oot_share * len(dataset))][date_col]
-	df_oot = dataset[dataset[date_col] >= exportDateOot]
-	df_rest = dataset.drop(df_oot.index, axis=0).reset_index(drop=True)
+	if oot_share > 0.0:
+		exportDateOot = dataset.iloc[-int(oot_share * len(dataset))][date_col]
+		df_oot = dataset[dataset[date_col] >= exportDateOot]
+		df_rest = dataset.drop(df_oot.index, axis=0).reset_index(drop=True)
+	else:
+		df_rest = dataset
 
 	# test to split keeping exportedAt column always in same group
 	gss_test = GroupShuffleSplit(n_splits=1, train_size=test_share, random_state=42)
