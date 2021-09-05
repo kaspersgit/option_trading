@@ -32,19 +32,37 @@ def splitDataTrainTestValOot(dataset, target = 'reachedStrikePrice', date_col='e
 	df_train = df_rest2.loc[train_idx]
 	df_val = df_rest2.loc[val_idx]
 
-	# clean unwanted columns for model training
-	# Add weights column
+	# Final datasets
 	X_train = df_train.drop(columns=[target])
 	y_train = df_train[target]
 
-	X_val = df_val.drop(columns=[target])
-	y_val = df_val[target]
+	print("Train shape: {}".format(X_train.shape))
 
-	X_test = df_test.drop(columns=[target])
-	y_test = df_test[target]
+	if "df_val" in locals():
+		X_val = df_val.drop(columns=[target])
+		y_val = df_val[target]
+		print("Validation shape: {}".format(X_val.shape))
+	else:
+		X_val = None
+		y_val = None
+		print("Validation dataset non existent")
 
-	X_oot = df_oot.drop(columns=[target])
-	y_oot = df_oot[target]
+	if "df_test" in locals():
+		X_test = df_test.drop(columns=[target])
+		y_test = df_test[target]
+		print("Test shape: {}".format(X_test.shape))
+	else:
+		X_test = None
+		y_test = None
+		print("Test dataset non existent")
 
-	print("Train shape: {}\nValidation shape: {}\nTest shape: {}\nOut of time shape: {}".format(X_train.shape,X_val.shape,X_test.shape,X_oot.shape))
+	if "df_oot" in locals():
+		X_oot = df_oot.drop(columns=[target])
+		y_oot = df_oot[target]
+		print("Out of time shape: {}".format(X_oot.shape))
+	else:
+		X_oot = None
+		y_oot = None
+		print("Out of time dataset non existent")
+
 	return X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot
