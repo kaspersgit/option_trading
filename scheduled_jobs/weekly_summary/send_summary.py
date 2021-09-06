@@ -233,7 +233,7 @@ GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=True, sav
 
 # Nr of days until options reach their strike price
 plotHistogramPlotly(df, col='duration', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction'}, savefig=True, saveFileName="scheduled_jobs/summary_content/daysToReachStrike.png")
-plotBarChartPlotly(df, xcol='duration', ycol='strikeReachedShare', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction', 'ylabel':'Share of active options'}, savefig=True, saveFileName='scheduled_jobs/summary_content/daysToReachStrike.png')
+plotBarChartPlotly(df_days2strike, xcol='duration', ycol='strikeReachedShare', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction', 'ylabel':'Share of active options'}, savefig=True, saveFileName='scheduled_jobs/summary_content/daysToReachStrike.png')
 
 ##### Profitability
 # Plot on expected profit when selling on strike (if reached)
