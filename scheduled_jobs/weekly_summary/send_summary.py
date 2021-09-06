@@ -26,7 +26,7 @@ from option_trading_nonprod.process.stock_price_enriching import *
 
 # Check if run locally (macbook) or not
 if platform.system() == 'Darwin':
-	modelname = 'DEV_c_GB64_v1x3'
+	modelname = 'DEV_c_GB64_v1x4'
 else:
 	os.chdir("/home/pi/Documents/python_scripts/option_trading")
 	modelname = sys.argv[1]
@@ -217,9 +217,8 @@ df['strikePricePercBin'] = pd.cut(df['strikePricePerc'], bins=bins, labels=label
 high_prob_df = dfFilterOnGivenSetOptions(df, hprob_config)
 high_prof_df = dfFilterOnGivenSetOptions(df, hprof_config)
 
-# Get time duration from extraction to reaching strike price
-df = AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate')
-
+# Get days to strike price as a share of possible options reaching it
+df_days2strike = getDaysToStrikeAsShare(df)
 
 print('Start creating plots')
 
@@ -234,6 +233,7 @@ GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=True, sav
 
 # Nr of days until options reach their strike price
 plotHistogramPlotly(df, col='duration', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction'}, savefig=True, saveFileName="scheduled_jobs/summary_content/daysToReachStrike.png")
+plotBarChartPlotly(df, xcol='duration', ycol='strikeReachedShare', titles = {'title':'Nr of days to reach strike price', 'xlabel':'Days since extraction', 'ylabel':'Share of active options'}, savefig=True, saveFileName='scheduled_jobs/summary_content/daysToReachStrike.png')
 
 ##### Profitability
 # Plot on expected profit when selling on strike (if reached)

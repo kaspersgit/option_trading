@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 
 def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, savefig=False, saveFileName='test.png'):
 	fig = plt.figure()
@@ -83,3 +84,34 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, sa
 	if savefig:
 		fig.savefig(saveFileName)
 		print(f'Created and saved scatter plot (expected vs {typeOfActual} profitability)')
+
+def AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate'):
+	df_ = df.copy()
+
+	# extract nr of days between start and end (if end exist)
+	df_['duration'] = (pd.to_datetime(df_[endCol]) - pd.to_datetime(df_[startCol])).dt.days
+
+	return(df_)
+
+def getDaysToStrikeAsShare(df):
+	df_ = df.copy()
+
+	# Get time duration from extraction to reaching strike price
+	df_ = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'strikePriceDate')
+	df_['counting'] = 1
+
+	d2e = df_[['daysToExpiration','counting']].groupby('daysToExpiration').count()
+	d2e['activeOptions'] = d2e['counting'][::-1].cumsum()
+	d2e = d2e.reset_index(drop=False)
+	d2e['daysToExpiration'] = d2e['daysToExpiration'].astype('int')
+	d2e = d2e[['daysToExpiration','activeOptions']]
+
+	d2s = df_[['duration','counting']].groupby('duration').count()
+	d2s = d2s.reset_index(drop=False)
+	d2s.rename(columns={'counting':'reachedStrike'}, inplace=True)
+	d2s['duration'] = d2s['duration'].astype('int')
+
+	df_merge = pd.merge_asof(d2s, d2e, left_on=['duration'], right_on=['daysToExpiration'], direction='forward')
+	df_merge['strikeReachedShare'] = df_merge['reachedStrike'] / df_merge['activeOptions']
+
+	return df_merge

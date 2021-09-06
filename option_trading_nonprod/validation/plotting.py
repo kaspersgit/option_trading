@@ -37,7 +37,21 @@ def plotHistogramPlotly(df, col, titles = {'title':'Histogram', 'xlabel':'Value'
                        )
     if savefig:
         fig.write_image(saveFileName)
-        print(f'Created and saved histogram of days until strike')
+        print(f'Created and saved histogram as {saveFileName}')
+
+def plotBarChartPlotly(df, xcol, ycol, titles = {'title':'Histogram', 'xlabel':'Value', 'ylabel':'Frequency'}, savefig=False, saveFileName='test.png'):
+    df_ = df.copy()
+    fig = px.bar(df_,
+                       x=xcol,
+                       y=ycol,
+                       title=titles['title'],
+                       labels={xcol: titles['xlabel'], ycol: titles['ylabel']}, # can specify one label per df column
+                       opacity=0.8,
+                       color_discrete_sequence=['indianred'] # color of bars
+                       )
+    if savefig:
+        fig.write_image(saveFileName)
+        print(f'Created and saved histogram as {saveFileName}')
 
 def plotMultipleLines(df, xcol = 'week_start', ycol = 'reachedStrikePrice', groupcol = 'strikePriceIncreaseBin'):
     df_grouped = df[[xcol,groupcol,ycol]].groupby([xcol,groupcol]).agg({ycol:['sum', 'count']})
@@ -62,14 +76,6 @@ def AddWeekStart(df, col = 'exportedAt'):
     df_['daysoffset'] = df_[col].apply(lambda x: x.weekday())
     # We apply, row by row (axis=1) a timedelta operation
     df_['week_start'] = df_.apply(lambda x: x[col] - datetime.timedelta(days=x['daysoffset']), axis=1)
-
-    return(df_)
-
-def AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate'):
-    df_ = df.copy()
-
-    # extract nr of days between start and end (if end exist)
-    df_['duration'] = (pd.to_datetime(df_[endCol]) - pd.to_datetime(df_[startCol])).dt.days
 
     return(df_)
 
