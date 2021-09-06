@@ -74,6 +74,7 @@ print(f"Imported dataframe shape: {df.shape}")
 # print current timestamp for logging
 print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+
 # Commented out as price is input for model and other features should be adjusted as well accordingly
 # Adding most recent stock price
 # unique_tickers = df['baseSymbol'].unique()
@@ -90,9 +91,9 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 print("Added latest stock prices")
 print("Shape of dataframe: {}".format(df.shape))
 
-if mode == 'DEVELOPMENT':
-	from option_trading_nonprod.process.stock_price_enriching import *
-	df = batch_enrich_df(df)
+# if mode == 'DEVELOPMENT':
+# enrich data within batches
+df = batch_enrich_df(df)
 
 with open('other_files/config_file.json') as json_file:
 	config = json.load(json_file)
