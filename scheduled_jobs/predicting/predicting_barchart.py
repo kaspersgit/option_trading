@@ -88,12 +88,14 @@ print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 #
 # df = df[~df['baseLastPrice'].isnull()]
 
-print("Added latest stock prices")
-print("Shape of dataframe: {}".format(df.shape))
+# print("Added latest stock prices")
+# print("Shape of dataframe: {}".format(df.shape))
 
 # if mode == 'DEVELOPMENT':
 # enrich data within batches
 df = batch_enrich_df(df)
+print("Enriched data within this batch")
+print("Shape of enriched dataframe: {}".format(df.shape))
 
 with open('other_files/config_file.json') as json_file:
 	config = json.load(json_file)

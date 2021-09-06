@@ -25,14 +25,18 @@ def scrapeMarketBeat(url):
         cols = row.find_all('td')
         first2cols = [ele.find_all('div') for ele in cols]
         first2cols = [ele.text.strip() for ele in first2cols[0]][-2::]
+
+        characters_to_remove = "$%+"
+        pattern = "[" + characters_to_remove + "]"
+        second2cols = [re.sub(pattern, "", s) for s in cols[1].stripped_strings]
         cols = [ele.text.strip() for ele in cols]
-        cols = first2cols + cols[1:len(cols)]
+        cols = first2cols + second2cols + cols[2:len(cols)]
         data.append([ele for ele in cols if ele])  # Get rid of empty values
 
     #colNames = table.find_all('th')
     #colNames = [ele.text.strip() for ele in colNames]
     # Hardcoded as 'ticker' is not a column name
-    colNames = ['ticker', 'company', 'callOptionVolume', 'avgOptionVolume', 'increaseRelative2Avg', 'avgStockVolume',
+    colNames = ['ticker', 'company', 'currentPrice', 'priceMovement', 'callOptionVolume', 'avgOptionVolume', 'increaseRelative2Avg', 'avgStockVolume',
                 'indicators']
 
     df = pd.DataFrame(data=data, columns=colNames)
@@ -83,6 +87,8 @@ print('Scraped a total of {} records'.format(len(df)))
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 df['exportedAt'] = now
 df['dataDate'] = pd.to_datetime(df['dataDate'])
+df['currentPrice'] = df['currentPrice'].astype(float)
+df['priceMovement'] = df['priceMovement'].astype(float)
 df['callOptionVolume'] = df["callOptionVolume"].str.replace(",", "").str.replace('*', '').astype(float)
 df['avgOptionVolume'] = df["avgOptionVolume"].str.replace(",", "").str.replace('*', '').astype(float)
 df['increaseRelative2Avg'] = df["increaseRelative2Avg"].str.replace("%", "").str.replace('*', '').astype(float)
