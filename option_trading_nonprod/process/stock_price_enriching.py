@@ -229,6 +229,44 @@ def limitDaysToExpiration(df, min=15, max=25):
 	df = df[(df['daysToExpiration'] > min) & (df['daysToExpiration'] < max)]
 	return (df)
 
+def getStockPriceDate(ticker, date, attribute='Close'):
+	price = yf.download(ticker, start=date, end=date)[attribute]
+	if len(price) == 0:
+		price = [0]
+	return price[0]
+
+def getStockPriceDateMulti(df, datecol, attribute='Close'):
+	df_output = pd.DataFrame(columns=['ticker', datecol,'stockPrice'])
+	dates = df[datecol].unique()
+
+	for date in dates:
+		part_df = df[df[datecol]==date]
+		tickers = part_df['baseSymbol'].unique()
+		if isinstance(tickers, np.ndarray):
+			tickers = tickers.tolist()
+		if len(tickers) > 50:
+			# 50 maximum tickers extracted at same time (probably equal to threads used)
+			n = 50
+			print('More than 50 tickers, splitting in parts with size {}'.format(n))
+			for i in range(0, len(tickers), n):
+				tickers_part = tickers[i:i+n]
+				data = yf.download(tickers_part, start=date, end=date, threads=True)
+				if data.empty:
+					continue
+				returned_value = data[attribute].values
+				result = returned_value[0]
+				df_output = df_output.append(pd.DataFrame({'ticker': tickers_part, datecol:date, 'stockPrice': result}), ignore_index=True)
+		else:
+			tickers_part = tickers
+			data = yf.download(tickers_part, start=date, end=date, threads=True)
+			if data.empty:
+				continue
+			returned_value = data[attribute].values
+			result = returned_value[0]
+			df_output = df_output.append(pd.DataFrame({'ticker': tickers_part, datecol:date, 'stockPrice': result}), ignore_index=True)
+
+	return df_output
+
 def getCurrentStockPrice(ticker, attribute='Close'):
 	df = pd.DataFrame(columns=['ticker','livePrice'])
 	if isinstance(ticker, np.ndarray):

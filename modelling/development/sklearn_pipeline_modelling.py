@@ -1,4 +1,5 @@
 import json
+import numpy as np
 
 from sklearn.pipeline import FeatureUnion, Pipeline, make_pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -12,6 +13,7 @@ from option_trading_nonprod.other.trading_strategies import *
 from option_trading_nonprod.process.pre_train import *
 from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.process.train_modifications import *
+from option_trading_nonprod.other.other_funcions import *
 from option_trading_nonprod.validation.trained_model_validation import *
 
 ## functions
@@ -59,7 +61,8 @@ print('Source key: {}'.format(source_key))
 df = load_from_s3(profile=s3_profile, bucket=source_bucket, key_prefix=source_key)
 print("Raw imported data shape: {}".format(df.shape))
 
-# Set target
+#####################################
+# Set target and feature engineering
 df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
 df['percStrikeReached'] = (df['maxPrice'] - df['baseLastPrice']) / (
 		df['strikePrice'] - df['baseLastPrice'])
@@ -85,7 +88,16 @@ included_options = config['included_options']
 df_calls = dfFilterOnGivenSetOptions(df, included_options)
 df_calls = df_calls.sort_values('exportedAt', ascending=True)
 
-X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df_calls, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.8, val_share=0.8)
+## testing the addition of opening prices
+# Add opening price on day of export
+openingPricesDF = getStockPriceDateMulti(df_calls, datecol='exportedAt', attribute='Open')
+openingPricesDF.rename(columns={'stockPrice': 'stockPriceOpen'}, inplace=True)
+
+df_calls = pd.merge(df_calls, openingPricesDF, left_on=['baseSymbol','exportedAt'], right_on=['ticker','exportedAt'])
+df_calls_open = df_calls[~df_calls['stockPriceOpen'].isnull()]
+
+
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df_calls_open, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.8, val_share=0.8)
 
 # Start of tuning
 # general approach
@@ -158,6 +170,7 @@ features_info = ['strikePrice'
 	, 'meanStrikePutPerc'
 	, 'midpointPerc'
 	, 'meanHigherStrike'
+	, 'stockPriceOpen'
 ]
 
 
@@ -223,7 +236,7 @@ features_adj = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
 				'MACDs_2_20_9', 'higherStrikePriceCum']
 
 # topFeatures = feat_imp[feat_imp['importance'] > 0.009]['feature']
-features = features_base
+features = features_info
 # top30features = feat_imp['feature'].head(30)
 
 ###########
