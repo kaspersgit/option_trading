@@ -70,7 +70,7 @@ parso==0.8.3
 pbr==5.6.0
 pexpect==4.8.0
 pickleshare==0.7.5
-Pillow==8.3.1
+Pillow==9.0.0
 plotly==5.5.0
 prettytable==2.1.0
 prometheus-client==0.12.0
