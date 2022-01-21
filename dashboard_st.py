@@ -47,12 +47,8 @@ def load_data():
     return df
 
 
-# Check if run locally (macbook) or not
-if platform.system() == 'Darwin':
-    modelname = 'DEV_c_GB64_v1x4'
-else:
-    os.chdir("/home/pi/Documents/python_scripts/option_trading")
-    modelname = sys.argv[1]
+# select model to use
+modelname = 'DEV_c_GB64_v1x4'
 
 # import data
 # load in data from s3
