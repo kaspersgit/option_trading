@@ -7,6 +7,11 @@ import numpy as np
 from io import StringIO, BytesIO
 import gzip
 
+def getDataS3(bucket, key):
+    s3 = boto3.client('s3')
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    df = pd.read_csv(obj['Body'])
+    return df
 
 def connect_to_s3(profile, type="client"):
     session = boto3.Session(region_name="eu-west-1", profile_name=profile)
@@ -100,8 +105,12 @@ def load_from_s3(
     # key_prefix = 'access-purpose/risk_general_eu/cpd/dc_forecasting/data/daily000'
     # gzipped = False
     ##############
-    # For the risk general S3 bucket
-    s3_resource = connect_to_s3(profile, type="resource")
+    # connect to s3
+    if profile == 'streamlit':
+        s3_resource = boto3.resource('s3')
+    else:
+        s3_resource = connect_to_s3(profile, type="resource")
+
     # Reading in multiple files with same prefix
     try:
         df = pd.DataFrame()

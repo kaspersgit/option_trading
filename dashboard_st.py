@@ -36,7 +36,8 @@ def load_data():
 
     bucket = 'project-option-trading-output'
     key = 'enriched_data/barchart/expired_on_'
-    df = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
+    # df = getDataS3(bucket, key)
+    df = load_from_s3(profile='streamlit', bucket=bucket, key_prefix=key)
 
     print('Shape of raw imported data: {}'.format(df.shape))
 
