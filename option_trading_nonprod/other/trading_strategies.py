@@ -2,6 +2,45 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+def filterDFonConstraints(df, config):
+	# TODO fix this to make it perform the same as fuction below
+	# Getting number of applicable accounts based on constraints
+	# find constraints
+	df_ = df.copy()
+
+	# Fill up filterset with default in case of non existing
+	if "minThreshold" not in config:
+		config['minThreshold'] = 0.0
+	if "maxThreshold" not in config:
+		config['maxThreshold'] = 1.0
+	if "maxBasePrice" not in config:
+		config['maxBasePrice'] = 200
+	if "minDaysToExp" not in config:
+		config['minDaysToExp'] = 2
+	if "maxDaysToExp" not in config:
+		config['maxDaysToExp'] = 100
+	if "minStrikeIncrease" not in config:
+		config['minStrikeIncrease'] = 1.0
+	# In case we have not scored yet
+	if "minThreshold" not in config:
+		config['minThreshold'] = 0.0
+	if "prob" not in df_.keys():
+		df_['prob'] = 1.0
+
+	for col in df_.keys().str.lower():
+		for con in [k.lower() for k in config.keys()]:
+			if col in con:
+				# Apply min value if existing
+				if 'min' in con:
+					df_ = df_[df_[col] >= config[con]]
+				# Apply max value if existing
+				elif 'max' in con:
+					df_ = df_[df_[col] < config[con]]
+				# Apply equality  if existing
+				else:
+					df_ = df_[df_[col] == config[con]]
+	return df_
+
 def dfFilterOnGivenSetOptions(df, filterset={}, type='stock'):
 	df_ = df.copy()
 	# Fill up filterset with default in case of non existing

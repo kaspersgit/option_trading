@@ -9,7 +9,7 @@ from sklearn.metrics import (brier_score_loss, precision_score, recall_score,
                              f1_score)
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-def plotCalibrationCurve(actuals, probs, title, bins=10, savefig=False, saveFileName='test.png', show_plot=True):
+def plotCalibrationCurve(actuals, probs, title, bins=10, returnfig=False, savefig=False, saveFileName='test.png', show_plot=True):
     """
     Plot the calibration curve for a set of true and predicted values
 
@@ -41,6 +41,8 @@ def plotCalibrationCurve(actuals, probs, title, bins=10, savefig=False, saveFile
         plt.show()
     if savefig:
         plt.savefig(saveFileName)
+    if returnfig:
+        return plt
 
 def plot_calibration_curve_mult(est, X_train, y_train, X_test, y_test, name, fig_index):
     """Plot calibration curve for est w/o and with calibration. """

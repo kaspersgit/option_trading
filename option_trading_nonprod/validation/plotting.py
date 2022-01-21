@@ -25,7 +25,7 @@ def plotHistogram(serie, show_highest=0.99, titles = {'title':'Histogram', 'xlab
     # Set a clean upper y-axis limit.
     plt.ylim(ymax=np.ceil(maxfreq / 10) * 10 if maxfreq % 10 else maxfreq + 10)
 
-def plotHistogramPlotly(df, col, titles = {'title':'Histogram', 'xlabel':'Value', 'ylabel':'Frequency'}, savefig=False, saveFileName='test.png'):
+def plotHistogramPlotly(df, col, titles = {'title':'Histogram', 'xlabel':'Value', 'ylabel':'Frequency'}, returnfig=False, savefig=False, saveFileName='test.png'):
     df_ = df.copy()
     fig = px.histogram(df_,
                        x=col,
@@ -39,7 +39,10 @@ def plotHistogramPlotly(df, col, titles = {'title':'Histogram', 'xlabel':'Value'
         fig.write_image(saveFileName)
         print(f'Created and saved histogram as {saveFileName}')
 
-def plotBarChartPlotly(df, xcol, ycol, titles = {'title':'Histogram', 'xlabel':'Value', 'ylabel':'Frequency'}, savefig=False, saveFileName='test.png'):
+    if returnfig:
+        return fig
+
+def plotBarChartPlotly(df, xcol, ycol, titles = {'title':'Histogram', 'xlabel':'Value', 'ylabel':'Frequency'}, returnfig=False, savefig=False, saveFileName='test.png'):
     df_ = df.copy()
     fig = px.bar(df_,
                        x=xcol,
@@ -52,6 +55,9 @@ def plotBarChartPlotly(df, xcol, ycol, titles = {'title':'Histogram', 'xlabel':'
     if savefig:
         fig.write_image(saveFileName)
         print(f'Created and saved histogram as {saveFileName}')
+
+    if returnfig:
+        return fig
 
 def plotMultipleLines(df, xcol = 'week_start', ycol = 'reachedStrikePrice', groupcol = 'strikePriceIncreaseBin'):
     df_grouped = df[[xcol,groupcol,ycol]].groupby([xcol,groupcol]).agg({ycol:['sum', 'count']})

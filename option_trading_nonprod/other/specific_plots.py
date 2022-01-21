@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
 
-def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, savefig=False, saveFileName='test.png'):
+def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, returnfig=False, savefig=False, saveFileName='test.png'):
 	fig = plt.figure()
 	ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
 	ax.scatter(ReachedStrike['strikePricePerc'], ReachedStrike['prob'], s = 4, color='g', alpha=0.7, label='Did reach strike')
@@ -16,7 +17,30 @@ def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, savefig=Fals
 		fig.savefig(saveFileName)
 		print(f'Created and saved scatter plot of strike price increase vs predicted probability')
 
-def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False, saveFileName='test.png'):
+	if returnfig:
+		return fig
+
+def PredictionVsStrikeIncreasePlotly(df, returnfig=False, savefig=False, saveFileName='test.png'):
+	# making a copy to avoid problems
+	df_ = df.copy()
+	df_['reachedStrikePrice'] = df_['reachedStrikePrice'].astype(str)
+	df_ = df_.sort_values('reachedStrikePrice', ascending=True)
+	fig = px.scatter(df_, x='strikePricePerc', y='prob', color='reachedStrikePrice', hover_name='baseSymbol'
+					 , color_discrete_map={'0':'red', '1':'green'}, opacity=0.7
+					 , title='Strike increase vs prediction', labels={'strikePricePerc':'Strike price increase', 'prob':'Predicted probability'})
+
+	# updating value names
+	newnames = {'0': 'Not reached strike', '1': 'Did reach strike'}
+	fig.for_each_trace(lambda t: t.update(name=newnames[t.name],
+										  legendgroup=newnames[t.name],
+										  hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+										  )
+					   )
+
+	if returnfig:
+		return fig
+
+def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, returnfig=False, savefig=False, saveFileName='test.png'):
 
 	df_=df.copy()
 
@@ -32,7 +56,6 @@ def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False
 	hprof_strikeIncreaseBin = high_prof_df[['baseSymbol','strikePricePercBin','reachedStrikePrice']].groupby(['strikePricePercBin','reachedStrikePrice']).count()
 	hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
 																		 100 * x / float(x.sum())).reset_index(drop=False)
-
 
 	fig, axs = plt.subplots(1, 3, figsize=(12, 5), sharey=True)
 	# All contracts
@@ -63,7 +86,55 @@ def GroupsPerformanceComparisonBar(df, high_prob_df, high_prof_df, savefig=False
 		fig.savefig(saveFileName)
 		print(f'Created and saved bar plot of success ratio all options vs selected options')
 
-def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, savefig=False, saveFileName='test.png'):
+	if returnfig:
+		return fig
+
+
+def GroupsPerformanceComparisonBarPlotly(df, high_prob_df, high_prof_df, returnfig=False, savefig=False,
+								   saveFileName='test.png'):
+	df_ = df.copy()
+
+	# Create bar plots showing share of successes per strike price increase bucket
+	all_strikeIncreaseBin = df_[['baseSymbol', 'strikePricePercBin', 'reachedStrikePrice']].groupby(
+		['strikePricePercBin', 'reachedStrikePrice']).count()
+	all_binPercentage = all_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+																	 100 * x / float(x.sum())).reset_index(drop=False)
+
+	hprob_strikeIncreaseBin = high_prob_df[['baseSymbol', 'strikePricePercBin', 'reachedStrikePrice']].groupby(
+		['strikePricePercBin', 'reachedStrikePrice']).count()
+	hprob_binPercentage = hprob_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+																		 100 * x / float(x.sum())).reset_index(
+		drop=False)
+
+	hprof_strikeIncreaseBin = high_prof_df[['baseSymbol', 'strikePricePercBin', 'reachedStrikePrice']].groupby(
+		['strikePricePercBin', 'reachedStrikePrice']).count()
+	hprof_binPercentage = hprof_strikeIncreaseBin.groupby(level=0).apply(lambda x:
+																		 100 * x / float(x.sum())).reset_index(
+		drop=False)
+
+	all_binPercentage['group'] = 'all'
+	hprob_binPercentage['group'] = 'high_probability'
+	hprof_binPercentage['group'] = 'high_profitability'
+
+	# concat dfs
+	df_concat = pd.concat([all_binPercentage,hprob_binPercentage,hprof_binPercentage], ignore_index=True)
+	# update name made ugly due to grouping
+	df_concat.rename(columns={'baseSymbol':'share'}, inplace=True)
+	# order according to how it should be displayed
+	# cast reachedStrikePrice to string for coloring purposes
+	df_concat['reachedStrikePrice'] = df_concat['reachedStrikePrice'].astype(str)
+
+	fig = px.bar(df_concat, x="strikePricePercBin", y="share",
+				 color="reachedStrikePrice", barmode="stack",
+				 color_discrete_map = {'0': 'red', '1': 'green'},
+				 category_orders={'reachedStrikePrice':['1','0']}, facet_col="group")
+
+	# fig.show(renderer='browser')
+
+	if returnfig:
+		return fig
+
+def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, returnfig=False, savefig=False, saveFileName='test.png'):
 	typeOfActual = 'Max' if actualCol.startswith('max') else 'Actual'
 
 	# Create scatter plot (strike price progress vs predicted probability)
@@ -84,6 +155,9 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, sa
 	if savefig:
 		fig.savefig(saveFileName)
 		print(f'Created and saved scatter plot (expected vs {typeOfActual} profitability)')
+
+	if returnfig:
+		return fig
 
 def AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate'):
 	df_ = df.copy()
