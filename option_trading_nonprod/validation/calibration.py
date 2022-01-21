@@ -3,13 +3,14 @@
 # License: BSD Style.
 
 import matplotlib.pyplot as plt
-
+import pandas as pd
+import plotly.express as px
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (brier_score_loss, precision_score, recall_score,
                              f1_score)
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-def plotCalibrationCurve(actuals, probs, title, bins=10, returnfig=False, savefig=False, saveFileName='test.png', show_plot=True):
+def plotCalibrationCurve(actuals, probs, title, bins=10, returnfig=False, savefig=False, saveFileName='test.png', show_plot=False):
     """
     Plot the calibration curve for a set of true and predicted values
 
@@ -43,6 +44,48 @@ def plotCalibrationCurve(actuals, probs, title, bins=10, returnfig=False, savefi
         plt.savefig(saveFileName)
     if returnfig:
         return plt
+
+def plotCalibrationCurvePlotly(actuals, probs, title, bins=10, returnfig=False, savefig=False, saveFileName='test.png'):
+    """
+    Plot the calibration curve for a set of true and predicted values
+
+    :param actuals: true target value
+    :param probs: predicted probability of target
+    :param bins: how many bins to divide data in for plotting
+    :param savefig: boolean if plot should be saved
+    :param saveFileName: str path to which to save the plot
+    :return: calibration plot
+    """
+    # summaries actuals and predicted probs to (bins) number of points
+    fraction_of_positives, mean_predicted_value = \
+        calibration_curve(actuals, probs, n_bins=bins)
+
+    # Create scatter plot
+    fig = px.scatter(x=fraction_of_positives, y=mean_predicted_value, title='Calibration plot (reliability curve)')
+
+    # Make trace be line plus dots
+    fig.data[0].update(mode='markers+lines')
+
+    # set axis range to 0 - 1
+    fig.update_layout(xaxis_range=[0,1], yaxis_range=[0,1], xaxis_title='Predicted probability', yaxis_title='Fraction of positives')
+
+    # Add diagonal reference line
+    fig.add_shape(type="line",
+                  xref="paper", yref="paper",
+                  x0=0, x1=1, y0=0, y1=1,
+                  line=dict(
+                      color="black",
+                      width=2,
+                      dash="dot",
+                  )
+    )
+
+    if savefig:
+        fig.write_image(saveFileName)
+        print(f'Created and saved calibration plot as {saveFileName}')
+
+    if returnfig:
+        return fig
 
 def plot_calibration_curve_mult(est, X_train, y_train, X_test, y_test, name, fig_index):
     """Plot calibration curve for est w/o and with calibration. """

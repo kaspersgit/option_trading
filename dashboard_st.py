@@ -10,11 +10,13 @@ example:
 """
 
 # import packages
+import pandas as pd
 from dateutil.relativedelta import relativedelta, FR
 import os, sys, platform
 import pickle
 import json
 import streamlit as st
+import hashlib
 from datetime import date, timedelta
 
 from option_trading_nonprod.aws import *
@@ -45,15 +47,21 @@ def load_data():
     df = batch_enrich_df(df)
     print('Shape of batch enriched data: {}'.format(df.shape))
 
+    df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
+
     return df
 
-
-# select model to use
-modelname = 'DEV_c_GB64_v1x4'
 
 # import data
 # load in data from s3
 df_all = load_data()
+
+# password implementation
+password = st.sidebar.text_input('Type in password')
+if os.environ['PASSWORD'] == password:
+    st.sidebar.write('Password is correct')
+else:
+    st.sidebar.write('Password is wrong')
 
 # Set title for sidebar
 st.sidebar.markdown('## Filtering options')
@@ -87,10 +95,11 @@ print('Shape of filtered data: {}'.format(df.shape))
 ########################
 # list available models
 models = os.listdir(os.getcwd() + '/trained_models')
-available_models = [i for i in models if i.startswith('PROD')]
+available_models = [i for i in models if (('64' in i) & ('DEV' in i))]
 
 # allow to choose model
-# modelname = st.sidebar.selectbox('Select model:', available_models)
+modelname = st.sidebar.selectbox('Select model:', available_models, index=available_models.index('DEV_c_GB64_v1x4.sav'))
+modelname = modelname.split('.')[0]
 
 ########################
 # Import model and score
@@ -103,11 +112,12 @@ prob = model.predict_proba(df[features])[:, 1]
 print('Loaded model and scored options')
 
 ####### Adding columns and variables #############
-# Make high level summary
-# Add target variable
-df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
 # Add prediction variable
 df['prob'] = prob
+
+# set threshold
+threshold = 0.5
+df['pred'] = np.where(df['prob'] > 0.5,1,0)
 
 df = simpleEnriching(df)
 
@@ -129,15 +139,6 @@ biggest_decrease_df = df.sort_values('maxProfitability', ascending=True)[
     subset=['baseSymbol']).head(5)
 biggest_decrease_df.reset_index(drop=True, inplace=True)
 
-# basic performance
-# accuracy (split per days to expiration)
-# accuracy (split per strike price increase)
-# brier score
-brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
-st.write('Brier score:', brier_score)
-
-# Simulating trading strategies
-print('Simulating simple trading strategies')
 
 # High probability
 roi_highprob, cost_highprob, revenue_highprob, profit_highprob = simpleTradingStrategy(df, actualCol='reachStrikePrice',
@@ -149,21 +150,35 @@ roi_highprof, cost_highprof, revenue_highprof, profit_highprof = simpleTradingSt
                                                                                        filterset=hprof_config,
                                                                                        plot=False)
 
-####################
-# PLOTS GENERATION #
-####################
-
-## pre plot variable and dftransformations
-# Subset total df into ones reaching strike and those not
-ReachedStrike = df[df['reachedStrikePrice'] == 1]
-notReachedStrike = df[df['reachedStrikePrice'] == 0]
-
 # Filter on options appearing in high probability, profitability or in neither of the two
 high_prob_df = dfFilterOnGivenSetOptions(df, hprob_config)
 high_prof_df = dfFilterOnGivenSetOptions(df, hprof_config)
 
 # Get days to strike price as a share of possible options reaching it
 df_days2strike = getDaysToStrikeAsShare(df)
+
+############################
+# Start dashboard creation #
+############################
+
+st.markdown('# Option trading model summary')
+
+# Showing some model info
+# model_details_df = pd.DataFrame({'Key':['model name', 'nr features', 'train size', 'calibration size']
+#                                  , 'Value':[modelname, len(model.feature_names), model.train_data_shape[0]
+#         , model.calibration_data_shape[0]]})
+# st.table(model_details_df)
+
+# top 10 features of model
+model_feature_importance = pd.DataFrame({'Feature':model.feature_names, 'Importance':model.feature_importances_}).sort_values('Importance', ascending=False).reset_index(drop=True)
+st.table(model_feature_importance.head(10))
+
+brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
+st.write('Brier score:', brier_score)
+
+####################
+# PLOTS GENERATION #
+####################
 
 print('Start creating plots')
 
@@ -184,10 +199,13 @@ st.plotly_chart(fig)
 
 ##### Model performance
 # calibration curve
-fig = plotCalibrationCurve(df['reachedStrikePrice'], df['prob'], title='', bins=10, returnfig=True, savefig=False)
-st.pyplot(fig)
+fig = plotCalibrationCurvePlotly(df['reachedStrikePrice'], df['prob'], title='', bins=10, returnfig=True, savefig=False)
+st.plotly_chart(fig)
 
 ##### Profitability
+# Biggest increases
+st.table(biggest_increase_df)
+
 # Plot on expected profit when selling on strike (if reached)
 fig = ExpvsActualProfitabilityScatter(df, high_prob_df, high_prof_df, actualCol='profitPerc', returnfig=True, savefig=False)
 st.pyplot(fig)
@@ -198,18 +216,20 @@ st.pyplot(fig)
 
 
 # # precision threshold plot
-# plotThresholdMetrics(df['prob'], df['reachedStrikePrice'], savefig=True,
-#                      saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
-#
-# print('Created and saved precision vs threshold plot')
-#
+fig = plotThresholdMetricsPlotly(df['prob'], df['reachedStrikePrice'], returnfig=True, savefig=False,
+                     saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
+st.plotly_chart(fig)
+
 # # AUC and similar
-# auc_roc = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='roc', savefig=True,
-#                        saveFileName='scheduled_jobs/summary_content/roc.png')
-#
-# print('Created and saved ROC plot')
-#
-# auc_pr = plotCurveAUC(df['prob'], df['reachedStrikePrice'], title='', type='pr', savefig=True,
-#                       saveFileName='scheduled_jobs/summary_content/pr.png')
-#
-# print('Created and saved Precision Recall plot')
+fig, auc_roc = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='roc', returnfig=True, savefig=False,
+                       saveFileName='scheduled_jobs/summary_content/roc.png')
+
+
+st.plotly_chart(fig)
+st.write(f'ROC auc of: {auc_roc}')
+
+fig, auc_pr = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='pr', returnfig=True, savefig=False,
+                      saveFileName='scheduled_jobs/summary_content/pr.png')
+
+st.plotly_chart(fig)
+st.write(f'ROC auc of: {auc_pr}')

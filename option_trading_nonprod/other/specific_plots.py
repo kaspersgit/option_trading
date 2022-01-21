@@ -36,6 +36,9 @@ def PredictionVsStrikeIncreasePlotly(df, returnfig=False, savefig=False, saveFil
 										  hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
 										  )
 					   )
+	if savefig:
+		fig.write_image(saveFileName)
+		print(f'Created and saved prediction vs strike increase scatter as {saveFileName}')
 
 	if returnfig:
 		return fig
@@ -120,7 +123,6 @@ def GroupsPerformanceComparisonBarPlotly(df, high_prob_df, high_prof_df, returnf
 	df_concat = pd.concat([all_binPercentage,hprob_binPercentage,hprof_binPercentage], ignore_index=True)
 	# update name made ugly due to grouping
 	df_concat.rename(columns={'baseSymbol':'share'}, inplace=True)
-	# order according to how it should be displayed
 	# cast reachedStrikePrice to string for coloring purposes
 	df_concat['reachedStrikePrice'] = df_concat['reachedStrikePrice'].astype(str)
 
@@ -130,6 +132,10 @@ def GroupsPerformanceComparisonBarPlotly(df, high_prob_df, high_prof_df, returnf
 				 category_orders={'reachedStrikePrice':['1','0']}, facet_col="group")
 
 	# fig.show(renderer='browser')
+
+	if savefig:
+		fig.write_image(saveFileName)
+		print(f'Created and saved group comparison bar plot as {saveFileName}')
 
 	if returnfig:
 		return fig
