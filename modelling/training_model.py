@@ -19,7 +19,7 @@ n_bits = 32 << bool(sys.maxsize >> 32)
 ###### import data from S3
 # Set source and target for bucket and keys
 source_bucket = 'project-option-trading-output'
-source_key = 'enriched_data/barchart'
+source_key = 'enriched_data/barchart/expired_on_'
 
 # print status of variables
 print('Source bucket: {}'.format(source_bucket))

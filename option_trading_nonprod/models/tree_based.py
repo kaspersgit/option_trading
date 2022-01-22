@@ -1,7 +1,10 @@
-# import xgboost as xgb
-# import catboost as cb
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 import pickle
+import sys
+
+if sys.platform == 'Darwin':
+	# import xgboost as xgb
+	import catboost as cb
 
 # def fit_xgb(X_fit, y_fit, X_val, y_val, params, save_model, xgb_path, name):
 # 	# Example
@@ -28,28 +31,30 @@ import pickle
 # 	return model
 #
 #
-# def fit_cb(X_fit, y_fit, X_val, y_val, params, save_model, cb_path, name):
-# 	# Example
-# 	# params = {'iterations':100,
-# 	#                               'max_depth':2,
-# 	#                               'learning_rate':0.1,
-# 	#                               'colsample_bylevel':0.03,
-# 	#                               'objective':"Logloss"}
-# 	model = cb.CatBoostClassifier()
-# 	model.set_params(**params)
-# 	model.fit(X_fit, y_fit,
-# 			  eval_set=[(X_val, y_val)],
-# 			  verbose=0,
-#               early_stopping_rounds=1000)
-# 	model.set_feature_names(X_fit.columns)
-#
-# 	if save_model:
-# 		# Save Catboost Model
-# 		save_to = '{}{}.cbm'.format(cb_path, name)
-# 		model.save_model(save_to)
-# 		print('Saved model to {}'.format(save_to))
-#
-# 	return model
+def fit_cb(X_fit, y_fit, X_val, y_val, params, save_model, cb_path, name):
+	# Example
+	# params = {'iterations':100,
+	#                               'max_depth':2,
+	#                               'learning_rate':0.1,
+	#                               'colsample_bylevel':0.03,
+	#                               'objective':"Logloss"}
+	model = cb.CatBoostClassifier()
+	model.set_params(**params)
+	model.fit(X_fit, y_fit,
+			  eval_set=[(X_val, y_val)],
+			  verbose=0,
+              early_stopping_rounds=1000)
+	model.feature_names = X_fit.columns
+	model.train_data_shape = X_fit.shape
+	model.train_data_describe = X_fit.describe()
+
+	if save_model:
+		# Save Catboost Model
+		save_to = '{}{}.cbm'.format(cb_path, name)
+		model.save_model(save_to)
+		print('Saved model to {}'.format(save_to))
+
+	return model
 
 def fit_AdaBoost(X_fit, y_fit, X_val, y_val, params, save_model, ab_path, name):
 	# Example

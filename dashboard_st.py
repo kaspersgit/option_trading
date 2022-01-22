@@ -31,25 +31,27 @@ from option_trading_nonprod.process.simple_enriching import *
 
 @st.cache
 def load_data():
-    if platform.system() == 'Darwin':
-        s3_profile = 'mrOption'
-    else:
-        s3_profile = 'default'
+	if platform.system() == 'Darwin':
+		s3_profile = 'mrOption'
+	else:
+		s3_profile = 'streamlit'
 
-    bucket = 'project-option-trading-output'
-    key = 'enriched_data/barchart/expired_on_'
-    # df = getDataS3(bucket, key)
-    df = load_from_s3(profile='streamlit', bucket=bucket, key_prefix=key)
+	bucket = 'project-option-trading-output'
+	key = 'enriched_data/barchart/expired_on_'
 
-    print('Shape of raw imported data: {}'.format(df.shape))
+	df_all = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 
-    # enrich data within batches
-    df = batch_enrich_df(df)
-    print('Shape of batch enriched data: {}'.format(df.shape))
+	print('Shape of raw imported data: {}'.format(df_all.shape))
 
-    df['reachedStrikePrice'] = np.where(df['maxPrice'] >= df['strikePrice'], 1, 0)
+	# enrich data within batches
+	df = batch_enrich_df(df_all)
+	print('Shape of batch enriched data: {}'.format(df.shape))
 
-    return df
+	df = addTargets(df)
+
+	df = cleanDF(df)
+
+	return df.reset_index(drop=True)
 
 
 # import data
@@ -191,10 +193,15 @@ st.plotly_chart(fig)
 fig = GroupsPerformanceComparisonBarPlotly(df, high_prob_df, high_prof_df, returnfig=True, savefig=False)
 st.plotly_chart(fig)
 
+##### Stock price behaviour
 # Nr of days until options reach their strike price
 fig = plotBarChartPlotly(df_days2strike, xcol='duration', ycol='strikeReachedShare',
                    titles={'title': 'Nr of days to reach strike price', 'xlabel': 'Days since extraction',
                            'ylabel': 'Share of active options'}, returnfig=True, savefig=False)
+st.plotly_chart(fig)
+
+# Lowest price reached as % of starting price
+fig = plotLowestPriceReachedPlotly(df, returnfig=True)
 st.plotly_chart(fig)
 
 ##### Model performance

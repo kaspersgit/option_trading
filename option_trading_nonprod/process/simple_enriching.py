@@ -39,3 +39,18 @@ def simpleEnriching(df):
     print(f'Added columns: {col_difference}')
 
     return df_
+
+def addTargets(df):
+    df_ = df.copy()
+    df_['reachedStrikePrice'] = np.where(df_['maxPrice'] >= df_['strikePrice'], 1, 0)
+    df_['percStrikeReached'] = (df_['maxPrice'] - df_['baseLastPrice']) / (
+            df_['strikePrice'] - df_['baseLastPrice'])
+    df_['finalPriceHigher'] = np.where(df_['finalPrice'] >= df_['baseLastPrice'], 1, 0)
+    return df_
+
+def cleanDF(df):
+    df_ = df.copy()
+    df_ = df_.drop_duplicates(subset=['baseSymbol', 'symbolType', 'strikePrice', 'expirationDate', 'exportedAt'])
+    # TODO belows seems to filter out everything almost?
+    # df_ = df_[~df_['midpoint'].isna()]
+    return df_

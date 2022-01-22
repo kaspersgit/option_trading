@@ -162,6 +162,10 @@ df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").str.rep
 df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
+for col in ['bidPrice', 'midpoint','askPrice', 'lastPrice']:
+    df_total[col] = df_total[col].str.replace(",", "").str.replace('*', '').astype(float)
+
+
 print('Extracted a total of {} records'.format(len(df_total)))
 
 # Saving file as CSV

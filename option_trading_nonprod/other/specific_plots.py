@@ -165,19 +165,54 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, re
 	if returnfig:
 		return fig
 
+def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileName='test.png'):
+	df_ = df.copy()
+	df_['reachedStrikePrice'] = df_['reachedStrikePrice'].astype(str)
+	# add number of days from extraction to expiration
+	df_['optionDuration'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'expirationDate')
+	df_['days2minPrice'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'minPriceDate')
+	df_['minPriceShareOfPrice'] = df_['minPrice'] / df_['baseLastPrice']
+	df_ = df_[df_['minPriceShareOfPrice'] < 1.0]
+
+	# per day from export
+	# fig = px.violin(df_, x='days2minPrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
+	# 			 , box=True, hover_name='baseSymbol', color_discrete_map={'0':'red', '1':'green'})
+
+
+	# in total
+	fig = px.violin(df_, x='reachedStrikePrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
+				 	, box=True, hover_name='baseSymbol', color_discrete_map={'0':'red', '1':'green'}
+					, title='Minimum price reached as % of starting price')
+
+	# Update value names
+	newnames = {'0': 'Not reached strike', '1': 'Did reach strike'}
+	fig.for_each_trace(lambda t: t.update(name=newnames[t.name],
+										  legendgroup=newnames[t.name],
+										  hovertemplate=t.hovertemplate.replace(t.name, newnames[t.name])
+										  )
+					   )
+
+	if savefig:
+		fig.write_image(saveFileName)
+		print(f'Created and saved group comparison bar plot as {saveFileName}')
+
+	if returnfig:
+		return fig
+
+
+# TODO below are not plots
 def AddDaysFromStartToEnd(df, startCol = 'exportedAt', endCol = 'strikePriceDate'):
 	df_ = df.copy()
 
 	# extract nr of days between start and end (if end exist)
-	df_['duration'] = (pd.to_datetime(df_[endCol]) - pd.to_datetime(df_[startCol])).dt.days
 
-	return(df_)
+	return (pd.to_datetime(df_[endCol]) - pd.to_datetime(df_[startCol])).dt.days
 
 def getDaysToStrikeAsShare(df):
 	df_ = df.copy()
 
 	# Get time duration from extraction to reaching strike price
-	df_ = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'strikePriceDate')
+	df_['duration'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'strikePriceDate')
 	df_['counting'] = 1
 
 	d2e = df_[['daysToExpiration','counting']].groupby('daysToExpiration').count()
