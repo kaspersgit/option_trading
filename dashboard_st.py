@@ -53,11 +53,6 @@ def load_data():
 
 	return df.reset_index(drop=True)
 
-
-# import data
-# load in data from s3
-df_all = load_data()
-
 # password implementation
 password = st.sidebar.text_input('Type in password')
 if os.environ['PASSWORD'] == password:
@@ -68,18 +63,6 @@ else:
 # Set title for sidebar
 st.sidebar.markdown('## Filtering options')
 
-# Set filter options
-# set slider
-today = date.today()
-today_m100 = today - timedelta(days=100)
-start_date = st.sidebar.date_input('Start date', today_m100)
-end_date = st.sidebar.date_input('End date', today)
-
-if start_date < end_date:
-    st.sidebar.success('Selected period of `%s` days' % ((end_date - start_date).days))
-else:
-    st.sidebar.error('Error: End date must fall after start date.')
-
 # filter set on applicable rows
 # only select Call option out of the money
 with open('other_files/config_file.json') as json_file:
@@ -89,12 +72,10 @@ hprob_config = config['high_probability']
 hprof_config = config['high_profitability']
 included_options = config['included_options']
 
-# Filter on basics (like days to expiration and contract type)
-df = dfFilterOnGivenSetOptions(df_all, included_options)
-
-print('Shape of filtered data: {}'.format(df.shape))
-
 ########################
+## SELECTION OF MODEL ##
+########################
+
 # list available models
 models = os.listdir(os.getcwd() + '/trained_models')
 available_models = [i for i in models if (('64' in i) & ('DEV' in i))]
@@ -102,6 +83,38 @@ available_models = [i for i in models if (('64' in i) & ('DEV' in i))]
 # allow to choose model
 modelname = st.sidebar.selectbox('Select model:', available_models, index=available_models.index('DEV_c_GB64_v1x4.sav'))
 modelname = modelname.split('.')[0]
+
+# Set filter options
+# for expiration date
+today = date.today()
+today_m100 = today - timedelta(days=6)
+start_date = st.sidebar.date_input('Start date', today_m100)
+end_date = st.sidebar.date_input('End date', today)
+
+if start_date < end_date:
+    st.sidebar.success('Selected period of `%s` days' % ((end_date - start_date).days))
+else:
+    st.sidebar.error('Error: End date must fall after start date.')
+
+# for other options (as in the config jsons
+price_range = st.sidebar.slider('Stock price at start between', min_value=0.0, max_value=500.0, value=(0.0, 200.0))
+extr2exp_days = st.sidebar.slider('Days from extraction to expiration', min_value=0, max_value=100, value=(5, 20))
+strikprice_increase = st.sidebar.slider('Strike price increase ratio', min_value=1.0, max_value=20.0, value=(1.05, 10.0))
+threshold_range = st.sidebar.slider('Threshold range', min_value=0.0, max_value=1.0, value=(0.0, 1.0))
+
+# import data
+# load in data from s3
+df_all = load_data()
+df = df_all.copy()
+
+# update included options filter
+included_options['maxBasePrice'] = price_range[1]
+included_options['minDaysToExp'] = extr2exp_days[0]
+included_options['maxDaysToExp'] = extr2exp_days[1]
+included_options['minStrikeIncrease'] = strikprice_increase[0]
+included_options['maxStrikeIncrease'] = strikprice_increase[1]
+included_options['minThreshold'] = threshold_range[0]
+included_options['maxThreshold'] = threshold_range[1]
 
 ########################
 # Import model and score
@@ -120,6 +133,11 @@ df['prob'] = prob
 # set threshold
 threshold = 0.5
 df['pred'] = np.where(df['prob'] > 0.5,1,0)
+
+# Filter on basics (like days to expiration and contract type)
+df = dfFilterOnGivenSetOptions(df, included_options)
+
+print('Shape of filtered data: {}'.format(df.shape))
 
 df = simpleEnriching(df)
 
@@ -159,11 +177,57 @@ high_prof_df = dfFilterOnGivenSetOptions(df, hprof_config)
 # Get days to strike price as a share of possible options reaching it
 df_days2strike = getDaysToStrikeAsShare(df)
 
+#################
+# Create dashboard content variables
+################
+
+# AUC for ROC and PR
+fig_roc, auc_roc = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='roc', returnfig=True,
+                                  savefig=False,
+                                  saveFileName='scheduled_jobs/summary_content/roc.png')
+
+
+fig_pr, auc_pr = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='pr', returnfig=True,
+                                    savefig=False,
+                                    saveFileName='scheduled_jobs/summary_content/pr.png')
+
+brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
+
 ############################
 # Start dashboard creation #
 ############################
 
 st.markdown('# Option trading model summary')
+
+st.markdown('## Data information')
+
+st.write(f'Total number of options (unique tickers): {len(df)}({df.baseSymbol.nunique()})')
+st.write(f'Options reaching strike (unique tickers): {df.reachedStrikePrice.sum()}({df[df.reachedStrikePrice == 1].baseSymbol.nunique()})')
+st.write(f'Share of options reaching strike: {df.reachedStrikePrice.sum() / len(df):.2f}')
+
+st.markdown('## Model performance metrics')
+
+st.write(f'Area Under Curve (AUC) of ROC: {auc_pr:.2f}')
+st.write(f'AUC of Precision Recall: \t {auc_roc:.2f}')
+st.write(f'Brier loss score: {brier_score:.2f}')
+
+with st.expander("See model details and performance metrics"):
+    st.write(f"""
+        For predicting the chance an option will reach its strike price we used the following model \n
+        Model name: {modelname} \n
+        Model type: [Gradient Boosting Classifier](https://en.wikipedia.org/wiki/Gradient_boosting) \n
+    """)
+
+    # top 10 features of model
+    model_feature_importance = pd.DataFrame(
+        {'Feature': model.feature_names, 'Importance': model.feature_importances_}).sort_values('Importance',
+                                                                                                ascending=False).reset_index(
+        drop=True)
+    st.table(model_feature_importance.head(10))
+
+    st.plotly_chart(fig_roc)
+
+    st.plotly_chart(fig_pr)
 
 # Showing some model info
 # model_details_df = pd.DataFrame({'Key':['model name', 'nr features', 'train size', 'calibration size']
@@ -171,12 +235,7 @@ st.markdown('# Option trading model summary')
 #         , model.calibration_data_shape[0]]})
 # st.table(model_details_df)
 
-# top 10 features of model
-model_feature_importance = pd.DataFrame({'Feature':model.feature_names, 'Importance':model.feature_importances_}).sort_values('Importance', ascending=False).reset_index(drop=True)
-st.table(model_feature_importance.head(10))
 
-brier_score = brier_score_loss(df['reachedStrikePrice'], df['prob'])
-st.write('Brier score:', brier_score)
 
 ####################
 # PLOTS GENERATION #
@@ -227,16 +286,3 @@ fig = plotThresholdMetricsPlotly(df['prob'], df['reachedStrikePrice'], returnfig
                      saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
 st.plotly_chart(fig)
 
-# # AUC and similar
-fig, auc_roc = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='roc', returnfig=True, savefig=False,
-                       saveFileName='scheduled_jobs/summary_content/roc.png')
-
-
-st.plotly_chart(fig)
-st.write(f'ROC auc of: {auc_roc}')
-
-fig, auc_pr = plotCurveAUCPlotly(df['prob'], df['reachedStrikePrice'], title='', type='pr', returnfig=True, savefig=False,
-                      saveFileName='scheduled_jobs/summary_content/pr.png')
-
-st.plotly_chart(fig)
-st.write(f'ROC auc of: {auc_pr}')

@@ -61,7 +61,7 @@ def plotCalibrationCurvePlotly(actuals, probs, title, bins=10, returnfig=False, 
         calibration_curve(actuals, probs, n_bins=bins)
 
     # Create scatter plot
-    fig = px.scatter(x=fraction_of_positives, y=mean_predicted_value, title='Calibration plot (reliability curve)')
+    fig = px.scatter(x=mean_predicted_value, y=fraction_of_positives, title='Calibration plot (reliability curve)')
 
     # Make trace be line plus dots
     fig.data[0].update(mode='markers+lines')

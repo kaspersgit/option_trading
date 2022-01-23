@@ -182,6 +182,7 @@ def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileNam
 	# in total
 	fig = px.violin(df_, x='reachedStrikePrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
 				 	, box=True, hover_name='baseSymbol', color_discrete_map={'0':'red', '1':'green'}
+				 	, category_orders={'reachedStrikePrice':['0','1']}
 					, title='Minimum price reached as % of starting price')
 
 	# Update value names
