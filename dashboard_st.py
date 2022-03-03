@@ -87,7 +87,7 @@ modelname = modelname.split('.')[0]
 # Set filter options
 # for expiration date
 today = date.today()
-today_m100 = today - timedelta(days=6)
+today_m100 = today - timedelta(days=10)
 start_date = st.sidebar.date_input('Start date', today_m100)
 end_date = st.sidebar.date_input('End date', today)
 
@@ -97,10 +97,13 @@ else:
     st.sidebar.error('Error: End date must fall after start date.')
 
 # for other options (as in the config jsons
-price_range = st.sidebar.slider('Stock price at start between', min_value=0.0, max_value=500.0, value=(0.0, 200.0))
-extr2exp_days = st.sidebar.slider('Days from extraction to expiration', min_value=0, max_value=100, value=(5, 20))
-strikprice_increase = st.sidebar.slider('Strike price increase ratio', min_value=1.0, max_value=20.0, value=(1.05, 10.0))
-threshold_range = st.sidebar.slider('Threshold range', min_value=0.0, max_value=1.0, value=(0.0, 1.0))
+min_price_range = st.sidebar.slider('Minimum stock price at start', min_value=0.0, max_value=500.0, value=0.0)
+max_price_range = st.sidebar.slider('Maximum stock price at start', min_value=0.0, max_value=500.0, value=200.0)
+min_extr2exp_days = st.number_input('Minimum nr of days until expiration', min_value=0, max_value=100, value=5)
+max_extr2exp_days = st.number_input('Maximum nr of days until expiration', min_value=0, max_value=100, value=20)
+min_strikprice_increase = st.sidebar.number_input('Minimum strike price increase ratio', min_value=1.0, max_value=20.0, value=1.05)
+max_strikprice_increase = st.sidebar.number_input('Maximum strike price increase ratio', min_value=1.0, max_value=20.0, value=10.0)
+threshold_range = st.number_input('Minimal probability', min_value=0.0, max_value=1.0, value=0.0)
 
 # import data
 # load in data from s3
@@ -108,13 +111,13 @@ df_all = load_data()
 df = df_all.copy()
 
 # update included options filter
-included_options['maxBasePrice'] = price_range[1]
-included_options['minDaysToExp'] = extr2exp_days[0]
-included_options['maxDaysToExp'] = extr2exp_days[1]
-included_options['minStrikeIncrease'] = strikprice_increase[0]
-included_options['maxStrikeIncrease'] = strikprice_increase[1]
-included_options['minThreshold'] = threshold_range[0]
-included_options['maxThreshold'] = threshold_range[1]
+included_options['maxBasePrice'] = max_price_range
+included_options['minDaysToExp'] = min_extr2exp_days
+included_options['maxDaysToExp'] = max_extr2exp_days
+included_options['minStrikeIncrease'] = min_strikprice_increase
+included_options['maxStrikeIncrease'] = max_strikprice_increase
+included_options['minThreshold'] = threshold_range
+included_options['maxThreshold'] = 1
 
 ########################
 # Import model and score
