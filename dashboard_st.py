@@ -97,13 +97,13 @@ else:
     st.sidebar.error('Error: End date must fall after start date.')
 
 # for other options (as in the config jsons
-min_price_range = st.sidebar.slider('Minimum stock price at start', min_value=0.0, max_value=500.0, value=0.0)
-max_price_range = st.sidebar.slider('Maximum stock price at start', min_value=0.0, max_value=500.0, value=200.0)
-min_extr2exp_days = st.number_input('Minimum nr of days until expiration', min_value=0, max_value=100, value=5)
-max_extr2exp_days = st.number_input('Maximum nr of days until expiration', min_value=0, max_value=100, value=20)
+min_price_range = st.sidebar.number_input('Minimum stock price at start', min_value=0, max_value=500, value=0)
+max_price_range = st.sidebar.number_input('Maximum stock price at start', min_value=0, max_value=500, value=200)
+min_extr2exp_days = st.sidebar.number_input('Minimum nr of days until expiration', min_value=0, max_value=100, value=5)
+max_extr2exp_days = st.sidebar.number_input('Maximum nr of days until expiration', min_value=0, max_value=100, value=20)
 min_strikprice_increase = st.sidebar.number_input('Minimum strike price increase ratio', min_value=1.0, max_value=20.0, value=1.05)
 max_strikprice_increase = st.sidebar.number_input('Maximum strike price increase ratio', min_value=1.0, max_value=20.0, value=10.0)
-threshold_range = st.number_input('Minimal probability', min_value=0.0, max_value=1.0, value=0.0)
+threshold_range = st.sidebar.number_input('Minimal probability', min_value=0.0, max_value=1.0, value=0.0)
 
 # import data
 # load in data from s3
