@@ -7,6 +7,9 @@ from sklearn.metrics import roc_auc_score, make_scorer, precision_recall_curve, 
 from sklearn.metrics import accuracy_score, log_loss
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.model_selection import GridSearchCV
+
+import catboost as cb
+
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.models.tree_based import *
 from option_trading_nonprod.other.trading_strategies import *
@@ -32,6 +35,8 @@ class CustomTransformer(BaseEstimator, TransformerMixin):
 		# print('>transform() called.')
 		X_ = X.copy() # creating a copy to avoid changes to original dataset
 		# X_ = enrich_df(X_)
+
+		# causing nuance warning
 		X_.fillna(X_.mean(), inplace=True)
 		X_ = X_[self.feature_names]
 		print('Features included: {}'.format(len(self.feature_names)))
@@ -73,170 +78,157 @@ def load_data():
 
 	return df.reset_index(drop=True)
 
-# import data
-# load in data from s3
-df_all = load_data()
+def filter4training(df_):
+	df = df_.copy()
 
-## TODO clean up below here for easy training of models
+	if 'sector' in df.columns:
+		df = df[~df['sector'].isnull()]
+		df = pd.get_dummies(df, prefix='sector', columns=['sector'])
 
-#####################################
-# Set target and feature engineering
+	# filter set on applicable rows
+	# only select Call option out of the money
+	with open('other_files/config_file.json') as json_file:
+		config = json.load(json_file)
 
-if 'sector' in df_all.columns:
-	df_all = df_all[~df_all['sector'].isnull()]
-	df_all = pd.get_dummies(df_all, prefix='sector', columns=['sector'])
+	included_options = config['included_options']
 
-# filter set on applicable rows
-# only select Call option out of the money
-with open('other_files/config_file.json') as json_file:
-	config = json.load(json_file)
+	# Filter on basics (like days to expiration and contract type)
+	df = dfFilterOnGivenSetOptions(df, included_options)
+	df = df.sort_values('exportedAt', ascending=True)
 
-included_options = config['included_options']
+	## testing the addition of opening prices
+	# Add opening price on day of export
+	add_opening_price = False
+	if add_opening_price:
+		openingPricesDF = getStockPriceDateMulti(df, datecol='exportedAt', attribute='Open')
+		openingPricesDF.rename(columns={'stockPrice': 'stockPriceOpen'}, inplace=True)
 
-# Filter on basics (like days to expiration and contract type)
-df = dfFilterOnGivenSetOptions(df_all, included_options)
-df = df.sort_values('exportedAt', ascending=True)
+		df = pd.merge(df, openingPricesDF, left_on=['baseSymbol', 'exportedAt'], right_on=['ticker', 'exportedAt'])
+		df = df[~df['stockPriceOpen'].isnull()]
 
-## testing the addition of opening prices
-# Add opening price on day of export
-add_opening_price=False
-if add_opening_price:
-	openingPricesDF = getStockPriceDateMulti(df, datecol='exportedAt', attribute='Open')
-	openingPricesDF.rename(columns={'stockPrice': 'stockPriceOpen'}, inplace=True)
+	return df
 
-	df = pd.merge(df, openingPricesDF, left_on=['baseSymbol','exportedAt'], right_on=['ticker','exportedAt'])
-	df = df[~df['stockPriceOpen'].isnull()]
+def selectFeatures4Training(type):
+	if type == 'base':
+		features = ['strikePrice'
+		, 'daysToExpiration'
+		, 'bidPrice'
+		, 'midpoint'
+		, 'askPrice'
+		, 'lastPrice'
+		, 'openInterest'
+		, 'volumeOpenInterestRatio'
+		, 'volatility'
+		, 'volume'
+		# to capture end of day price (closer to the price we can buy the stock for)
+		# , 'firstPrice'
+		]
+	elif type == 'info':
+		features = ['strikePrice'
+		, 'baseLastPrice'
+		, 'daysToExpiration'
+		, 'bidPrice'
+		, 'midpoint'
+		, 'askPrice'
+		, 'lastPrice'
+		, 'openInterest'
+		, 'volumeOpenInterestRatio'
+		, 'volatility'
+		, 'volume'
+		# , 'marketCap'
+		# , 'beta'
+		# , 'forwardPE'
+		# , 'sector_Healthcare'
+		# , 'sector_Technology'
+		# , 'sector_Basic Materials'
+		# , 'sector_Communication Services'
+		# , 'sector_Consumer Cyclical'
+		# , 'sector_Consumer Defensive'
+		# , 'sector_Energy'
+		# , 'sector_Financial Services'
+		# , 'sector_Industrials'
+		# , 'sector_Real Estate'
+		# , 'sector_Services'
+		# , 'sector_Utilities'
+					 # Features from in batch enriching
+		, 'nrOptions'
+		, 'strikePriceCum'
+		, 'volumeTimesStrike'
+		, 'nrCalls'
+		, 'meanStrikeCall'
+		, 'sumVolumeCall'
+		, 'sumOpenInterestCall'
+		, 'sumVolumeTimesStrikeCall'
+		, 'weightedStrikeCall'
+		, 'nrPuts'
+		, 'meanStrikePut'
+		, 'sumVolumePut'
+		, 'sumOpenInterestPut'
+		, 'sumVolumeTimesStrikePut'
+		, 'weightedStrikePut'
+		, 'volumeCumSum'
+		, 'openInterestCumSum'
+		, 'nrHigherOptions'
+		, 'higherStrikePriceCum'
+		, 'meanStrikeCallPerc'
+		, 'meanStrikePutPerc'
+		, 'midpointPerc'
+		, 'meanHigherStrike'
+		# , 'stockPriceOpen'
+		]
+	elif type == 'all':
+		features = ['strikePrice'
+		, 'daysToExpiration'
+		, 'bidPrice'
+		, 'midpoint'
+		, 'askPrice'
+		, 'lastPrice'
+		, 'openInterest'
+		, 'volumeOpenInterestRatio'
+		, 'volatility'
+		, 'volume'
+		# simple calculated features
+		, 'priceDiff'
+		, 'priceDiffPerc'
+		, 'inTheMoney'
+		# Features from technical indicators
+		, 'MACD_2_20_9'
+		, 'MACDh_2_20_9'
+		, 'MACDs_2_20_9'
+		, 'RSI_14'
+		, 'OBV'
+		, 'BBL_5_2.0'
+		, 'BBM_5_2.0'
+		, 'BBU_5_2.0'
+		, 'BBB_5_2.0'
+		# Features from in batch enriching
+		, 'nrOptions'
+		, 'strikePriceCum'
+		, 'volumeTimesStrike'
+		, 'nrCalls'
+		, 'meanStrikeCall'
+		, 'sumVolumeCall'
+		, 'sumOpenInterestCall'
+		, 'sumVolumeTimesStrikeCall'
+		, 'weightedStrikeCall'
+		, 'nrPuts'
+		, 'meanStrikePut'
+		, 'sumVolumePut'
+		, 'sumOpenInterestPut'
+		, 'sumVolumeTimesStrikePut'
+		, 'weightedStrikePut'
+		, 'volumeCumSum'
+		, 'openInterestCumSum'
+		, 'nrHigherOptions'
+		, 'higherStrikePriceCum'
+		, 'meanStrikeCallPerc'
+		, 'meanStrikePutPerc'
+		, 'midpointPerc'
+		, 'meanHigherStrike'
+		]
 
-
-X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.8, val_share=0.8)
-
-# Start of tuning
-# general approach
-# Use all features and create descent model (tiny bit of hyper parameter optimization
-# Use trained model to do feature selection
-# Use these features to perform hyper paramter optimization with
-
-# features to train on
-features_base = ['strikePrice'
-	, 'daysToExpiration'
-	, 'bidPrice'
-	, 'midpoint'
-	, 'askPrice'
-	, 'lastPrice'
-	, 'openInterest'
-	, 'volumeOpenInterestRatio'
-	, 'volatility'
-	, 'volume'
-	# to capture end of day price (closer to the price we can buy the stock for)
-	, 'firstPrice'
-	]
-
-features_info = ['strikePrice'
-	, 'baseLastPrice'
-	, 'daysToExpiration'
-	, 'bidPrice'
-	, 'midpoint'
-	, 'askPrice'
-	, 'lastPrice'
-	, 'openInterest'
-	, 'volumeOpenInterestRatio'
-	, 'volatility'
-	, 'volume'
-	# , 'marketCap'
-	# , 'beta'
-	# , 'forwardPE'
-	# , 'sector_Healthcare'
-	# , 'sector_Technology'
-	# , 'sector_Basic Materials'
-	# , 'sector_Communication Services'
-	# , 'sector_Consumer Cyclical'
-	# , 'sector_Consumer Defensive'
-	# , 'sector_Energy'
-	# , 'sector_Financial Services'
-	# , 'sector_Industrials'
-	# , 'sector_Real Estate'
-	# , 'sector_Services'
-	# , 'sector_Utilities'
-				 # Features from in batch enriching
-	, 'nrOptions'
-	, 'strikePriceCum'
-	, 'volumeTimesStrike'
-	, 'nrCalls'
-	, 'meanStrikeCall'
-	, 'sumVolumeCall'
-	, 'sumOpenInterestCall'
-	, 'sumVolumeTimesStrikeCall'
-	, 'weightedStrikeCall'
-	, 'nrPuts'
-	, 'meanStrikePut'
-	, 'sumVolumePut'
-	, 'sumOpenInterestPut'
-	, 'sumVolumeTimesStrikePut'
-	, 'weightedStrikePut'
-	, 'volumeCumSum'
-	, 'openInterestCumSum'
-	, 'nrHigherOptions'
-	, 'higherStrikePriceCum'
-	, 'meanStrikeCallPerc'
-	, 'meanStrikePutPerc'
-	, 'midpointPerc'
-	, 'meanHigherStrike'
-	, 'stockPriceOpen'
-]
-
-
-features_all = ['strikePrice'
-	, 'daysToExpiration'
-	, 'bidPrice'
-	, 'midpoint'
-	, 'askPrice'
-	, 'lastPrice'
-	, 'openInterest'
-	, 'volumeOpenInterestRatio'
-	, 'volatility'
-	, 'volume'
-	# simple calculated features
-	, 'priceDiff'
-	, 'priceDiffPerc'
-	, 'inTheMoney'
-	# Features from technical indicators
-	, 'MACD_2_20_9'
-	, 'MACDh_2_20_9'
-	, 'MACDs_2_20_9'
-	, 'RSI_14'
-	, 'OBV'
-	, 'BBL_5_2.0'
-	, 'BBM_5_2.0'
-	, 'BBU_5_2.0'
-	, 'BBB_5_2.0'
-	# Features from in batch enriching
-	, 'nrOptions'
-	, 'strikePriceCum'
-	, 'volumeTimesStrike'
-	, 'nrCalls'
-	, 'meanStrikeCall'
-	, 'sumVolumeCall'
-	, 'sumOpenInterestCall'
-	, 'sumVolumeTimesStrikeCall'
-	, 'weightedStrikeCall'
-	, 'nrPuts'
-	, 'meanStrikePut'
-	, 'sumVolumePut'
-	, 'sumOpenInterestPut'
-	, 'sumVolumeTimesStrikePut'
-	, 'weightedStrikePut'
-	, 'volumeCumSum'
-	, 'openInterestCumSum'
-	, 'nrHigherOptions'
-	, 'higherStrikePriceCum'
-	, 'meanStrikeCallPerc'
-	, 'meanStrikePutPerc'
-	, 'midpointPerc'
-	, 'meanHigherStrike']
-
-
-
-features_adj = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
+	elif type=='adj':
+		features=['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
 				'strikePriceCum', 'midpoint', 'lastPrice', 'weightedStrikeCall',
 				'strikePrice', 'meanStrikeCall', 'sumVolumeTimesStrikeCall',
 				'askPrice', 'meanStrikePut', 'daysToExpiration',
@@ -245,15 +237,34 @@ features_adj = ['midpointPerc', 'priceDiff', 'priceDiffPerc', 'bidPrice',
 				'BBB_5_2.0', 'volatility', 'BBM_5_2.0', 'sumOpenInterestCall',
 				'BBL_5_2.0', 'MACD_2_20_9', 'sumOpenInterestPut', 'volumeCumSum',
 				'MACDs_2_20_9', 'higherStrikePriceCum']
+	return features
 
-# topFeatures = feat_imp[feat_imp['importance'] > 0.009]['feature']
-features = features_info
-# top30features = feat_imp['feature'].head(30)
+# import data
+# load in data from s3
+df_all = load_data()
+
+## TODO clean up below here for easy training of models
+
+#####################################
+# Set target and feature engineering
+df = filter4training(df_all)
+
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.8, val_share=0.8)
+
+
+train_features = selectFeatures4Training(type='info')
+# Start of tuning
+# general approach
+# Use all features and create descent model (tiny bit of hyper parameter optimization
+# Use trained model to do feature selection
+# Use these features to perform hyper paramter optimization with
+
 
 ###########
 # Test different classifiers
 ## creating pipeline
 classifiers = [
+	cb.CatBoostClassifier(verbose=False),
 	AdaBoostClassifier(learning_rate=0.01, n_estimators=2000, random_state=42),
 	GradientBoostingClassifier(learning_rate=0.01, n_estimators=1000, min_samples_split=500, max_features='sqrt', max_depth=4, random_state=42, subsample=0.8)
 ]
@@ -263,7 +274,7 @@ classifiers = [
 
 for classifier in classifiers:
 	print(classifier)
-	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(features_info)),
+	pipe = Pipeline(steps=[('preprocessor', CustomTransformer(train_features)),
 					  ('classifier', classifier)])
 
 	# add sample weights

@@ -268,6 +268,11 @@ st.plotly_chart(fig)
 fig = plotCalibrationCurvePlotly(df['reachedStrikePrice'], df['prob'], title='', bins=10, returnfig=True, savefig=False)
 st.plotly_chart(fig)
 
+# # precision threshold plot
+fig = plotThresholdMetricsPlotly(df['prob'], df['reachedStrikePrice'], returnfig=True, savefig=False,
+                     saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
+st.plotly_chart(fig)
+
 ##### Profitability
 # Biggest increases
 st.table(biggest_increase_df)
@@ -281,8 +286,5 @@ fig = ExpvsActualProfitabilityScatter(df, high_prob_df, high_prof_df, actualCol=
 st.pyplot(fig)
 
 
-# # precision threshold plot
-fig = plotThresholdMetricsPlotly(df['prob'], df['reachedStrikePrice'], returnfig=True, savefig=False,
-                     saveFileName='scheduled_jobs/summary_content/pr-threshold.png')
-st.plotly_chart(fig)
+
 
