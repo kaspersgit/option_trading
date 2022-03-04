@@ -171,9 +171,18 @@ def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileNam
 	# add number of days from extraction to expiration
 	df_['optionDuration'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'expirationDate')
 	df_['days2minPrice'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'minPriceDate')
+
+	# set lowest price to at least starting price
+	df_['minPrice'] = np.where(df_['minPrice'] > df_['baseLastPrice'], df_['baseLastPrice'], df_['minPrice'])
+
+	# Calculate lowest price reached as share of original price
 	df_['minPriceShareOfPrice'] = df_['minPrice'] / df_['baseLastPrice']
 	df_ = df_[df_['minPriceShareOfPrice'] < 1.0]
 
+	df_['valid_options'] = np.where((df_['reachedStrike'] == 'False') | (df_['minPriceDate'] <= df_['strikePriceDate']),1,0)
+
+	df_ = df_[(df_['valid_options'] == 1)]
+	
 	# per day from export
 	# fig = px.violin(df_, x='days2minPrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
 	# 			 , box=True, hover_name='baseSymbol', color_discrete_map={'0':'red', '1':'green'})
