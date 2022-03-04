@@ -180,7 +180,7 @@ def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileNam
 	df_['minPriceShareOfPrice'] = df_['minPrice'] / df_['baseLastPrice']
 	df_ = df_[df_['minPriceShareOfPrice'] < 1.0]
 
-	df_['valid_options'] = np.where((df_['reachedStrike'] == 'False') | (df_['minPriceDate'] <= df_['strikePriceDate']),1,0)
+	df_['valid_options'] = np.where((df_['reachedStrikePrice'] == 'False') | (df_['minPriceDate'] <= df_['strikePriceDate']),1,0)
 
 	df_ = df_[(df_['valid_options'] == 1)]
 
