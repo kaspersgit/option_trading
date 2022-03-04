@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 import plotly.express as px
 
 def PredictionVsStrikeIncrease(df, ReachedStrike, notReachedStrike, returnfig=False, savefig=False, saveFileName='test.png'):
@@ -182,7 +183,7 @@ def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileNam
 	df_['valid_options'] = np.where((df_['reachedStrike'] == 'False') | (df_['minPriceDate'] <= df_['strikePriceDate']),1,0)
 
 	df_ = df_[(df_['valid_options'] == 1)]
-	
+
 	# per day from export
 	# fig = px.violin(df_, x='days2minPrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
 	# 			 , box=True, hover_name='baseSymbol', color_discrete_map={'0':'red', '1':'green'})
