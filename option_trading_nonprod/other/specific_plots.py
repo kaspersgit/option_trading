@@ -168,6 +168,8 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, re
 
 def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileName='test.png'):
 	df_ = df.copy()
+	df_ = df_[(~df_['reachedStrikePrice']) | (df_['minPriceDate'] <= df_['strikePriceDate'])]
+
 	df_['reachedStrikePrice'] = df_['reachedStrikePrice'].astype(str)
 	# add number of days from extraction to expiration
 	df_['optionDuration'] = AddDaysFromStartToEnd(df_, startCol = 'exportedAt', endCol = 'expirationDate')
@@ -179,10 +181,6 @@ def plotLowestPriceReachedPlotly(df, returnfig=False, savefig=False, saveFileNam
 	# Calculate lowest price reached as share of original price
 	df_['minPriceShareOfPrice'] = df_['minPrice'] / df_['baseLastPrice']
 	df_ = df_[df_['minPriceShareOfPrice'] < 1.0]
-
-	df_['valid_options'] = np.where((df_['reachedStrikePrice'] == 'False') | (df_['minPriceDate'] <= df_['strikePriceDate']),1,0)
-
-	df_ = df_[(df_['valid_options'] == 1)]
 
 	# per day from export
 	# fig = px.violin(df_, x='days2minPrice', y='minPriceShareOfPrice', color='reachedStrikePrice', points='all'
