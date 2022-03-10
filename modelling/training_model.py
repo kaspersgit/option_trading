@@ -118,7 +118,7 @@ X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTes
 # Classifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-train_type = 'DEV'
+train_type = 'PROD'
 version = 'v1x1'
 algorithm = 'CB'
 if train_type == 'DEV':
