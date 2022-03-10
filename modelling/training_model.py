@@ -118,9 +118,9 @@ X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTes
 # Classifier
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
-train_type = 'PROD'
-version = 'v1x4'
-algorithm = 'GB'
+train_type = 'DEV'
+version = 'v1x1'
+algorithm = 'CB'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
@@ -145,6 +145,12 @@ elif algorithm == 'GB':
     # kwargs = {'sample_weight': sample_weights.values}
     kwargs = {'nothing': 'empty'}
     uncal_model = fit_GBclf(X_fit[features], y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version), **kwargs)
+elif algorithm == 'CB':
+    params = {}
+    # sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
+    # kwargs = {'sample_weight': sample_weights.values}
+    kwargs = {'nothing': 'empty'}
+    uncal_model = fit_cb(X_fit[features], y_fit, X_val[features], y_val, params, save_model = False, cb_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 
 print('Training uncalibrated model... Done!')
 

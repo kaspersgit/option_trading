@@ -2,7 +2,7 @@ from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 import pickle
 import sys
 
-if sys.platform == 'Darwin':
+if 32 << bool(sys.maxsize >> 32) == 64:
 	# import xgboost as xgb
 	import catboost as cb
 
@@ -32,6 +32,7 @@ if sys.platform == 'Darwin':
 #
 #
 def fit_cb(X_fit, y_fit, X_val, y_val, params, save_model, cb_path, name):
+	import catboost as cb
 	# Example
 	# params = {'iterations':100,
 	#                               'max_depth':2,
