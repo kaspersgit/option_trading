@@ -14,6 +14,7 @@ blinker==1.4
 boto3==1.18.28
 botocore==1.21.28
 cachetools==5.0.0
+catboost==1.0.4
 certifi==2021.5.30
 cffi==1.15.0
 charset-normalizer==2.0.4
@@ -34,6 +35,7 @@ greenlet==1.1.1
 idna==3.2
 importlib-metadata==4.7.0
 importlib-resources==5.4.0
+interpret==0.2.7
 ipykernel==6.7.0
 ipython==7.31.1
 ipython-genutils==0.2.0

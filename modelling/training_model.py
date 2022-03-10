@@ -111,7 +111,7 @@ print('Nr of features included: {}'.format(len(features)))
 ########################
 # Split in train and test
 # test to split keeping exportedAt column always in same group
-X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.0, test_share=0.75, val_share=0.75)
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.75, val_share=0.75)
 
 #####################
 # Train

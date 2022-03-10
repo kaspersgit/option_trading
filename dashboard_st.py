@@ -78,11 +78,21 @@ included_options = config['included_options']
 
 # list available models
 models = os.listdir(os.getcwd() + '/trained_models')
-available_models = [i for i in models if (('64' in i) & ('DEV' in i))]
+available_models = [i for i in models if ('64' in i)]
 
 # allow to choose model
 modelname = st.sidebar.selectbox('Select model:', available_models, index=available_models.index('DEV_c_GB64_v1x4.sav'))
 modelname = modelname.split('.')[0]
+
+if 'GB' in modelname:
+    model_expl_url = 'https://en.wikipedia.org/wiki/Gradient_boosting'
+    model_descr = 'Gradient Boosting'
+elif 'CB' in modelname:
+    model_expl_url = 'https://en.wikipedia.org/wiki/Catboost'
+    model_descr = 'CatBoost'
+elif 'EBM' in modelname:
+    model_expl_url = 'https://interpret.ml/docs/ebm.html'
+    model_descr = 'Explainable Boosting Machine'
 
 # Set filter options
 # for expiration date
@@ -125,6 +135,8 @@ file_path = os.getcwd() + '/trained_models/' + modelname + '.sav'
 with open(file_path, 'rb') as file:
     model = pickle.load(file)
 features = model.feature_names
+# Below will filter out the interaction feature names
+features = [f for f in features if ' x ' not in f]
 prob = model.predict_proba(df[features])[:, 1]
 
 print('Loaded model and scored options')
@@ -210,15 +222,15 @@ st.write(f'Share of options reaching strike: {df.reachedStrikePrice.sum() / len(
 
 st.markdown('## Model performance metrics')
 
-st.write(f'Area Under Curve (AUC) of ROC: {auc_pr:.2f}')
-st.write(f'AUC of Precision Recall: \t {auc_roc:.2f}')
+st.write(f'Area Under Curve (AUC) of ROC: {auc_roc:.2f}')
+st.write(f'AUC of Precision Recall: \t {auc_pr:.2f}')
 st.write(f'Brier loss score: {brier_score:.2f}')
 
 with st.expander("See model details and performance metrics"):
     st.write(f"""
         For predicting the chance an option will reach its strike price we used the following model \n
         Model name: {modelname} \n
-        Model type: [Gradient Boosting Classifier](https://en.wikipedia.org/wiki/Gradient_boosting) \n
+        Model type: [{model_descr}]({model_expl_url}) \n
     """)
 
     # top 10 features of model
