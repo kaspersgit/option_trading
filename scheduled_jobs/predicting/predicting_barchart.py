@@ -210,6 +210,7 @@ html = """\
     Or check the streamlit dashboard with the predictions: <br>
     <a href="https://share.streamlit.io/kaspersgit/option_trading/daily_predict_st.py">predictions dashboard</a> <br>
     Just keep in mind this email and the dashboard are using different models <br>
+    </p>
   </body>
 </html>
 """.format(high_prob.to_html(),hprob_config['minThreshold'],hprob_config['maxBasePrice'],
