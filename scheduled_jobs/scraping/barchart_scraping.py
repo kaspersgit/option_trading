@@ -82,7 +82,7 @@ def get_column_classes(soup, part = 'thead'):
         classname = columns[0].find_all('th', {'class': element})
         if (not classname == None) & (
                 element not in ['text-left', 'hide', 'barchart-sort-desc', 'barchart-sort-asc', 'bc-glyph-sort-desc',
-                                'bc-glyph-sort-asc', 'quick-links', 'hide-for-print']):
+                                'bc-glyph-sort-asc', 'quick-links', 'hide-for-print','ng-scope','ng-binding']):
             classnames.append(element)
     #print('Classes cleaned, {} columnclasses left'.format(len(classnames)))
     return(classnames, columntitles)
