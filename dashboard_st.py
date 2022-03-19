@@ -1,18 +1,14 @@
 """
 This script should show the performance of all options which ended on the last Friday
 import enriched options which ended friday from S3
-score options with model
-make summary (split per score band, graph,  TODO different durations, TODO estimate potential earnings)
-command line command:
-<script_name> <model> <mode>
-example:
-/home/pi/Documents/python_scripts/option_trading/scheduled_jobs/send_summary.py PROD_c_AB32_v1x2 DEVELOPMENT
+ rn locally: streamlit run dashboard_st.py
 """
 
 # import packages
 import pandas as pd
 from dateutil.relativedelta import relativedelta, FR
 import os, sys, platform
+import time
 import pickle
 import json
 import streamlit as st
@@ -30,35 +26,32 @@ from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.process.simple_enriching import *
 
 @st.cache
-def load_data():
-	if platform.system() == 'Darwin':
-		s3_profile = 'mrOption'
-	else:
-		s3_profile = 'streamlit'
+def load_data(expiry_date):
+    if platform.system() == 'Darwin':
+        s3_profile = 'mrOption'
+    else:
+        s3_profile = 'streamlit'
 
-	bucket = 'project-option-trading-output'
-	key = 'enriched_data/barchart/expired_on_'
+    bucket = 'project-option-trading-output'
+    key = f'enriched_data/barchart/expired_on_{expiry_date}'
+    print(time.time())
+    df_all = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
+    print(time.time())
 
-	df_all = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
+    print('Shape of raw imported data: {}'.format(df_all.shape))
 
-	print('Shape of raw imported data: {}'.format(df_all.shape))
+    # enrich data within batches
+    df = batch_enrich_df(df_all)
+    print(time.time())
+    print('Shape of batch enriched data: {}'.format(df.shape))
 
-	# enrich data within batches
-	df = batch_enrich_df(df_all)
-	print('Shape of batch enriched data: {}'.format(df.shape))
+    df = addTargets(df)
+    print(time.time())
 
-	df = addTargets(df)
+    df = cleanDF(df)
+    print(time.time())
 
-	df = cleanDF(df)
-
-	return df.reset_index(drop=True)
-
-# password implementation
-password = st.sidebar.text_input('Type in password')
-if os.environ['PASSWORD'] == password:
-    st.sidebar.write('Password is correct')
-else:
-    st.sidebar.write('Password is wrong')
+    return df.reset_index(drop=True)
 
 # Set title for sidebar
 st.sidebar.markdown('## Filtering options')
@@ -115,10 +108,29 @@ min_strikprice_increase = st.sidebar.number_input('Minimum strike price increase
 max_strikprice_increase = st.sidebar.number_input('Maximum strike price increase ratio', min_value=1.0, max_value=20.0, value=10.0)
 threshold_range = st.sidebar.number_input('Minimal probability', min_value=0.0, max_value=1.0, value=0.0)
 
-# import data
-# load in data from s3
-df_all = load_data()
+
+# password implementation
+password = st.sidebar.text_input('Type in password')
+
+# Data import
+# only import last friday unless correct password is given, then load all data
+if os.environ['PASSWORD'] == password:
+    # load in data from s3
+    df_all = load_data(expiry_date='')
+    data_info = 'All historic data will be loaded'
+    st.sidebar.write('Password is correct')
+else:
+    # load in data from s3
+    last_friday = (datetime.today() + relativedelta(weekday=FR(-1))).strftime('%Y-%m-%d')
+    df_all = load_data(expiry_date=last_friday)
+    data_info = f'Only options expiring last friday ({last_friday}) data will be loaded'
+    st.sidebar.write('Password is wrong')
+
+# make copy to avoid warnings
 df = df_all.copy()
+
+# give result of password
+st.sidebar.write(data_info)
 
 # update included options filter
 included_options['maxBasePrice'] = max_price_range
@@ -216,6 +228,7 @@ st.markdown('# Option trading model summary')
 
 st.markdown('## Data information')
 
+st.write(f'Number of expiration dates included: {len(df.expirationDate.unique())}')
 st.write(f'Total number of options (unique tickers): {len(df)}({df.baseSymbol.nunique()})')
 st.write(f'Options reaching strike (unique tickers): {df.reachedStrikePrice.sum()}({df[df.reachedStrikePrice == 1].baseSymbol.nunique()})')
 st.write(f'Share of options reaching strike: {df.reachedStrikePrice.sum() / len(df):.2f}')
@@ -223,7 +236,7 @@ st.write(f'Share of options reaching strike: {df.reachedStrikePrice.sum() / len(
 st.markdown('## Model performance metrics')
 
 st.write(f'Area Under Curve (AUC) of ROC: {auc_roc:.2f}')
-st.write(f'AUC of Precision Recall: \t {auc_pr:.2f}')
+st.write(f'AUC of Precision Recall: {auc_pr:.2f}')
 st.write(f'Brier loss score: {brier_score:.2f}')
 
 with st.expander("See model details and performance metrics"):
@@ -241,8 +254,11 @@ with st.expander("See model details and performance metrics"):
     st.table(model_feature_importance.head(10))
 
     st.plotly_chart(fig_roc)
+    st.write(f'ROC AUC: {auc_roc}')
+
 
     st.plotly_chart(fig_pr)
+    st.write(f'Precision Recall AUC: {auc_pr}')
 
 # Showing some model info
 # model_details_df = pd.DataFrame({'Key':['model name', 'nr features', 'train size', 'calibration size']

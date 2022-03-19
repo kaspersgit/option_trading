@@ -154,7 +154,7 @@ def ExpvsActualProfitabilityScatter(df,high_prob_df ,high_prof_df, actualCol, re
 	ax.scatter(not_email_df[actualCol], not_email_df['expPercIncrease'], s=7, color='r', alpha=0.7, label='Not in email')
 	ax.scatter(high_prob_df[actualCol], high_prob_df['expPercIncrease'], s=7, color='g', alpha=0.7, label='High probability')
 	ax.scatter(high_prof_df[actualCol], high_prof_df['expPercIncrease'], s=7, color='b', alpha=0.7, label='High profitability')
-	ax.legend(loc="upper left")
+	ax.legend(bbox_to_anchor=(1, 1), loc="upper right")
 	ax.set_xlabel(f'{typeOfActual} profit')
 	ax.set_ylabel('Expected profit')
 	ax.set_title(f'Expected vs {typeOfActual} profitability')

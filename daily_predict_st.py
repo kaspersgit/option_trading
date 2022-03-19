@@ -206,7 +206,7 @@ print('High profitability table size: {}'.format(len(high_prof)))
 # Start dashboard creation #
 ############################
 
-st.markdown('# Option trading model summary')
+st.markdown('# Option trading model daily prediction')
 
 st.markdown('## Data information')
 
@@ -244,6 +244,3 @@ st.table(high_prob)
 
 st.markdown('## High profitability options')
 st.table(high_prof)
-
-
-
