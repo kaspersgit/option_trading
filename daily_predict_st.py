@@ -31,25 +31,25 @@ from option_trading_nonprod.process.simple_enriching import *
 
 @st.cache
 def load_data(date=date.today().strftime('%Y-%m-%d')):
-	if platform.system() == 'Darwin':
-		s3_profile = 'mrOption'
-	else:
-		s3_profile = 'streamlit'
+    if platform.system() == 'Darwin':
+        s3_profile = 'mrOption'
+    else:
+        s3_profile = 'streamlit'
 
-	bucket = 'project-option-trading'
-	key = f'raw_data/barchart/barchart_unusual_activity_{date}.csv'
+    bucket = 'project-option-trading'
+    key = f'raw_data/barchart/barchart_unusual_activity_{date}.csv'
 
-	df_all = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
+    df_all = load_from_s3(profile=s3_profile, bucket=bucket, key_prefix=key)
 
-	print('Shape of raw imported data: {}'.format(df_all.shape))
+    print('Shape of raw imported data: {}'.format(df_all.shape))
 
-	# enrich data within batches
-	df = batch_enrich_df(df_all)
-	print('Shape of batch enriched data: {}'.format(df.shape))
+    # enrich data within batches
+    df = batch_enrich_df(df_all)
+    print('Shape of batch enriched data: {}'.format(df.shape))
 
-	df = cleanDF(df)
+    df = cleanDF(df)
 
-	return df.reset_index(drop=True)
+    return df.reset_index(drop=True)
 
 # password implementation
 password = st.sidebar.text_input('Type in password')
@@ -147,7 +147,7 @@ df['pred'] = np.where(df['prob'] > 0.5,1,0)
 df['model'] = modelname
 
 # Adding some additional columns
-df['predictionDate'] = today
+df['predictionTimeStamp'] = df['exportedAt']
 df['priceDiff'] = df['strikePrice'] - df['baseLastPrice']
 df['priceDiffPerc'] = df['strikePrice'] / df['baseLastPrice']
 df['inTheMoney'] = np.where(df['baseLastPrice'] >= df['strikePrice'],1,0)
@@ -182,7 +182,7 @@ high_prob = df[(df['prob'] > hprob_config['minThreshold']) &
     (df['increase'] > hprob_config['minStrikeIncrease']) &
     (df['daysToExpiration'] > hprob_config['minDaysToExp']) &
     (df['stockPrice'] < hprob_config['maxBasePrice'])].copy()
-high_prob = high_prob[['ticker', 'predictionDate', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prob', 'model']]
+high_prob = high_prob[['ticker', 'predictionTimeStamp', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prob', 'model']]
 high_prob = high_prob.sort_values('increase').reset_index(drop=True)
 
 print('High probability table size: {}'.format(len(high_prob)))
@@ -194,7 +194,7 @@ high_prof = df[(df['prob'] > hprof_config['minThreshold']) &
     (df['increase'] > hprof_config['minStrikeIncrease']) &
     (df['daysToExpiration'] > hprof_config['minDaysToExp']) &
     (df['stockPrice'] < hprof_config['maxBasePrice'])].copy()
-high_prof = high_prof[['ticker', 'predictionDate', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prob', 'model']]
+high_prof = high_prof[['ticker', 'predictionTimeStamp', 'expirationDate', 'stockPrice', 'strikePrice', 'increase', 'prob', 'model']]
 high_prof = high_prof.sort_values('increase').reset_index(drop=True)
 
 print('High profitability table size: {}'.format(len(high_prof)))
@@ -210,6 +210,7 @@ st.markdown('# Option trading model daily prediction')
 
 st.markdown('## Data information')
 
+st.write(f"Showing options extracted on {check_date.strftime('%Y-%m-%d')}")
 st.write(f'Total number of options (unique tickers): {len(df)}({df.ticker.nunique()})')
 
 with st.expander("See model details and performance metrics"):
@@ -226,11 +227,12 @@ with st.expander("See model details and performance metrics"):
         drop=True)
     st.table(model_feature_importance.head(10))
 
-# Showing some model info
-# model_details_df = pd.DataFrame({'Key':['model name', 'nr features', 'train size', 'calibration size']
-#                                  , 'Value':[modelname, len(model.feature_names), model.train_data_shape[0]
-#         , model.calibration_data_shape[0]]})
-# st.table(model_details_df)
+    # Showing some model info
+    if hasattr(model,'feature_names') & hasattr(model,'train_data_shape') & hasattr(model,'calibration_data_shape'):
+        model_details_df = pd.DataFrame({'Key':['model name', 'nr features', 'train size', 'calibration size']
+                                         , 'Value':[modelname, str(len(model.feature_names)), str(model.train_data_shape[0])
+                , str(model.calibration_data_shape[0])]})
+        st.table(model_details_df)
 
 
 ####################
