@@ -78,20 +78,6 @@ included_options = config['included_options']
 models = os.listdir(os.getcwd() + '/trained_models')
 available_models = [i for i in models if ('64' in i)]
 
-# allow to choose model
-modelname = st.sidebar.selectbox('Select model:', available_models, index=available_models.index('DEV_c_GB64_v1x4.sav'))
-modelname = modelname.split('.')[0]
-
-if 'GB' in modelname:
-    model_expl_url = 'https://en.wikipedia.org/wiki/Gradient_boosting'
-    model_descr = 'Gradient Boosting'
-elif 'CB' in modelname:
-    model_expl_url = 'https://en.wikipedia.org/wiki/Catboost'
-    model_descr = 'CatBoost'
-elif 'EBM' in modelname:
-    model_expl_url = 'https://interpret.ml/docs/ebm.html'
-    model_descr = 'Explainable Boosting Machine'
-
 # Set filter options
 # for expiration date
 today = date.today()
@@ -207,6 +193,22 @@ print('High profitability table size: {}'.format(len(high_prof)))
 ############################
 
 st.markdown('# Option trading model daily prediction')
+
+st.markdown('## Model selection')
+
+# allow to choose model
+modelname = st.selectbox('Select model:', available_models, index=available_models.index('DEV_c_GB64_v1x4.sav'))
+modelname = modelname.split('.')[0]
+
+if 'GB' in modelname:
+    model_expl_url = 'https://en.wikipedia.org/wiki/Gradient_boosting'
+    model_descr = 'Gradient Boosting'
+elif 'CB' in modelname:
+    model_expl_url = 'https://en.wikipedia.org/wiki/Catboost'
+    model_descr = 'CatBoost'
+elif 'EBM' in modelname:
+    model_expl_url = 'https://interpret.ml/docs/ebm.html'
+    model_descr = 'Explainable Boosting Machine'
 
 st.markdown('## Data information')
 
