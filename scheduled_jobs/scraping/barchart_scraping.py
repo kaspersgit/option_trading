@@ -81,8 +81,9 @@ def get_column_classes(soup, part = 'thead'):
     for element in classes:
         classname = columns[0].find_all('th', {'class': element})
         if (not classname == None) & (
-                element not in ['text-left', 'hide', 'barchart-sort-desc', 'barchart-sort-asc', 'bc-glyph-sort-desc',
-                                'bc-glyph-sort-asc', 'quick-links', 'hide-for-print']):
+                element in ['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate'
+                                , 'daysToExpiration', 'bidPrice', 'midpoint', 'askPrice', 'lastPrice', 'volume'
+                                , 'openInterest', 'volumeOpenInterestRatio', 'volatility', 'delta', 'tradeTime']):
             classnames.append(element)
     #print('Classes cleaned, {} columnclasses left'.format(len(classnames)))
     return(classnames, columntitles)
