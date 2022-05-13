@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import plotly.express as px
 import numpy as np
 from sklearn import metrics 
 import itertools
@@ -51,6 +52,70 @@ def plotCurveAUC(probs, actual, title, type='roc', savefig=False, saveFileName='
         plt.savefig(saveFileName)
     return(auc)
 
+
+def plotCurveAUCPlotly(prob, actual, title, type='roc', returnfig=True, savefig=False, saveFileName='test.png'):
+    """
+    :param probs: float models predicted probability
+    :param actual: int 1 or 0 for the actual outcome
+    :param title: str title of the plot
+    :param type: str either ROC or PR
+    :param savefig: boolean if plot should be saved
+    :param saveFileName: str where to save the plot to
+    :return:
+    """
+    type = type.lower()
+    if type == 'roc':
+        xVar, yVar, thresholds = metrics.roc_curve(actual, prob)
+        title = 'ROC curve - {}'.format(title)
+        xlabel = 'False Positive Rate'
+        ylabel = 'True Positive Rate (Recall)'
+        diagCor1 = [0, 1]
+        diagCor2 = [0, 1]
+
+    elif ('recall' in type and 'precision' in type) or type == 'pr':
+        yVar, xVar, thresholds = metrics.precision_recall_curve(actual, prob)
+        title = 'Precision-Recall curve - {}'.format(title)
+        xlabel = 'True Positive Rate (Recall)'
+        ylabel = 'Precision'
+        diagCor1 = [0, 0]
+        diagCor2 = [0, 0]
+
+        # adding 0 to start of thresholds to make length equal
+        thresholds = np.insert(thresholds, 0, 0.0)
+
+    # Calculate area under curve (AUC)
+    auc = metrics.auc(xVar, yVar)
+
+    # make df for simpler future use
+    df_plot = pd.DataFrame({'xVar':xVar, 'yVar':yVar, 'threshold':thresholds})
+
+    # Plot curve
+    fig = px.line(df_plot, x='xVar', y='yVar', title=title, labels={'xVar':xlabel, 'yVar':ylabel}
+                  , hover_data={'xVar':':.2f','yVar':':.2f','threshold':':.2f'})
+
+    # set axis range to 0 - 1
+    fig.update_layout(xaxis_range=[0,1], yaxis_range=[0,1], xaxis_title=xlabel, yaxis_title=ylabel)
+
+    # Add diagonal reference line
+    fig.add_shape(type="line",
+                  xref="paper", yref="paper",
+                  x0=diagCor1[0], x1=diagCor1[1], y0=diagCor2[0], y1=diagCor2[1],
+                  line=dict(
+                      color="black",
+                      width=2,
+                      dash="dot",
+                  )
+    )
+
+    if savefig:
+        fig.write_image(saveFileName)
+        print(f'Created and saved {type} plot as {saveFileName}')
+
+    if returnfig:
+        return fig, auc
+
+    return auc
+
 def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold.png', show_plot=True):
     precision, recall, th = metrics.precision_recall_curve(actual, pred)
     plt.figure()
@@ -65,9 +130,27 @@ def plotThresholdMetrics(pred, actual, savefig=False, saveFileName='pr-threshold
     if savefig:
         plt.savefig(saveFileName)
 
-def plotMetricOverTime(df, savefig=False, saveFileName='prOverTime.png', show_plot=True):
+def plotThresholdMetricsPlotly(prob, actual, returnfig=True, savefig=False, saveFileName='pr-threshold.png'):
+    precision, recall, th = metrics.precision_recall_curve(actual, prob)
 
-    metric_df = df[['date','actual','pred']].copy()
+    # make df for easier future use
+    df_pr = pd.DataFrame({'threshold':th ,'precision':precision[:-1],'recall':recall[:-1]})
+    fig = px.line(df_pr, x='threshold', y=['precision', 'recall'], title='Precision and recall for different threshold values')
+
+    # set axis range to 0 - 1
+    fig.update_layout(xaxis_range=[0,1], yaxis_range=[-0.05,1.05], xaxis_title='Threshold', yaxis_title='Precision/Recall')
+
+    if savefig:
+        fig.write_image(saveFileName)
+        print(f'Created and threshold precision recall plot as {saveFileName}')
+    if returnfig:
+        return fig
+
+def plotMetricOverTime(df, savefig=False, saveFileName='prOverTime.png', show_plot=True):
+    # TODO adjust this and add it to the dashboard
+    df_ = df.copy()
+    df_.rename(columns={'expirationDate':'date','reachedStrikePrice':'actual'}, inplace=True)
+    metric_df = df_[['date','actual','pred']].copy()
 
     # add tp, fp, tn and fn
     metric_df['TP'] = np.where((metric_df['pred'] == 1) & (metric_df['actual'] == 1),1,0)

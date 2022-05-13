@@ -81,7 +81,7 @@ def get_column_classes(soup, part = 'thead'):
     for element in classes:
         classname = columns[0].find_all('th', {'class': element})
         if (not classname == None) & (
-                element in ['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate'
+                    element in ['baseSymbol', 'baseLastPrice', 'symbolType', 'strikePrice', 'expirationDate'
                                 , 'daysToExpiration', 'bidPrice', 'midpoint', 'askPrice', 'lastPrice', 'volume'
                                 , 'openInterest', 'volumeOpenInterestRatio', 'volatility', 'delta', 'tradeTime']):
             classnames.append(element)
@@ -162,6 +162,10 @@ df_total['volume'] = df_total["volume"].str.replace(",", "").str.replace('*', ''
 df_total['openInterest'] = df_total["openInterest"].str.replace(",", "").str.replace('*', '').astype(float)
 df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
+
+for col in ['bidPrice', 'midpoint','askPrice', 'lastPrice']:
+    df_total[col] = df_total[col].str.replace(",", "").str.replace('*', '').astype(float)
+
 
 print('Extracted a total of {} records'.format(len(df_total)))
 

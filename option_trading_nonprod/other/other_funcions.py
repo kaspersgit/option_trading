@@ -3,6 +3,9 @@ import time
 import pandas as pd
 
 def applyFunctionSplittedSeries(df, func, func_arg,  splits = 50, pause_time=0.01):
+	"""
+	applying a function on a series by first splitting the series and then applying the function
+	"""
 	df_list = np.array_split(df, splits)
 	outcome_list = list(range(len(df_list)))
 	for i in range(len(df_list)):

@@ -19,7 +19,7 @@ n_bits = 32 << bool(sys.maxsize >> 32)
 ###### import data from S3
 # Set source and target for bucket and keys
 source_bucket = 'project-option-trading-output'
-source_key = 'enriched_data/barchart'
+source_key = 'enriched_data/barchart/expired_on_'
 
 # print status of variables
 print('Source bucket: {}'.format(source_bucket))
@@ -111,7 +111,7 @@ print('Nr of features included: {}'.format(len(features)))
 ########################
 # Split in train and test
 # test to split keeping exportedAt column always in same group
-X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.0, test_share=0.75, val_share=0.75)
+X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTestValOot(df, target = 'reachedStrikePrice', date_col='exportedAt', oot_share=0.1, test_share=0.75, val_share=0.75)
 
 #####################
 # Train
@@ -119,8 +119,8 @@ X_train, y_train, X_test, y_test, X_val, y_val, X_oot, y_oot = splitDataTrainTes
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 
 train_type = 'PROD'
-version = 'v1x4'
-algorithm = 'GB'
+version = 'v1x1'
+algorithm = 'CB'
 if train_type == 'DEV':
     X_fit = X_train
     y_fit = y_train
@@ -145,6 +145,12 @@ elif algorithm == 'GB':
     # kwargs = {'sample_weight': sample_weights.values}
     kwargs = {'nothing': 'empty'}
     uncal_model = fit_GBclf(X_fit[features], y_fit, X_val, y_val, params, save_model = False, gbc_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version), **kwargs)
+elif algorithm == 'CB':
+    params = {}
+    # sample_weights = getSampleWeights(X_fit, column='exportedAt', normalize=True, squared=False)
+    # kwargs = {'sample_weight': sample_weights.values}
+    kwargs = {'nothing': 'empty'}
+    uncal_model = fit_cb(X_fit[features], y_fit, X_val[features], y_val, params, save_model = False, cb_path=getwd+'/trained_models/', name='{}_{}{}_{}'.format(train_type, algorithm, n_bits, version))
 
 print('Training uncalibrated model... Done!')
 

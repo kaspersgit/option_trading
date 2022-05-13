@@ -3,9 +3,10 @@ marketbeat_call_activity_*
 data/
 .idea
 .vscode
-.option_venv
-.venv*
+.option_venvg
 geckodriver.log
 __pycache__
 *.DS_Store
 modelling/development/documentation/visualizations/*
+.venv*
+.streamlit*
