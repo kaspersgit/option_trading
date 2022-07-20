@@ -61,6 +61,9 @@ except Exception:
     browser.get(url)
     html = browser.page_source
 
+# Wait to let page load
+WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.bc-button.login-button')))
+
 # Deal with privacy / cookies acceptance
 print('Attempting to deal with privacy questions')
 try:
@@ -94,6 +97,8 @@ print('Filled username and password')
 # Click the actual login button
 login_button = browser.find_element(By.CSS_SELECTOR, 'button.bc-button.login-button')
 login_button.click()
+
+print('Logged in successfully')
 
 ### test
 print(browser.current_url)
