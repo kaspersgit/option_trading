@@ -24,10 +24,7 @@ else:
 	last_friday = (datetime.today() + relativedelta(weekday=FR(-1)))
 
 # import data
-if platform.system() == 'Darwin':
-	s3_profile = 'mrOption'
-else:
-	s3_profile = 'default'
+s3_profile = 'mrOption'
 
 # Set bucket
 bucket = 'project-option-trading'
