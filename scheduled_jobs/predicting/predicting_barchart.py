@@ -9,8 +9,14 @@ import numpy as np
 import pickle
 import json
 
+
+# Set variables based on system we are running it on
+if platform.system() == 'Darwin':
+	os.chdir('/Users/kasper.de-harder/gits/option_trading')
+else:
+	os.chdir('/home/pi/Documents/python_scripts/option_trading')
+
 # to load custom packages
-os.chdir("/home/pi/Documents/python_scripts/option_trading")
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.process.stock_price_enriching import *
 
@@ -34,12 +40,6 @@ if len(sys.argv) >= 3:
 		with open('/home/pi/Documents/trusted/option_predict_email_receivers.txt') as f:
 			recipients = f.read().splitlines()
 		emaillist = recipients[0]
-
-# Set variables based on system we are running it on
-if platform.system() == 'Darwin':
-	os.chdir('/Users/kasper.de-harder/gits/option_trading')
-else:
-	os.chdir('/home/pi/Documents/python_scripts/option_trading')
 
 # Set AWS profile
 profile='mrOption'
@@ -132,6 +132,8 @@ elif model_name != 'Logit':
 	with open(file_path, 'rb') as file:
 		model = pickle.load(file)
 	features = model.feature_names
+	# Below will filter out the interaction feature names
+	features = [f for f in features if ' x ' not in f]
 	prob = model.predict_proba(df[features])[:, 1]
 
 print('Options contract scored')
