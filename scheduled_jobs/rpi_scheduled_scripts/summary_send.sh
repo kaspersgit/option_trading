@@ -1,4 +1,4 @@
 #!/bin/bash
-export PYTHONPATH='/home/pi/Documents/python_scripts/option_trading/'
+export PYTHONPATH=${PYTHONPATH}:/home/pi/Documents/python_scripts/option_trading/
 python3 /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/weekly_summary/enrich_expired_options.py
-python3 /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/weekly_summary/send_summary.py PROD_c_GB32_v2x4 PRODUCTION
+python3 /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/weekly_summary/send_summary.py PROD_c_CB64_v1x1 PRODUCTION

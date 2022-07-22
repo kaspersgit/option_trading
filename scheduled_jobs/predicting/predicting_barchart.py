@@ -37,11 +37,12 @@ if len(sys.argv) >= 3:
 
 # Set variables based on system we are running it on
 if platform.system() == 'Darwin':
-	profile='mrOption'
 	os.chdir('/Users/kasper.de-harder/gits/option_trading')
 else:
-	profile='default'
 	os.chdir('/home/pi/Documents/python_scripts/option_trading')
+
+# Set AWS profile
+profile='mrOption'
 
 # set working directory
 current_path = os.getcwd()
@@ -208,7 +209,7 @@ html = """\
     </p>
     <p>
     Or check the streamlit dashboard with the predictions: <br>
-    <a href="https://share.streamlit.io/kaspersgit/option_trading/daily_predict_st.py">predictions dashboard</a> <br>
+    <a href="https://kaspersgit-option-trading-daily-predict-st-022izs.streamlitapp.com/">predictions dashboard</a> <br>
     Just keep in mind this email and the dashboard are using different models <br>
     </p>
   </body>

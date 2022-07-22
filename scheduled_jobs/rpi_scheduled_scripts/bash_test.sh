@@ -1,5 +1,5 @@
 #!/bin/bash
-export PYTHONPATH='/home/pi/Documents/python_scripts/option_trading/'
+export PYTHONPATH=${PYTHONPATH}:/home/pi/Documents/python_scripts/option_trading/
 echo "Kasper"
 echo "is...... Great"
 python3 -c "print('this is within python')"

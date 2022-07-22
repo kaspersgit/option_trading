@@ -3,7 +3,7 @@
 # and https://www.marketbeat.com/market-data/unusual-call-options-volume/
 # and https://marketchameleon.com/Reports/UnusualOptionVolumeReport
 #### Using Selenium
-from bs4 import BeautifulSoup
+#from bs4 import BeautifulSoup
 from selenium import webdriver
 import pandas as pd
 import numpy as np
@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import NoSuchElementException
 from pyvirtualdisplay import Display
 import time
 import random
@@ -53,28 +54,39 @@ print('Script started at {}'.format(now))
 url = 'https://www.barchart.com/login'
 stocks_url = 'https://www.barchart.com/options/unusual-activity/stocks'
 
-try:
-    browser.get(url)
-    html = browser.page_source
-except Exception:
-    print('Failed, trying again')
-    browser.get(url)
-    html = browser.page_source
+# try:
+#     browser.get(url)
+#     html = browser.page_source
+# except Exception:
+#     print('Failed, trying again')
+#     browser.get(url)
+#     html = browser.page_source
+
+browser.get(url)
 
 # Wait to let page load
-WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.bc-button.login-button')))
+# WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.bc-button.login-button')))
+time.sleep(5)
 
 # Deal with privacy / cookies acceptance
 print('Attempting to deal with privacy questions')
 try:
     # Click see more t&a
-    WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Read more to accept preferences')]"))).click()
+    more_terms = WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Read more to accept preferences')]")))
+    more_terms.click()
+except NoSuchElementException:
+    print('No read more button found')
 except:
     print('Screen big enough to show all privacy text')
 finally:
-    # Click to reject all
-    WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Reject all')]"))).click()
-    print('Rejected all privacy trackers')
+    try:
+        # Click to reject all
+        WebDriverWait(browser, 50).until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Reject all')]"))).click()
+        print('Rejected all privacy trackers')
+    except NoSuchElementException:
+        print('No reject all button found')
+    except Exception as e:
+        print(f'other error {e}')
 
 # Click login button
 # login = browser.find_element(By.CSS_SELECTOR, 'a.bc-user-block__button').click()
@@ -114,6 +126,10 @@ print(browser.current_url)
 
 # Explicit extra waiting
 time.sleep(5)
+
+# Test Click the filter data button
+download_data = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.bc-glyph-filter")))
+download_data.click()
 
 # Click the download data button
 download_data = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.bc-glyph-download")))

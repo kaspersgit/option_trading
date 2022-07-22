@@ -31,8 +31,8 @@ def get_loaded_page(url, wait = 30):
     if platform.system() == 'Linux':
         browser = webdriver.Chrome()
     elif platform.system() == 'Windows':
-        browser = webdriver.Firefox(
-            executable_path='C:/Users/kaspe/Downloads/geckodriver-v0.26.0-win64/geckodriver.exe')
+        browser = webdriver.Chrome(
+            executable_path=r'C:/Users/kaspe/Downloads/chromedriver_win32/chromedriver.exe')
 
     browser.get(url)
     delay = wait # seconds
@@ -45,6 +45,39 @@ def get_loaded_page(url, wait = 30):
         raise Exception
     browser.quit()
     return(html)
+
+# testing
+# first finding correct id (in case it changes)
+html = browser.page_source
+soup = BeautifulSoup(html, 'html.parser')
+table_div = soup.find("div", {"class": 'bc-table-wrapper'})
+shadow_root_id = table_div.get('class')[1]
+shadow_host = browser.find_element(By.ID, shadow_root_id)
+shadow_root = shadow_host.shadow_root
+
+# script = 'return arguments[0].shadowRoot'
+# shadow_root = browser.execute_script(script, shadow_host) # for older chrome
+
+shadow_content = shadow_root.find_element(By.ID, '_root')
+
+html_of_interest=browser.execute_script('return arguments[0].innerHTML',shadow_content)
+sel_soup=BeautifulSoup(html_of_interest, 'html.parser')
+sel_soup
+
+# each value is also hidden behind a shadow root
+root2 = shadow_root.find_element(By.CSS_SELECTOR, '[binding="this.baseSymbol"]')
+shadow_root2 = root2.shadow_root
+shadow_content2 = shadow_root2.text
+browser.execute_script('return arguments[0].innerHTML',shadow_content2)
+
+item = browser.execute_script("return document.querySelector('bc-table-wrapper').shadowRoot.querySelector('text-binding').shadowRoot")
+print(item.text)
+
+def expand_shadow_element(element):
+  shadow_root = browser.execute_script('return arguments[0].shadowRoot', element)
+  return shadow_root
+
+
 
 # To get the volume
 def get_column_values(columname,soup):
@@ -174,3 +207,5 @@ df_total.to_csv('/home/pi/Documents/python_scripts/option_trading/data/barchart/
 
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 print('Script finished at {}'.format(now))
+
+

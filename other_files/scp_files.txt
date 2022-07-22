@@ -8,5 +8,9 @@ scp pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/barchart_u
 scp -r pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/data/barchart ~/gits/option_trading/data/barchart
 scp -r pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/data/marketbeat ~/gits/option_trading/data/marketbeat
 
+scp -r pi@raspberrypi.local:/home/pi/Documents/trusted C:\Users\kaspe\Documents\trusted
+
 -- To pi
 scp -r  ~/gits/option_trading/data/barchart_yf_enr_1.csv pi@192.168.1.181:/home/pi/Documents/python_scripts/option_trading/data/barchart_yf_enr_1.csv
+
+scp -r  C:\Users\kaspe\Documents\trusted pi@raspberrypi.local:/home/pi/Documents/trusted
