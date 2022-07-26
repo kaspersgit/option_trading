@@ -110,28 +110,31 @@ print('Filled username and password')
 login_button = browser.find_element(By.CSS_SELECTOR, 'button.bc-button.login-button')
 login_button.click()
 
-print('Logged in successfully')
+# Check if logged in
+loggedin = browser.find_element(By.CSS_SELECTOR, 'span.bc-glyph-user')
+if loggedin:
+    print('Logged in successfully')
+else:
+    print('Could not locate My Accounts tab, indicating login was not successful')
 
-### test
+# Double check url
 print(browser.current_url)
 
 # Switch to unusual stock option activity
+print('Switch to option page')
 browser.get(stocks_url)
 
 # Wait 5 seconds
 time.sleep(5)
 
-### test
+# Double check url
 print(browser.current_url)
 
 # Explicit extra waiting
 time.sleep(5)
 
-# Test Click the filter data button
-download_data = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.bc-glyph-filter")))
-download_data.click()
-
 # Click the download data button
+print('Looking for the download button')
 download_data = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.bc-glyph-download")))
 download_data.click()
 
@@ -139,6 +142,7 @@ try:
     # if premier subscription alert shows click 'download anyway'
     download_anyway = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Download Anyway')]")))
     download_anyway.click()
+    print('Data downloaded')
 except:
     print('No premier subscription nudge is given')
 
@@ -180,7 +184,7 @@ df_total['tradeTime'] = pd.to_datetime(df_total['tradeTime'])
 # for col in ['baseLastPrice','strikePrice','volume','openInterest','bidPrice', 'midpoint','askPrice', 'lastPrice']:
 #     df_total[col] = df_total[col].str.replace(",", "").str.replace('*', '').astype(float)
 
-df_total['volatility'] = df_total["volatility"].str.replace(",", "").str.replace("%", "").str.replace('*', '').astype(float)
+df_total['volatility'] = df_total["volatility"].str.replace(",", "", regex=True).str.replace("%", "", regex=True).str.replace('*', '', regex=True).astype(float)
 df_total['daysToExpiration'] = df_total['daysToExpiration'].astype(int)
 
 print('Extracted a total of {} records'.format(len(df_total)))

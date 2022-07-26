@@ -19,6 +19,7 @@ else:
 # to load custom packages
 from option_trading_nonprod.aws import *
 from option_trading_nonprod.process.stock_price_enriching import *
+from option_trading_nonprod.utilities.email import sendEmailSmtpTls
 
 print('Script can be run from command line as <script> <model> <mode>')
 
@@ -178,15 +179,7 @@ print('High profitability table size: {}'.format(len(high_prof)))
 
 # %%
 # Sending an email with the predictions
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-# Email configurations and content
-msg = MIMEMultipart()
-msg['Subject'] = "Stock buy advise"
-msg['From'] = 'k.sends.python@gmail.com'
-
-html = """\
+html_content = """\
 <html>
   <head></head>
   <body>
@@ -222,20 +215,12 @@ html = """\
 		   hprof_config['minDaysToExp'],hprof_config['maxDaysToExp'],hprof_config['minStrikeIncrease'],
 		   )
 
-part1 = MIMEText(html, 'html')
-msg.attach(part1)
+sender = os.environ['send_python_email']
+password = os.environ['send_python_password']
+recipient = emaillist
+username = sender
+smtp_server = 'smtp.office365.com'
+port = 587
+sendEmailSmtpTls(html_content, sender, recipient, username, password, smtp_server, port)
 
-# Sending the email
-import smtplib, ssl
-
-port = 465  # For SSL
-password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
-
-# Create a secure SSL context
-context = ssl.create_default_context()
-
-with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
-    server.login(msg['From'], password)
-    server.sendmail(msg['From'], emaillist , msg.as_string())
-
-print('Email with predictions send')
+print('Email with predictions sent')

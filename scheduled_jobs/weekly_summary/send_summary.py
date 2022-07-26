@@ -387,8 +387,10 @@ else:
 	attachment = None
 
 
-password = open("/home/pi/Documents/trusted/ps_gmail_send.txt", "r").read()
-sendRichEmail(sender='k.sends.python@gmail.com'
+sender = os.environ['send_python_email']
+password = os.environ['send_python_password']
+
+sendRichEmail(sender=sender
 			  , receiver=emaillist
 			  , password=password
 			  , subject='Performance report expiry date {}'.format(d)

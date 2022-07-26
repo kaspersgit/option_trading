@@ -6,6 +6,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 import io
+import smtplib
 
 def df_to_bytes(df):
 	with io.StringIO() as buffer:
@@ -63,10 +64,104 @@ def sendRichEmail(sender = None, receiver = None, password = None, subject = 'De
 			msgImage.add_header('Content-ID', '<image{}>'.format(i+1))
 			msgRoot.attach(msgImage)
 
-	# Send the email (this example assumes SMTP authentication is required)
-	import smtplib
-	with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-		smtp.ehlo()
-		smtp.login(sender, password)
-		smtp.sendmail(sender, receiver, msgRoot.as_string())
+	# Sending the email
+	with smtplib.SMTP('smtp.office365.com', 587) as server:
+		server.ehlo()
+		server.starttls()
+		server.login(sender, password)
+		server.sendmail(sender, receiver, msgRoot.as_string())
+
 	print('Email with subject {} \nHas been sent to {} recipients'.format(subject, receiverstr.count('@')))
+
+def sendEmailSmtpSsl(html_content, sender, recipient, username, password, smtp_server, port):
+	# Sending an email with the predictions
+	import smtplib, ssl
+	from email.mime.text import MIMEText
+	from email.mime.multipart import MIMEMultipart
+
+	# Email configurations and content
+	msg = MIMEMultipart()
+	msg['Subject'] = "Stock buy advise"
+	msg['From'] = sender
+
+	part1 = MIMEText(html_content, 'html')
+	msg.attach(part1)
+
+	# Sending the email
+
+	# Create a secure SSL context
+	context = ssl.create_default_context()
+
+	with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+		server.login(msg['From'], password)
+		server.sendmail(msg['From'], recipient, msg.as_string())
+
+	print('Email with predictions send')
+
+
+def sendEmailSmtpTls(html_content, sender, recipient, username, password, smtp_server, port):
+	# Sending an email with the predictions
+	import smtplib, ssl
+	from email.mime.text import MIMEText
+	from email.mime.multipart import MIMEMultipart
+
+	# Email configurations and content
+	msg = MIMEMultipart()
+	msg['Subject'] = "Stock buy advise"
+	msg['From'] = sender
+
+	part1 = MIMEText(html_content, 'html')
+	msg.attach(part1)
+
+	# Sending the email
+	with smtplib.SMTP(smtp_server, port) as server:
+		server.ehlo()
+		server.starttls()
+		server.login(username, password)
+		server.sendmail(msg['From'], recipient, msg.as_string())
+
+	print('email sent')
+
+
+if __name__ == '__main__':
+	html_content = """
+	<html>
+	  <head></head>
+	  <body>
+	  	<h3> High probability </h3>
+	    {0}
+	    <h4> Configurations </h4>
+	    <p>
+	    Minimal threshold:  <br>
+	    Maximum stock price:  <br>
+	    Days to expiration between  and  <br>
+	    Strike price at least  higher than stock price <br>
+	    </p>
+	    <hr>
+	    <h3> High profitability </h3>
+	    
+	    <h4> Configurations </h4>
+	    <p>
+	    Minimal threshold:  <br>
+	    Maximum stock price:  <br>
+	    Days to expiration between  and  <br>
+	    Strike price at least  higher than stock price <br>
+	    </p>
+	    <p>
+	    Or check the streamlit dashboard with the predictions: <br>
+	    <a href="https://kaspersgit-option-trading-daily-predict-st-022izs.streamlitapp.com/">predictions dashboard</a> <br>
+	    Just keep in mind this email and the dashboard are using different models <br>
+	    </p>
+	  </body>
+	</html>
+	"""
+
+	sender='******'
+	recipient='******'
+	username=sender
+	password='******'
+	smtp_server='******'
+	port=587
+	sendEmailSmtpSsl(html_content, sender, recipient, username, password, smtp_server, port)
+
+	sendEmailSmtpTls(html_content, sender, recipient, username, password, smtp_server, port)

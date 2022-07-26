@@ -27,30 +27,31 @@ MAILTO="kasperde@hotmail.com"
 # System jobs
 # Reboot every 10th and 25th of the month at 04:00
 0 4 10,25 * reboot
+
 # Restarting lxpanel due to memory leakage
-0 4 * * * lxpanelctl restart 
+# 0 4 * * * lxpanelctl restart
 
 # Python scripts
-PYTHONPATH=/home/pi/.local/lib/python3.7/site-packages
+PYTHONPATH=/home/pi/.local/lib/python3.9/site-packages
 
 # Send 6 scientias extractive summaries to kasperde every Sunday morning at 6
 0 6 * * 0 python3 /home/pi/Documents/python_scripts/send_summaries/scientias_extractive.py >> /home/pi/scripts/scientias_summaries.log
 
-# Scrape barchart website showing unusual option activity and save it as a csv at 21:00 every weekday (slow selenium script ~ 15 min)
-0 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/barchart_scrape.sh >> /home/pi/scripts/barchart_scraping.log
+# Scrape barchart website showing unusual option activity and save it as a csv at 21:00 every weekday (fairly fast selenium script ~ 2 min, but error prone)
+0 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/barchart_login_scrape.sh >> /home/pi/scripts/barchart_scraping.log 2>&1
 
 # Scrape barchart website showing unusual option volume and save it as a csv at 21:00 every weekday (slow selenium script ~ 15 min)
-0 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/barchart_unusual_volume_scrape.sh >> /home/pi/scripts/barchart_scraping.log
+0 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/barchart_unusual_volume_scrape.sh  >> /home/pi/scripts/barchart_unusual_volume_scraping.log 2>&1
 
 # Scrape marketbeat website showing unusual option activity and save it as a csv at 20:55 every weekday (fast script ~ 2 min)
-55 20 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/marketbeat_scrape.sh >> /home/pi/scripts/marketbeat_scraping.log
+55 20 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/marketbeat_scrape.sh >> /home/pi/scripts/marketbeat_scraping.log 2>&1
 
-# Send predictions on call option data from barchart every weekday evening 21:40.
-40 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/predictin_send.sh >> /home/pi/scripts/call_option_predicting.log
+# Send predictions on call option data from barchart every weekday evening 21:15.
+15 21 * * 1-5 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/predicting_send.sh >> /home/pi/scripts/call_option_predicting.log 2>&1
 
 # Creating summary on all options expired last friday and sending it in an email
-0 10 * * 6 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/summary_send.sh >> /home/pi/scripts/option_summary.log
+0 10 * * 6 bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/summary_send.sh >> /home/pi/scripts/option_summary.log 2>&1
 
 # Testing
-#12 * * * * bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/bash_test.sh  >> /home/pi/scripts/bash_test.log
+#12 * * * * bash /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/rpi_scheduled_scripts/bash_test.sh  >> /home/pi/scripts/bash_test.log 2>&1
 #* * * * * python3 --version >> /home/pi/scripts/bash_test.log
