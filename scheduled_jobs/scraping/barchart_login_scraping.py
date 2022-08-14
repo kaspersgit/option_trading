@@ -35,6 +35,8 @@ if platform.system() == 'Linux':
     download_loc = "/home/pi/Documents/python_scripts/option_trading/data/barchart"
     prefs = {"download.default_directory": download_loc}
     options.add_experimental_option("prefs", prefs)
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     browser = webdriver.Chrome(options=options)
 
 elif platform.system() == 'Windows':
