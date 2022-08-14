@@ -21,12 +21,16 @@ import platform, os
 
 # Only when running in production
 if platform.system() == 'Linux':
-    display = Display(visible=0, size=(800,600))
-    display.start()
-
     # To have some human kind of behaviour with visitin the website
     rand_wait=random.uniform(0,200)
     time.sleep(rand_wait)
+
+    display = Display(visible=0, size=(800,600))
+    display.start()
+
+# else:
+#     display = Display(visible=1, size=(800, 600))
+#     display.start()
 
 # Load page
 if platform.system() == 'Linux':
@@ -45,6 +49,9 @@ elif platform.system() == 'Windows':
     download_loc = "C:/Users/kaspe/Downloads/selenium_download"
     prefs = {"download.default_directory": download_loc}
     options.add_experimental_option("prefs", prefs)
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    options.binary_location = "C:\Program Files\Google\Chrome\Application\chrome.exe"
     browser = webdriver.Chrome(
         executable_path=r'C:/Users/kaspe/Downloads/chromedriver_win32/chromedriver.exe', options=options)
 
@@ -113,11 +120,11 @@ login_button = browser.find_element(By.CSS_SELECTOR, 'button.bc-button.login-but
 login_button.click()
 
 # Check if logged in
-loggedin = browser.find_element(By.CSS_SELECTOR, 'span.bc-glyph-user')
-if loggedin:
-    print('Logged in successfully')
-else:
-    print('Could not locate My Accounts tab, indicating login was not successful')
+# loggedin = browser.find_element(By.CSS_SELECTOR, 'span.bc-glyph-user')
+# if loggedin:
+#     print('Logged in successfully')
+# else:
+#     print('Could not locate My Accounts tab, indicating login was not successful')
 
 # Double check url
 print(browser.current_url)
@@ -139,6 +146,8 @@ time.sleep(5)
 print('Looking for the download button')
 download_data = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "i.bc-glyph-download")))
 download_data.click()
+
+time.sleep(3)
 
 try:
     # if premier subscription alert shows click 'download anyway'
