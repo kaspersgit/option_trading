@@ -136,13 +136,13 @@ print('Switch to option page')
 browser.get(stocks_url)
 
 # Wait 5 seconds
-time.sleep(5)
+time.sleep(20)
 
 # Double check url
 print(browser.current_url)
 
 # Explicit extra waiting
-time.sleep(5)
+time.sleep(10)
 
 # Click the download data button
 print('Looking for the download button')
