@@ -20,7 +20,7 @@ import random
 import platform, os
 
 # Only when running in production
-if platform.system() == 'Linuxx':
+if platform.system() == 'Linux':
     # To have some human kind of behaviour with visitin the website
     rand_wait=random.uniform(0,200)
     time.sleep(rand_wait)
