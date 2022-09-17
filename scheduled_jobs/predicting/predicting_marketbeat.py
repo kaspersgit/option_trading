@@ -60,7 +60,7 @@ print('Source key: {}'.format(source_key))
 if platform.system() == 'Darwin':
 	profile='mrOption'
 else:
-	profile='default'
+	profile='mrOption'
 
 df = load_from_s3(profile=profile, bucket=source_bucket, key_prefix=source_key)
 
