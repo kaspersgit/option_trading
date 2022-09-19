@@ -115,8 +115,9 @@ def sendEmailSmtpTls(html_content, sender, recipient, username, password, smtp_s
 
 	# Sending the email
 	with smtplib.SMTP(smtp_server, port) as server:
-		server.ehlo()
+		#server.ehlo()
 		server.starttls()
+		server.ehlo()
 		server.login(username, password)
 		server.sendmail(msg['From'], recipient, msg.as_string())
 
