@@ -104,7 +104,7 @@ sklearn==0.0
 smmap==5.0.0
 SQLAlchemy==1.4.23
 stevedore==3.4.0
-streamlit==1.4.0
+streamlit==1.11.1
 tenacity==8.0.1
 terminado==0.12.1
 testpath==0.5.0
