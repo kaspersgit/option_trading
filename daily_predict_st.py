@@ -52,8 +52,9 @@ def load_data(date=date.today().strftime('%Y-%m-%d')):
     return df.reset_index(drop=True)
 
 # password implementation
-password = st.sidebar.text_input('Type in password')
-if os.environ['PASSWORD'] == password:
+# password = st.sidebar.text_input('Type in password')
+password = 'asd'
+if st.secrets['PASSWORD'] == password:
     st.sidebar.write('Password is correct')
 else:
     st.sidebar.write('Password is wrong')
