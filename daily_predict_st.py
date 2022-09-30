@@ -29,7 +29,7 @@ from option_trading_nonprod.validation.plotting import *
 from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.process.simple_enriching import *
 
-@st.cache
+@st.experimental_memog
 def load_data(date=date.today().strftime('%Y-%m-%d')):
     if platform.system() == 'Darwin':
         s3_profile = 'mrOption'
