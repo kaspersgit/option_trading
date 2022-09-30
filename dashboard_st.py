@@ -25,7 +25,7 @@ from option_trading_nonprod.validation.plotting import *
 from option_trading_nonprod.process.stock_price_enriching import *
 from option_trading_nonprod.process.simple_enriching import *
 
-@st.cache
+@st.experimental_memo
 def load_data(expiry_date):
     if platform.system() == 'Darwin':
         s3_profile = 'mrOption'
@@ -114,7 +114,7 @@ password = st.sidebar.text_input('Type in password')
 
 # Data import
 # only import last friday unless correct password is given, then load all data
-if os.environ['PASSWORD'] == password:
+if st.secrets['PASSWORD'] == password:
     # load in data from s3
     df_all = load_data(expiry_date='')
     data_info = 'All historic data will be loaded'
