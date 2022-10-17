@@ -204,7 +204,7 @@ html_content = """\
     </p>
     <p>
     Or check the streamlit dashboard with the predictions: <br>
-    <a href="https://kaspersgit-option-trading-daily-predict-st-022izs.streamlitapp.com/">predictions dashboard</a> <br>
+    <a href="https://kaspersgit-option-trading-daily-predict-st-zih1vq.streamlitapp.com/">predictions dashboard</a> <br>
     Just keep in mind this email and the dashboard are using different models <br>
     </p>
   </body>
