@@ -370,7 +370,7 @@ html_content = f"""
 	
     <p>
     Or check the streamlit dashboard with the performance overview: <br>
-    <a href="https://share.streamlit.io/kaspersgit/option_trading/dashboard_st.py">performance overview dashboard</a> <br>
+    <a href="https://kaspersgit-option-trading-dashboard-st-93ie9w.streamlitapp.com/">performance overview dashboard</a> <br>
     Just keep in mind this email and the dashboard are using different models <br>
     </p>
 	
