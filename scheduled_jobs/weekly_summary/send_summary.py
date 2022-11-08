@@ -69,10 +69,7 @@ print('Emaillist: {}'.format(emaillist))
 modelname = modelname.split('.')[0]
 
 # import data
-if platform.system() == 'Darwin':
-	s3_profile = 'mrOption'
-else:
-	s3_profile = 'default'
+s3_profile = 'mrOption'
 
 # Set bucket
 bucket = 'project-option-trading-output'
