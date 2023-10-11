@@ -1,5 +1,6 @@
 #!/bin/bash
 export PYTHONPATH=${PYTHONPATH}:/home/pi/Documents/python_scripts/option_trading/
+. $HOME/.bashrc
 date +"%Y-%m-%d %T"
 python3 /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/weekly_summary/enrich_expired_options.py
 python3 /home/pi/Documents/python_scripts/option_trading/scheduled_jobs/weekly_summary/send_summary.py DEV_c_GB64_v1x4 PRODUCTION
